@@ -1,0 +1,238 @@
+.hero {
+  padding-block: var(--hn-space-10) var(--hn-space-16);
+}
+
+.split {
+  display: grid;
+  gap: var(--hn-space-10);
+  align-items: center;
+}
+
+.copy {
+  max-width: 36rem;
+}
+
+.title {
+  font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.title em {
+  color: rgb(var(--hn-brand));
+}
+
+.body {
+  margin-top: var(--hn-space-5);
+  max-width: 32rem;
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-lg);
+}
+
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hn-space-3);
+  margin-top: var(--hn-space-8);
+}
+
+/* Example conversation: the question lands, HealthNexus "types", then answers.
+   The reply reserves its space from the start, so nothing shifts as it appears. */
+.chat {
+  display: grid;
+  gap: var(--hn-space-3);
+  max-width: 30rem;
+  margin-top: var(--hn-space-8);
+  padding: var(--hn-space-4);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: var(--hn-radius-xl);
+  background: rgb(var(--hn-surface));
+  box-shadow: var(--hn-shadow-sm);
+}
+
+.chatSource {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-2);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-xs);
+  font-weight: 500;
+}
+
+.question {
+  justify-self: end;
+  max-width: 85%;
+  padding: var(--hn-space-2) var(--hn-space-3);
+  border-radius: var(--hn-radius-lg) var(--hn-radius-lg) var(--hn-radius-sm) var(--hn-radius-lg);
+  background: rgb(var(--hn-paper-raised));
+  font-size: var(--hn-text-sm);
+  animation: bubble 500ms var(--hn-ease-out) 400ms both;
+}
+
+.replySlot {
+  position: relative;
+}
+
+.typing {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  gap: 4px;
+  padding: var(--hn-space-3);
+  border-radius: var(--hn-radius-lg);
+  background: rgb(var(--hn-brand-soft));
+  animation: typingWindow 1300ms linear 1000ms both;
+}
+
+.typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--hn-brand));
+  animation: dot 900ms var(--hn-ease-out) infinite;
+}
+
+.typing i:nth-child(2) { animation-delay: 150ms; }
+.typing i:nth-child(3) { animation-delay: 300ms; }
+
+.reply {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--hn-space-2);
+  align-items: start;
+  animation: bubble 600ms var(--hn-ease-out) 2300ms both;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--hn-radius-sm);
+  background: rgb(var(--hn-brand));
+  color: rgb(var(--hn-on-brand));
+}
+
+.answer {
+  padding: var(--hn-space-2) var(--hn-space-3);
+  border-radius: var(--hn-radius-sm) var(--hn-radius-lg) var(--hn-radius-lg) var(--hn-radius-lg);
+  background: rgb(var(--hn-brand-soft));
+  color: rgb(var(--hn-ink));
+  font-size: var(--hn-text-sm);
+}
+
+.reason {
+  margin-top: var(--hn-space-2);
+  color: rgb(var(--hn-accent-ink));
+  font-size: var(--hn-text-xs);
+  font-weight: 600;
+}
+
+@keyframes bubble {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Visible only between the question and the answer */
+@keyframes typingWindow {
+  0% { opacity: 0; }
+  10%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes dot {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  40% { transform: translateY(-3px); opacity: 1; }
+}
+
+/* Dark panel behind the phone */
+.visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  padding: var(--hn-space-8) var(--hn-space-4);
+  border-radius: var(--hn-radius-xl);
+  background:
+    radial-gradient(120% 80% at 80% 0%, rgb(var(--hn-accent) / 0.22), transparent 60%),
+    radial-gradient(90% 70% at 0% 100%, rgb(var(--hn-brand) / 0.55), transparent 70%),
+    rgb(var(--hn-panel));
+  overflow: hidden;
+}
+
+/* Faint grid texture, fixed to the panel and never animated */
+.visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(var(--hn-on-panel) / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--hn-on-panel) / 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%);
+  pointer-events: none;
+}
+
+.pillars {
+  display: grid;
+  gap: var(--hn-space-4);
+  margin-top: var(--hn-space-12);
+}
+
+.pillar {
+  padding: var(--hn-space-6);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: var(--hn-radius-lg);
+  background: rgb(var(--hn-surface));
+}
+
+.pillarIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--hn-radius-md);
+  background: rgb(var(--hn-brand-soft));
+  color: rgb(var(--hn-brand));
+}
+
+.pillarTitle {
+  margin-top: var(--hn-space-4);
+  font-size: var(--hn-text-base);
+  letter-spacing: -0.01em;
+}
+
+.pillarBody {
+  margin-top: var(--hn-space-1);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-sm);
+}
+
+@media (min-width: 640px) {
+  .pillars {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    padding-block: var(--hn-space-16) var(--hn-space-20);
+  }
+
+  .split {
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: var(--hn-space-16);
+  }
+
+  .visual {
+    min-height: 540px;
+  }
+
+  .pillars {
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: var(--hn-space-16);
+  }
+}

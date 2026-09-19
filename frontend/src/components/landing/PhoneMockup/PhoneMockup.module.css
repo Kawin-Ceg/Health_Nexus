@@ -1,0 +1,166 @@
+/* The phone screen always renders in light colours (it depicts the app),
+   so it uses the light token values directly rather than the themed ones. */
+
+.phone {
+  position: relative;
+  z-index: 1;
+  width: min(272px, 100%);
+  aspect-ratio: 9 / 18.5;
+  padding: 10px;
+  border-radius: 44px;
+  background: linear-gradient(160deg, rgb(64 78 75), rgb(18 28 26));
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.12),
+    0 40px 80px -30px rgb(4 10 9 / 0.7);
+  animation: rise 900ms var(--hn-ease-out) 120ms both;
+}
+
+.screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 44px 14px 16px;
+  border-radius: 34px;
+  background: rgb(250 247 242);
+  color: rgb(22 33 31);
+  overflow: hidden;
+}
+
+.notch {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 84px;
+  height: 22px;
+  border-radius: var(--hn-radius-pill);
+  background: rgb(18 28 26);
+  transform: translateX(-50%);
+}
+
+.header {
+  padding-inline: 4px;
+}
+
+.date {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(61 74 71);
+}
+
+.greeting {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-radius: var(--hn-radius-lg);
+  background: rgb(255 255 255);
+  box-shadow: 0 1px 2px rgb(22 33 31 / 0.06);
+}
+
+.tileIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 4px;
+  border-radius: var(--hn-radius-sm);
+  background: rgb(22 33 31 / 0.06);
+}
+
+.brand .tileIcon {
+  background: rgb(14 70 64);
+  color: rgb(255 255 255);
+}
+
+.accent .tileIcon {
+  background: rgb(193 101 59);
+  color: rgb(255 255 255);
+}
+
+.tileLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(61 74 71);
+}
+
+.tileValue {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  margin-left: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(61 74 71);
+}
+
+/* Tiny bar sparkline; heights come from nth-child so the JSX needs no styles. */
+.spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+  margin-top: 6px;
+}
+
+.spark i {
+  flex: 1;
+  height: 50%;
+  border-radius: 2px;
+  background: rgb(22 33 31 / 0.12);
+}
+
+.spark i:nth-child(2) { height: 70%; }
+.spark i:nth-child(3) { height: 45%; }
+.spark i:nth-child(4) { height: 80%; }
+.spark i:nth-child(5) { height: 60%; }
+.spark i:nth-child(6) { height: 90%; }
+.spark i:nth-child(7) { height: 65%; }
+
+.brand .spark i:last-child {
+  background: rgb(14 70 64);
+}
+
+.accent .spark i:last-child {
+  background: rgb(193 101 59);
+}
+
+.neutral .spark i:last-child {
+  background: rgb(22 33 31 / 0.4);
+}
+
+.status {
+  margin-top: auto;
+  padding: 10px 12px;
+  border-radius: var(--hn-radius-md);
+  background: rgb(222 236 232);
+  color: rgb(14 70 64);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}

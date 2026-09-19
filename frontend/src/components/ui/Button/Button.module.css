@@ -1,0 +1,75 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hn-space-2);
+  min-height: var(--hn-tap);
+  padding: 0 var(--hn-space-5);
+  border: 1px solid transparent;
+  border-radius: var(--hn-radius-md);
+  font-weight: 600;
+  font-size: var(--hn-text-sm);
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color var(--hn-duration-hover) var(--hn-ease-out),
+    border-color var(--hn-duration-hover) var(--hn-ease-out),
+    color var(--hn-duration-hover) var(--hn-ease-out),
+    transform var(--hn-duration-hover) var(--hn-ease-out);
+}
+
+.button:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.button svg {
+  flex-shrink: 0;
+  transition: transform var(--hn-duration-hover) var(--hn-ease-out);
+}
+
+.button:hover svg:last-child:not(:first-child) {
+  transform: translateX(2px);
+}
+
+.lg {
+  min-height: 52px;
+  padding: 0 var(--hn-space-6);
+  font-size: var(--hn-text-base);
+}
+
+.primary {
+  background: rgb(var(--hn-brand));
+  color: rgb(var(--hn-on-brand));
+}
+
+.primary:hover {
+  background: rgb(var(--hn-brand) / 0.88);
+}
+
+.secondary {
+  background: rgb(var(--hn-surface));
+  border-color: rgb(var(--hn-line));
+  color: rgb(var(--hn-ink));
+}
+
+.secondary:hover {
+  border-color: rgb(var(--hn-ink) / 0.35);
+}
+
+.ghost {
+  color: rgb(var(--hn-ink));
+}
+
+.ghost:hover {
+  background: rgb(var(--hn-ink) / 0.06);
+}
+
+/* For dark panels: light fill, panel-coloured text */
+.inverse {
+  background: rgb(var(--hn-on-panel));
+  color: rgb(var(--hn-panel));
+}
+
+.inverse:hover {
+  background: rgb(var(--hn-on-panel) / 0.88);
+}

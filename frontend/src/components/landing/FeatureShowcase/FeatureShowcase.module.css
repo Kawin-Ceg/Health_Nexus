@@ -1,0 +1,157 @@
+.section {
+  padding-block: var(--hn-space-16);
+}
+
+.header {
+  max-width: 40rem;
+}
+
+.title {
+  font-size: var(--hn-text-3xl);
+}
+
+.title em {
+  color: rgb(var(--hn-brand));
+}
+
+.body {
+  margin-top: var(--hn-space-4);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-lg);
+}
+
+/* 5 cards, 5 cells, all rows full:
+   mobile 1 col; tablet 2 cols with the last card full width;
+   desktop a 6-col track so the rows read 3 + 2 at equal heights. */
+.grid {
+  display: grid;
+  gap: var(--hn-space-4);
+  margin-top: var(--hn-space-10);
+}
+
+.cell {
+  display: flex;
+}
+
+.card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--hn-space-6);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: var(--hn-radius-xl);
+  background: rgb(var(--hn-surface));
+  overflow: hidden;
+  transition:
+    transform 450ms var(--hn-ease-out),
+    border-color 200ms var(--hn-ease-out),
+    box-shadow 450ms var(--hn-ease-out);
+}
+
+/* Blossom: a soft bloom opens out from the icon when the card is hovered or tapped. */
+.bloom {
+  position: absolute;
+  z-index: -1;
+  top: -120px;
+  left: -120px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(var(--hn-brand) / 0.16) 0%, rgb(var(--hn-brand) / 0.06) 45%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.35);
+  transition:
+    opacity 450ms var(--hn-ease-out),
+    transform 650ms var(--hn-ease-out);
+  pointer-events: none;
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  align-self: flex-start;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--hn-radius-md);
+  background: rgb(var(--hn-brand-soft));
+  color: rgb(var(--hn-brand));
+  transition:
+    transform 450ms var(--hn-ease-out),
+    background-color 200ms var(--hn-ease-out),
+    color 200ms var(--hn-ease-out);
+}
+
+.cardTitle {
+  margin-top: var(--hn-space-6);
+  font-size: var(--hn-text-lg);
+  letter-spacing: -0.015em;
+}
+
+.cardBody {
+  margin-top: var(--hn-space-2);
+  color: rgb(var(--hn-ink-soft));
+}
+
+/* :hover also fires on tap in mobile browsers; :active gives instant press feedback. */
+.card:hover,
+.card:active {
+  transform: translateY(-4px);
+  border-color: rgb(var(--hn-brand) / 0.35);
+  box-shadow: var(--hn-shadow-md);
+}
+
+.card:hover .bloom,
+.card:active .bloom {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.card:hover .icon,
+.card:active .icon {
+  transform: scale(1.08) rotate(-6deg);
+  background: rgb(var(--hn-brand));
+  color: rgb(var(--hn-on-brand));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover,
+  .card:active {
+    transform: none;
+  }
+
+  .card:hover .icon,
+  .card:active .icon {
+    transform: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-block: var(--hn-space-24);
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cell:last-child {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .cell {
+    grid-column: span 2;
+  }
+
+  .cell:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+
+}

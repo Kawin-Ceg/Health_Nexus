@@ -1,0 +1,68 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-2);
+  min-height: var(--hn-tap);
+  font-weight: 700;
+  font-size: var(--hn-text-lg);
+  letter-spacing: -0.02em;
+}
+
+.default {
+  color: rgb(var(--hn-ink));
+}
+
+.light {
+  color: rgb(var(--hn-on-panel));
+}
+
+.mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--hn-radius-sm);
+  background: rgb(var(--hn-brand));
+}
+
+.light .mark {
+  background: rgb(var(--hn-on-panel));
+}
+
+/* A plus sign with a terracotta centre */
+.mark::before,
+.mark::after {
+  content: "";
+  position: absolute;
+  background: rgb(var(--hn-on-brand));
+  border-radius: 2px;
+}
+
+.light .mark::before,
+.light .mark::after {
+  background: rgb(var(--hn-panel));
+}
+
+.mark::before {
+  width: 14px;
+  height: 4px;
+}
+
+.mark::after {
+  width: 4px;
+  height: 14px;
+}
+
+.dot {
+  position: relative;
+  z-index: 1;
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: rgb(var(--hn-accent));
+}
+
+.name {
+  line-height: 1;
+}

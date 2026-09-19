@@ -1,0 +1,140 @@
+@import "@fontsource-variable/inter";
+@import "./tokens.css";
+@import "./themes.css";
+
+/* Arial sized to Inter's metrics, so swapping in the web font causes no layout shift. */
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial"), local("ArialMT"), local("Helvetica"), local("Roboto");
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--hn-nav-height) + var(--hn-space-4));
+}
+
+body {
+  min-height: 100dvh;
+  background: rgb(var(--hn-paper));
+  color: rgb(var(--hn-ink));
+  font-family: var(--hn-font-sans);
+  font-size: var(--hn-text-base);
+  line-height: var(--hn-leading-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+
+/* Base typography */
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 650;
+  line-height: var(--hn-leading-tight);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* The one serif moment: italic emphasis words inside headings. Extra bottom
+   padding keeps descenders (y, g, p) from clipping at tight leading. */
+h1 em,
+h2 em,
+h3 em {
+  font-family: var(--hn-font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  padding-bottom: 0.08em;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--hn-focus));
+  outline-offset: 3px;
+  border-radius: var(--hn-radius-sm);
+}
+
+::selection {
+  background: rgb(var(--hn-brand) / 0.2);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Reduced motion: every animation and transition jumps to its end state. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

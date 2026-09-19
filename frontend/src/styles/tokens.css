@@ -1,0 +1,91 @@
+/* Design tokens. Colours are RGB triplets so they work with alpha:
+   color: rgb(var(--hn-ink));  background: rgb(var(--hn-brand) / 0.08); */
+
+:root {
+  /* Colour (light defaults; themes.css swaps these under .dark) */
+  --hn-ink: 22 33 31;
+  --hn-ink-soft: 61 74 71;
+  --hn-paper: 250 247 242;
+  --hn-paper-raised: 243 238 229;
+  --hn-surface: 255 255 255;
+  --hn-line: 228 221 207;
+
+  --hn-brand: 14 70 64; /* #0E4640 teal, primary */
+  --hn-brand-soft: 222 236 232; /* tinted brand fill */
+  --hn-on-brand: 255 255 255; /* text on brand fills */
+  --hn-accent: 193 101 59; /* #C1653B terracotta, decorative + large text */
+  --hn-accent-ink: 158 74 38; /* terracotta dark enough for small text (AA) */
+  --hn-warn: 166 112 18; /* chart "elevated" */
+
+  --hn-panel: 12 38 35; /* dark surface for hero side + footer */
+  --hn-panel-raised: 22 55 51;
+  --hn-on-panel: 240 236 228;
+  --hn-on-panel-soft: 183 199 194;
+  --hn-on-panel-error: 240 164 128; /* readable error text on the dark panel */
+
+  --hn-focus: 14 70 64;
+
+  /* Type */
+  --hn-font-sans: "Inter Variable", "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --hn-font-serif: Georgia, "Times New Roman", serif; /* italic emphasis words only */
+
+  --hn-text-xs: 0.75rem;
+  --hn-text-sm: 0.875rem;
+  --hn-text-base: 1rem;
+  --hn-text-lg: 1.125rem;
+  --hn-text-xl: 1.25rem;
+  --hn-text-2xl: 1.5rem;
+  --hn-text-3xl: clamp(1.75rem, 1.4rem + 1.5vw, 2.5rem);
+  --hn-text-display: clamp(2.25rem, 1.6rem + 3vw, 4rem);
+
+  --hn-leading-tight: 1.1;
+  --hn-leading-snug: 1.3;
+  --hn-leading-body: 1.6;
+
+  /* Spacing: 4px scale */
+  --hn-space-1: 4px;
+  --hn-space-2: 8px;
+  --hn-space-3: 12px;
+  --hn-space-4: 16px;
+  --hn-space-5: 20px;
+  --hn-space-6: 24px;
+  --hn-space-8: 32px;
+  --hn-space-10: 40px;
+  --hn-space-12: 48px;
+  --hn-space-16: 64px;
+  --hn-space-20: 80px;
+  --hn-space-24: 96px;
+
+  /* Radii: cards 16/24, controls 12, small chips 8 */
+  --hn-radius-sm: 8px;
+  --hn-radius-md: 12px;
+  --hn-radius-lg: 16px;
+  --hn-radius-xl: 24px;
+  --hn-radius-pill: 999px;
+
+  /* Shadows are tinted with ink, never pure black */
+  --hn-shadow-sm: 0 1px 2px rgb(var(--hn-ink) / 0.06), 0 1px 1px rgb(var(--hn-ink) / 0.04);
+  --hn-shadow-md: 0 8px 24px -8px rgb(var(--hn-ink) / 0.14), 0 2px 6px rgb(var(--hn-ink) / 0.05);
+  --hn-shadow-lg: 0 24px 60px -20px rgb(var(--hn-ink) / 0.28);
+
+  /* Motion */
+  --hn-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --hn-duration-hover: 180ms;
+  --hn-duration-reveal: 700ms;
+
+  /* Layout */
+  --hn-container: 1200px;
+  --hn-gutter: var(--hn-space-4);
+  --hn-nav-height: 68px;
+  --hn-tap: 44px;
+
+  /* Layers */
+  --hn-z-nav: 100;
+  --hn-z-menu: 200;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --hn-gutter: var(--hn-space-8);
+  }
+}

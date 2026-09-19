@@ -1,0 +1,189 @@
+.section {
+  padding-block: var(--hn-space-16);
+  background: rgb(var(--hn-paper-raised));
+}
+
+.layout {
+  display: grid;
+  gap: var(--hn-space-12);
+  align-items: center;
+}
+
+.title {
+  font-size: var(--hn-text-3xl);
+}
+
+.title em {
+  color: rgb(var(--hn-brand));
+}
+
+.body {
+  margin-top: var(--hn-space-4);
+  max-width: 34rem;
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-lg);
+}
+
+.points {
+  display: grid;
+  gap: var(--hn-space-6);
+  margin-top: var(--hn-space-10);
+}
+
+.point {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--hn-space-4);
+  align-items: start;
+}
+
+.pointIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--hn-radius-md);
+  background: rgb(var(--hn-surface));
+  color: rgb(var(--hn-brand));
+  box-shadow: var(--hn-shadow-sm);
+}
+
+.pointTitle {
+  font-size: var(--hn-text-lg);
+  letter-spacing: -0.01em;
+}
+
+.pointBody {
+  margin-top: var(--hn-space-1);
+  color: rgb(var(--hn-ink-soft));
+}
+
+/* Map card */
+.map {
+  padding: var(--hn-space-5);
+  border-radius: var(--hn-radius-xl);
+  background: rgb(var(--hn-surface));
+  box-shadow: var(--hn-shadow-md);
+}
+
+.mapTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hn-space-4);
+}
+
+.mapCaption {
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-sm);
+  font-weight: 500;
+}
+
+.liveDot {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* The only looping motion on the page: it signals real live state. */
+.liveDot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: ping 2s var(--hn-ease-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live {
+    display: none;
+  }
+}
+
+.field {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  margin-top: var(--hn-space-4);
+  border-radius: var(--hn-radius-lg);
+  background:
+    radial-gradient(circle at 30% 30%, rgb(var(--hn-brand) / 0.08), transparent 40%),
+    radial-gradient(circle at 75% 70%, rgb(var(--hn-accent) / 0.1), transparent 35%),
+    rgb(var(--hn-paper));
+  overflow: hidden;
+}
+
+/* Contour-style texture */
+.field::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: repeating-radial-gradient(circle at 60% 55%, transparent 0 22px, rgb(var(--hn-line) / 0.9) 22px 23px);
+  opacity: 0.7;
+}
+
+.area {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hn-space-2);
+  transform: translate(-50%, -50%);
+}
+
+.area:nth-child(1) { left: 34%; top: 30%; }
+.area:nth-child(2) { left: 26%; top: 72%; }
+.area:nth-child(3) { left: 72%; top: 38%; }
+.area:nth-child(4) { left: 66%; top: 76%; }
+
+.ring {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--hn-brand));
+  background: rgb(var(--hn-brand) / 0.16);
+}
+
+/* The outbreak locality */
+.area:nth-child(3) .ring {
+  width: 56px;
+  height: 56px;
+  border-color: rgb(var(--hn-accent));
+  background: rgb(var(--hn-accent) / 0.2);
+}
+
+.areaName {
+  padding: 2px var(--hn-space-2);
+  border-radius: var(--hn-radius-sm);
+  background: rgb(var(--hn-surface));
+  color: rgb(var(--hn-ink));
+  font-size: var(--hn-text-xs);
+  font-weight: 600;
+  box-shadow: var(--hn-shadow-sm);
+}
+
+@keyframes ping {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-block: var(--hn-space-24);
+  }
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr 1.05fr;
+    gap: var(--hn-space-16);
+  }
+}

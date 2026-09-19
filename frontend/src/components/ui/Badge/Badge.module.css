@@ -1,0 +1,25 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-1);
+  padding: 2px var(--hn-space-2);
+  border-radius: var(--hn-radius-sm);
+  font-size: var(--hn-text-xs);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.neutral {
+  background: rgb(var(--hn-ink) / 0.06);
+  color: rgb(var(--hn-ink-soft));
+}
+
+.brand {
+  background: rgb(var(--hn-brand-soft));
+  color: rgb(var(--hn-brand));
+}
+
+.accent {
+  background: rgb(var(--hn-accent) / 0.12);
+  color: rgb(var(--hn-accent-ink));
+}

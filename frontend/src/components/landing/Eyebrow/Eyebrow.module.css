@@ -1,0 +1,26 @@
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-2);
+  margin-bottom: var(--hn-space-4);
+  font-size: var(--hn-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--hn-accent));
+}
+
+.default {
+  color: rgb(var(--hn-accent-ink));
+}
+
+.light {
+  color: rgb(var(--hn-on-panel-soft));
+}

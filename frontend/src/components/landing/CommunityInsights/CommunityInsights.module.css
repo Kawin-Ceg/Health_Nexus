@@ -1,0 +1,217 @@
+.section {
+  padding-block: var(--hn-space-16);
+}
+
+.header {
+  max-width: 40rem;
+}
+
+.title {
+  font-size: var(--hn-text-3xl);
+}
+
+.title em {
+  color: rgb(var(--hn-brand));
+}
+
+.body {
+  margin-top: var(--hn-space-4);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-lg);
+}
+
+.layout {
+  display: grid;
+  gap: var(--hn-space-4);
+  margin-top: var(--hn-space-10);
+}
+
+.chartCard {
+  padding: var(--hn-space-5);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: var(--hn-radius-xl);
+  background: rgb(var(--hn-surface));
+}
+
+.chartTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hn-space-2);
+}
+
+.chartTitle {
+  font-weight: 600;
+  font-size: var(--hn-text-sm);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hn-space-4);
+  margin-top: var(--hn-space-3);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-sm);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-2);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* Series colours. Recharts sets a fill attribute on each bar; CSS wins over it. */
+.swatch.normal,
+.normal path {
+  background: rgb(var(--hn-brand));
+  fill: rgb(var(--hn-brand));
+}
+
+.swatch.elevated,
+.elevated path {
+  background: rgb(var(--hn-warn));
+  fill: rgb(var(--hn-warn));
+}
+
+.swatch.high,
+.high path {
+  background: rgb(var(--hn-accent));
+  fill: rgb(var(--hn-accent));
+}
+
+.chart {
+  height: 280px;
+  margin-top: var(--hn-space-4);
+}
+
+.grid line {
+  stroke: rgb(var(--hn-line));
+}
+
+.axis :global(.recharts-cartesian-axis-tick-value) {
+  fill: rgb(var(--hn-ink-soft));
+  font-size: 12px;
+}
+
+.cursor {
+  fill: rgb(var(--hn-ink) / 0.05);
+}
+
+.tooltip {
+  min-width: 160px;
+  padding: var(--hn-space-3);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: var(--hn-radius-md);
+  background: rgb(var(--hn-surface));
+  box-shadow: var(--hn-shadow-md);
+  font-size: var(--hn-text-sm);
+}
+
+.tooltipLabel {
+  margin-bottom: var(--hn-space-2);
+  font-weight: 600;
+}
+
+.tooltipRows {
+  display: grid;
+  gap: var(--hn-space-1);
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hn-space-4);
+  color: rgb(var(--hn-ink-soft));
+}
+
+.tooltipRow dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-2);
+}
+
+.tooltipRow dd {
+  margin: 0;
+  color: rgb(var(--hn-ink));
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tooltipTotal {
+  margin-top: var(--hn-space-1);
+  padding-top: var(--hn-space-2);
+  border-top: 1px solid rgb(var(--hn-line));
+}
+
+.stats {
+  display: grid;
+  gap: var(--hn-space-4);
+}
+
+.stat {
+  padding: var(--hn-space-5) var(--hn-space-6);
+  border-radius: var(--hn-radius-xl);
+  background: rgb(var(--hn-paper-raised));
+}
+
+.stat:last-child {
+  background: rgb(var(--hn-accent) / 0.12);
+}
+
+.statValue {
+  font-size: var(--hn-text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat:last-child .statValue {
+  color: rgb(var(--hn-accent-ink));
+}
+
+.statLabel {
+  margin-top: var(--hn-space-1);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-sm);
+}
+
+@media (min-width: 640px) {
+  .stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-block: var(--hn-space-24);
+  }
+
+  .chartCard {
+    padding: var(--hn-space-8);
+  }
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+    align-content: stretch;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+}

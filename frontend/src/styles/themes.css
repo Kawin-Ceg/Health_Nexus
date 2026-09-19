@@ -1,0 +1,26 @@
+/* Light values live in tokens.css. Dark mode redefines the colour tokens. */
+
+.dark {
+  --hn-ink: 236 232 224;
+  --hn-ink-soft: 178 190 186;
+  --hn-paper: 12 20 19;
+  --hn-paper-raised: 18 29 28;
+  --hn-surface: 23 36 34;
+  --hn-line: 43 59 56;
+
+  --hn-brand: 104 196 180; /* lifted teal so it reads on dark */
+  --hn-brand-soft: 24 52 48;
+  --hn-on-brand: 10 26 24;
+  --hn-accent: 226 138 98;
+  --hn-accent-ink: 236 158 122;
+  --hn-warn: 226 178 84;
+
+  --hn-panel: 7 15 14;
+  --hn-panel-raised: 18 34 32;
+  --hn-on-panel: 236 232 224;
+  --hn-on-panel-soft: 170 186 181;
+
+  --hn-focus: 104 196 180;
+
+  color-scheme: dark;
+}

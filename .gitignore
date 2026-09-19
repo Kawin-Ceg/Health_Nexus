@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+ml/data/*
+!ml/data/.gitkeep
+ml/models/*.joblib
+ml/models/**/*.joblib
+node_modules/
+frontend/dist/

@@ -1,0 +1,6 @@
+.container {
+  width: 100%;
+  max-width: calc(var(--hn-container) + 2 * var(--hn-gutter));
+  margin-inline: auto;
+  padding-inline: var(--hn-gutter);
+}
