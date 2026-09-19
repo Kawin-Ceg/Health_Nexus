@@ -8,3 +8,4 @@ ml/models/*.joblib
 ml/models/**/*.joblib
 node_modules/
 frontend/dist/
+.agents/
