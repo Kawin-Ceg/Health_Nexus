@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     SMTP_FROM: str = "HealthNexus <no-reply@healthnexus.local>"
     SMTP_STARTTLS: bool = True
 
+    # Uploaded avatars and cover images, served at /api/v1/media.
+    MEDIA_DIR: str = "media"
+
     # Seed scripts
     ADMIN_EMAIL: str | None = None
     ADMIN_PASSWORD: str | None = None

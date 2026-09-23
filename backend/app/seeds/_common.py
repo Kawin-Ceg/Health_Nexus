@@ -9,10 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import SessionLocal, engine
-from app.models import Alert, ConsentRecord, HealthRecord, ProcessedData, User
-from app.models.enums import AlertSeverity, AlertType, ConsentType
-from app.services.scoring import score_reading
-from app.services.vitals import VITALS, validate_vitals
+from app.models import ConsentRecord, ProcessedData, User
+from app.models.enums import ConsentType
+from app.services.metrics import validate_vitals
+from app.services.readings import record_reading
 
 
 def run(main: Callable[[AsyncSession], Awaitable[None]]) -> None:
@@ -52,45 +52,9 @@ async def add_scored_reading(
     measured_at: datetime,
     symptoms: list[str] | None = None,
 ) -> ProcessedData:
-    """Store a reading and its score, plus a personal alert when it is flagged."""
-    clean = validate_vitals(vitals)
-    record = HealthRecord(
-        user_id=user.id,
-        vitals=clean,
-        symptoms=symptoms or [],
-        geo_lat=user.geo_lat,
-        geo_lng=user.geo_lng,
-        timestamp=measured_at,
-        created_at=measured_at,
-    )
-    session.add(record)
-    await session.flush()
-
-    score = score_reading(clean)
-    processed = ProcessedData(
-        health_record_id=record.id,
-        user_id=user.id,
-        features=score.features,
-        anomaly_score=score.anomaly_score,
-        is_anomaly=score.is_anomaly,
-        processed_at=measured_at,
-    )
-    session.add(processed)
-
-    if score.is_anomaly and score.top_feature:
-        key = score.top_feature
-        severity = AlertSeverity.high if score.anomaly_score >= 0.75 else AlertSeverity.medium
-        session.add(
-            Alert(
-                user_id=user.id,
-                alert_type=AlertType.personal,
-                severity=severity,
-                message=f"Your {key.replace('_', ' ')} reading of {clean[key]:g} {VITALS[key].unit} is outside the normal range.",
-                created_at=measured_at,
-            )
-        )
-    await session.flush()
-    return processed
+    """Store and score a reading exactly as POST /health/vitals does, dated as if submitted then."""
+    recorded = await record_reading(session, user, validate_vitals(vitals), symptoms or [], measured_at, stored_at=measured_at)
+    return recorded.processed
 
 
 def utcnow() -> datetime:

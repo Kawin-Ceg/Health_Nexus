@@ -1,6 +1,35 @@
+@layer theme, base, components, utilities;
 @import "@fontsource-variable/inter";
 @import "./tokens.css";
 @import "./themes.css";
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Tokens exposed to Tailwind: `text-ink`, `bg-brand/10`, `border-line`... One palette for both systems. */
+@theme inline {
+  --color-ink: rgb(var(--hn-ink));
+  --color-ink-soft: rgb(var(--hn-ink-soft));
+  --color-paper: rgb(var(--hn-paper));
+  --color-paper-raised: rgb(var(--hn-paper-raised));
+  --color-surface: rgb(var(--hn-surface));
+  --color-line: rgb(var(--hn-line));
+  --color-brand: rgb(var(--hn-brand));
+  --color-brand-soft: rgb(var(--hn-brand-soft));
+  --color-on-brand: rgb(var(--hn-on-brand));
+  --color-accent: rgb(var(--hn-accent));
+  --color-accent-ink: rgb(var(--hn-accent-ink));
+  --color-warn: rgb(var(--hn-warn));
+  --color-danger: rgb(var(--hn-danger));
+  --color-danger-soft: rgb(var(--hn-danger-soft));
+  --color-success: rgb(var(--hn-success));
+  --color-success-soft: rgb(var(--hn-success-soft));
+  --color-sev-critical: rgb(var(--hn-sev-critical));
+  --color-sev-high: rgb(var(--hn-sev-high));
+  --color-sev-moderate: rgb(var(--hn-sev-moderate));
+  --color-sev-low: rgb(var(--hn-sev-low));
+  --font-sans: var(--hn-font-sans);
+}
+
 
 /* Arial sized to Inter's metrics, so swapping in the web font causes no layout shift. */
 @font-face {
@@ -12,6 +41,8 @@
   line-gap-override: 0%;
 }
 
+/* In the base layer, so a utility class always beats the reset. */
+@layer base {
 /* Reset */
 *,
 *::before,
@@ -119,6 +150,14 @@ h3 em {
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
+}
+}
+
+/* Motion: only transform and opacity, 150–200ms. Never transition-all. */
+.hn-fade {
+  transition-property: opacity, transform;
+  transition-duration: 180ms;
+  transition-timing-function: var(--hn-ease-out);
 }
 
 /* Reduced motion: every animation and transition jumps to its end state. */

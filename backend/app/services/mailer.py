@@ -82,3 +82,24 @@ async def send_password_reset_email(to: str, name: str, token: str) -> None:
         "This link works once and expires in 1 hour. Resetting signs you out everywhere.\n"
         "If you did not ask for this, ignore this message; your password has not changed.\n",
     )
+
+
+async def send_email_change_email(to: str, name: str, token: str) -> None:
+    await send_email(
+        to,
+        "Confirm your new HealthNexus email address",
+        f"Hello {name},\n\n"
+        f"Confirm this address to make it your HealthNexus sign-in email:\n{_link('/confirm-email', token)}\n\n"
+        "This link works once and expires in 24 hours. Until you confirm, your old address keeps working.\n"
+        "If you did not ask for this, ignore this message.\n",
+    )
+
+
+async def send_email_changed_notice(to: str, name: str, new_address: str) -> None:
+    await send_email(
+        to,
+        "Your HealthNexus email address was changed",
+        f"Hello {name},\n\n"
+        f"Your HealthNexus sign-in email is now {mask_email(new_address)}. This address will no longer work for signing in.\n"
+        "If you did not make this change, reset your password straight away and contact support.\n",
+    )

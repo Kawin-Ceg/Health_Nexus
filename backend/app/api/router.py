@@ -1,7 +1,14 @@
 from fastapi import APIRouter
 
-from app.api.routes import auth, onboarding
+from app.api.routes import alerts, auth, onboarding, phc, profile, schedule, settings, vitals
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
 api_router.include_router(onboarding.router)
+api_router.include_router(vitals.router)
+api_router.include_router(alerts.router)
+api_router.include_router(alerts.phc_router)
+api_router.include_router(schedule.router)
+api_router.include_router(phc.router)
+api_router.include_router(settings.router)
+api_router.include_router(profile.router)

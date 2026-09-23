@@ -21,6 +21,12 @@
   --hn-success: 24 110 72;
   --hn-success-soft: 224 242 232;
 
+  /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
+  --hn-sev-critical: 176 38 31;
+  --hn-sev-high: 193 86 30;
+  --hn-sev-moderate: 166 112 18;
+  --hn-sev-low: 74 96 92;
+
   --hn-panel: 12 38 35; /* dark surface for hero side + footer */
   --hn-panel-raised: 22 55 51;
   --hn-on-panel: 240 236 228;

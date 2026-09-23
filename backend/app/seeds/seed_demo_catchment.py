@@ -124,6 +124,7 @@ async def seed(session: AsyncSession) -> None:
             phc_id=facility.id,
             district=facility.district,
             state=facility.state,
+            phone=f"+91 94440 {10000 + i * 137:05d}",
             pincode="600004",
             area=AREAS[i % len(AREAS)],
             geo_lat=round(facility.latitude + rng.uniform(-0.012, 0.012), 6),
