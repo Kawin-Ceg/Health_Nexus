@@ -16,6 +16,10 @@
   --hn-accent: 193 101 59; /* #C1653B terracotta, decorative + large text */
   --hn-accent-ink: 158 74 38; /* terracotta dark enough for small text (AA) */
   --hn-warn: 166 112 18; /* chart "elevated" */
+  --hn-danger: 176 38 31; /* form errors; AA on paper and surface */
+  --hn-danger-soft: 252 234 231;
+  --hn-success: 24 110 72;
+  --hn-success-soft: 224 242 232;
 
   --hn-panel: 12 38 35; /* dark surface for hero side + footer */
   --hn-panel-raised: 22 55 51;

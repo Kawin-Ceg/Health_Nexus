@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { Spinner } from "../Spinner/Spinner";
 import styles from "./Button.module.css";
 
 type Variant = "primary" | "secondary" | "ghost" | "inverse";
@@ -10,17 +11,35 @@ interface BaseProps {
   variant?: Variant;
   size?: Size;
   className?: string;
+  fullWidth?: boolean;
   onClick?: () => void;
 }
 
+interface ActionProps {
+  type?: "button" | "submit";
+  /** Shows a spinner and blocks further clicks while a request is in flight. */
+  loading?: boolean;
+  disabled?: boolean;
+}
+
 type ButtonProps =
-  | (BaseProps & { to: string; href?: never; type?: never })
-  | (BaseProps & { href: string; to?: never; type?: never })
-  | (BaseProps & { type?: "button" | "submit"; to?: never; href?: never });
+  | (BaseProps & { to: string; href?: never; type?: never; loading?: never; disabled?: never })
+  | (BaseProps & { href: string; to?: never; type?: never; loading?: never; disabled?: never })
+  | (BaseProps & ActionProps & { to?: never; href?: never });
 
 /** Renders a router Link (`to`), an anchor (`href`), or a native button. */
-export function Button({ children, variant = "primary", size = "md", className, onClick, ...rest }: ButtonProps) {
-  const cls = [styles.button, styles[variant], styles[size], className].filter(Boolean).join(" ");
+export function Button({
+  children,
+  variant = "primary",
+  size = "md",
+  className,
+  fullWidth,
+  onClick,
+  ...rest
+}: ButtonProps) {
+  const cls = [styles.button, styles[variant], styles[size], fullWidth && styles.full, className]
+    .filter(Boolean)
+    .join(" ");
 
   if ("to" in rest && rest.to) {
     return (
@@ -36,8 +55,10 @@ export function Button({ children, variant = "primary", size = "md", className, 
       </a>
     );
   }
+  const { type = "button", loading = false, disabled = false } = rest as ActionProps;
   return (
-    <button type={("type" in rest && rest.type) || "button"} className={cls} onClick={onClick}>
+    <button type={type} className={cls} onClick={onClick} disabled={disabled || loading} aria-busy={loading || undefined}>
+      {loading && <Spinner />}
       {children}
     </button>
   );

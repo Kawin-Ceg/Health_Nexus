@@ -1,0 +1,25 @@
+.page {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--hn-space-3);
+  min-height: 100dvh;
+  padding: var(--hn-space-6) var(--hn-gutter);
+  text-align: center;
+}
+
+.page p {
+  max-width: 44ch;
+  margin-bottom: var(--hn-space-2);
+  color: rgb(var(--hn-ink-soft));
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--hn-radius-lg);
+  background: rgb(var(--hn-brand-soft));
+  color: rgb(var(--hn-brand));
+}
