@@ -1,0 +1,24 @@
+.wrap {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--hn-space-3);
+  min-height: 100dvh;
+  padding: var(--hn-space-6) var(--hn-gutter);
+  text-align: center;
+}
+
+.wrap p {
+  max-width: 40ch;
+  color: rgb(var(--hn-ink-soft));
+}
+
+.button {
+  min-height: var(--hn-tap);
+  margin-top: var(--hn-space-2);
+  padding: 0 var(--hn-space-5);
+  border-radius: var(--hn-radius-md);
+  background: rgb(var(--hn-brand));
+  color: rgb(var(--hn-on-brand));
+  font-weight: 600;
+}

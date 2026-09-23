@@ -1,0 +1,27 @@
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.large {
+  width: 28px;
+  height: 28px;
+  color: rgb(var(--hn-brand));
+}
+
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

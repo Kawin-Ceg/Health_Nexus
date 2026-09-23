@@ -1,0 +1,47 @@
+.wrap {
+  display: grid;
+  gap: var(--hn-space-1);
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hn-space-3);
+  cursor: pointer;
+}
+
+.box {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: rgb(var(--hn-brand));
+  cursor: pointer;
+}
+
+.box[aria-invalid="true"] {
+  outline: 2px solid rgb(var(--hn-danger));
+  outline-offset: 1px;
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+}
+
+.label {
+  font-size: var(--hn-text-sm);
+  font-weight: 500;
+}
+
+.description {
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-xs);
+}
+
+.error {
+  padding-left: 32px;
+  color: rgb(var(--hn-danger));
+  font-size: var(--hn-text-xs);
+  font-weight: 500;
+}

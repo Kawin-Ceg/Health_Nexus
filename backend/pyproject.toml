@@ -14,6 +14,7 @@ dependencies = [
     "google-genai>=1.0",
     "tzdata>=2024.1",
     "healthnexus-ml",
+    "python-jose[cryptography]==3.3.0",
     "passlib[bcrypt]==1.7.4",
     "bcrypt==4.0.1",
 ]
@@ -26,3 +27,8 @@ dev = ["pytest>=8", "pytest-asyncio>=0.24", "httpx>=0.27"]
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
