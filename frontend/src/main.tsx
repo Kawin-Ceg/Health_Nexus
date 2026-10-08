@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ComingSoon } from "./components/ComingSoon";
@@ -9,37 +9,49 @@ import { RedirectIfAuthenticated } from "./components/RedirectIfAuthenticated";
 import { AuthProvider } from "./context/AuthContext";
 import { paths } from "./lib/routes";
 import { initTheme } from "./lib/theme";
-import { ConfirmEmail } from "./pages/ConfirmEmail";
-import { Notifications } from "./pages/Notifications";
-import { Profile } from "./pages/Profile";
-import { Settings } from "./pages/Settings";
-import { CitizenAlerts } from "./pages/citizen/Alerts";
-import { CitizenDashboard } from "./pages/citizen/Dashboard";
-import { History } from "./pages/citizen/History";
-import { SubmitVitals } from "./pages/citizen/SubmitVitals";
-import { CitizenRecord } from "./pages/phc/CitizenRecord";
-import { Citizens } from "./pages/phc/Citizens";
-import { PhcAlerts } from "./pages/phc/PhcAlerts";
-import { PhcDashboard } from "./pages/phc/PhcDashboard";
-import { Reports } from "./pages/phc/Reports";
-import { RiskMap } from "./pages/phc/RiskMap";
-import { Schedule } from "./pages/phc/Schedule";
-import { ForgotPassword } from "./pages/ForgotPassword";
-import { LandingPage } from "./pages/LandingPage";
-import { LoginPage } from "./pages/LoginPage";
-import { Onboarding } from "./pages/Onboarding";
-import { PendingApproval } from "./pages/PendingApproval";
-import { PHCSignup } from "./pages/PHCSignup";
-import { ResetPassword } from "./pages/ResetPassword";
-import { SignupPage } from "./pages/SignupPage";
-import { VerifyEmail } from "./pages/VerifyEmail";
-import { SessionsPage } from "./pages/account/SessionsPage";
-import { NotFound } from "./pages/errors/NotFound";
-import { Unauthorized } from "./pages/errors/Unauthorized";
+/* Every page is loaded on demand. Without this the landing page pulls the whole
+   app down with it, Recharts and Leaflet included, before anyone signs in. */
+const page = <T extends string>(loader: () => Promise<Record<string, unknown>>, name: T) =>
+  lazy(() => loader().then((m) => ({ default: m[name] as ComponentType })));
+
+const ConfirmEmail = page(() => import("./pages/ConfirmEmail"), "ConfirmEmail");
+const Notifications = page(() => import("./pages/Notifications"), "Notifications");
+const Profile = page(() => import("./pages/Profile"), "Profile");
+const Settings = page(() => import("./pages/Settings"), "Settings");
+const CitizenAlerts = page(() => import("./pages/citizen/Alerts"), "CitizenAlerts");
+const CitizenDashboard = page(() => import("./pages/citizen/Dashboard"), "CitizenDashboard");
+const History = page(() => import("./pages/citizen/History"), "History");
+const SubmitVitals = page(() => import("./pages/citizen/SubmitVitals"), "SubmitVitals");
+const CitizenRecord = page(() => import("./pages/phc/CitizenRecord"), "CitizenRecord");
+const Citizens = page(() => import("./pages/phc/Citizens"), "Citizens");
+const PhcAlerts = page(() => import("./pages/phc/PhcAlerts"), "PhcAlerts");
+const PhcDashboard = page(() => import("./pages/phc/PhcDashboard"), "PhcDashboard");
+const Reports = page(() => import("./pages/phc/Reports"), "Reports");
+const RiskMap = page(() => import("./pages/phc/RiskMap"), "RiskMap");
+const Schedule = page(() => import("./pages/phc/Schedule"), "Schedule");
+const ForgotPassword = page(() => import("./pages/ForgotPassword"), "ForgotPassword");
+const LandingPage = page(() => import("./pages/LandingPage"), "LandingPage");
+const LoginPage = page(() => import("./pages/LoginPage"), "LoginPage");
+const Onboarding = page(() => import("./pages/Onboarding"), "Onboarding");
+const PendingApproval = page(() => import("./pages/PendingApproval"), "PendingApproval");
+const PHCSignup = page(() => import("./pages/PHCSignup"), "PHCSignup");
+const ResetPassword = page(() => import("./pages/ResetPassword"), "ResetPassword");
+const SignupPage = page(() => import("./pages/SignupPage"), "SignupPage");
+const VerifyEmail = page(() => import("./pages/VerifyEmail"), "VerifyEmail");
+const SessionsPage = page(() => import("./pages/account/SessionsPage"), "SessionsPage");
+const NotFound = page(() => import("./pages/errors/NotFound"), "NotFound");
+const Unauthorized = page(() => import("./pages/errors/Unauthorized"), "Unauthorized");
+
 import "./styles/global.css";
 
 // Follow the system theme until the signed-in user's saved preference loads (AppShell).
 initTheme();
+
+/** Shown while a route chunk loads. Deliberately quiet: on a fast connection it
+ *  flashes for a few frames, and a spinner there reads as an error. */
+function RouteFallback() {
+  return <div role="status" aria-live="polite" className="sr-only">Loading</div>;
+}
 
 const root = document.getElementById("root");
 if (!root) throw new Error("#root element missing from index.html");
@@ -49,6 +61,7 @@ createRoot(root).render(
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             {/* Signed-out visitors only */}
             <Route element={<RedirectIfAuthenticated />}>
@@ -111,6 +124,7 @@ createRoot(root).render(
             <Route path={paths.unauthorized} element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

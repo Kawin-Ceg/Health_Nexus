@@ -102,7 +102,7 @@ export function AppShell() {
       end={item.end}
       className={({ isActive }) =>
         cx(
-          "flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium",
+          "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium",
           isActive ? "bg-brand-soft text-brand" : "text-ink-soft hover:bg-paper-raised hover:text-ink",
         )
       }
@@ -110,7 +110,7 @@ export function AppShell() {
       <item.icon size={18} aria-hidden="true" />
       <span className="flex-1">{item.label}</span>
       {!!item.badge && (
-        <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-semibold text-white" aria-label={`${item.badge} new`}>
+        <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-semibold text-on-danger" aria-label={`${item.badge} new`}>
           {item.badge > 99 ? "99+" : item.badge}
         </span>
       )}
@@ -123,7 +123,7 @@ export function AppShell() {
         <Logo />
         <button
           type="button"
-          className="rounded-lg p-2 text-ink"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-ink"
           aria-expanded={open}
           aria-controls="app-nav"
           onClick={() => setOpen((o) => !o)}
@@ -151,7 +151,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => void logout()}
-              className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-ink-soft hover:bg-paper-raised hover:text-ink"
+              className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-ink-soft hover:bg-paper-raised hover:text-ink"
             >
               <LogOut size={18} aria-hidden="true" />
               Sign out

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.api.routes.schedule import check_booking_time
-from app.api.views import alert_out, person, visit_for_worker
+from app.api.views import alert_out, checks_of, person, visit_for_worker
 from app.db.session import get_session
 from app.models import (
     Alert,
@@ -291,6 +291,7 @@ def _case_out(processed: ProcessedData, record: HealthRecord, citizen: User) -> 
         vitals=record.vitals,
         symptoms=record.symptoms,
         measured_at=record.timestamp,
+        basis=processed.basis,
     )
 
 
@@ -445,6 +446,7 @@ async def worklist(
                         signal=describe_signal(p.features, r.vitals),
                         symptoms=r.symptoms,
                         measured_at=r.timestamp,
+                        basis=p.basis,
                     )
                     for p, r in top
                 ],
@@ -556,6 +558,8 @@ def _entry(record: HealthRecord, processed: ProcessedData | None) -> TimelineEnt
         signal=describe_signal(processed.features, record.vitals) if flagged and processed else None,
         resolution=processed.resolution if processed else None,
         reviewed_at=processed.reviewed_at if processed else None,
+        basis=processed.basis if processed else None,
+        checks=checks_of(processed),
     )
 
 
@@ -589,7 +593,7 @@ async def citizen_record(
         if not series:
             continue
         latest_at, latest = series[0]
-        base = baseline_of([v for _, v in series[1:]])
+        base = baseline_of(key, [v for _, v in reversed(series[1:])])
         vitals.append(
             RecordVital(
                 key=key,
@@ -597,8 +601,8 @@ async def citizen_record(
                 latest_at=latest_at,
                 position=position(key, latest),
                 readings=len(series),
-                baseline=BaselineOut(mean=round(base.mean, 2), sd=round(base.sd, 2), n=base.n) if base else None,
-                z_score=round((latest - base.mean) / base.sd, 2) if base and base.sd > 0 else None,
+                baseline=BaselineOut(usual=round(base.usual, 2), spread=round(base.spread, 2), n=base.n) if base else None,
+                z_score=round((latest - base.usual) / base.spread, 2) if base else None,
             )
         )
 

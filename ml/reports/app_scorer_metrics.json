@@ -1,0 +1,191 @@
+{
+  "model_version": "personal-baseline-v1",
+  "readings": 4432,
+  "people": 71,
+  "false_flags": {
+    "old": 0.2464,
+    "new": 0.0147
+  },
+  "false_flags_by_stage": {
+    "old": {
+      "learning": 0.2387,
+      "blending": 0.2449,
+      "personal": 0.2481
+    },
+    "new": {
+      "learning": 0.035,
+      "blending": 0.0075,
+      "personal": 0.0136
+    }
+  },
+  "people_flagged_over_half": {
+    "old": 15,
+    "new": 0
+  },
+  "episode_detection": {
+    "established|mild": {
+      "old": 0.194,
+      "new": 0.161
+    },
+    "established|moderate": {
+      "old": 0.161,
+      "new": 0.677
+    },
+    "established|strong": {
+      "old": 0.258,
+      "new": 0.984
+    },
+    "new user|mild": {
+      "old": 0.191,
+      "new": 0.162
+    },
+    "new user|moderate": {
+      "old": 0.176,
+      "new": 0.574
+    },
+    "new user|strong": {
+      "old": 0.294,
+      "new": 0.882
+    }
+  },
+  "threshold_sweep": [
+    {
+      "FLAG_THRESHOLD": 0.0,
+      "false flags": 0.1013,
+      "moderate episodes caught": 0.9677
+    },
+    {
+      "FLAG_THRESHOLD": 0.25,
+      "false flags": 0.0368,
+      "moderate episodes caught": 0.871
+    },
+    {
+      "FLAG_THRESHOLD": 0.5,
+      "false flags": 0.0147,
+      "moderate episodes caught": 0.6774
+    },
+    {
+      "FLAG_THRESHOLD": 0.75,
+      "false flags": 0.0065,
+      "moderate episodes caught": 0.4839
+    },
+    {
+      "FLAG_THRESHOLD": 1.0,
+      "false flags": 0.0047,
+      "moderate episodes caught": 0.3065
+    },
+    {
+      "FLAG_THRESHOLD": 1.5,
+      "false flags": 0.0045,
+      "moderate episodes caught": 0.0323
+    }
+  ],
+  "ablations": [
+    {
+      "variant": "app model (as shipped)",
+      "false flags": 0.0147,
+      "moderate caught": 0.6774,
+      "mild caught": 0.1613
+    },
+    {
+      "variant": "no second-reading rule",
+      "false flags": 0.0165,
+      "moderate caught": 0.7419,
+      "mild caught": 0.2097
+    },
+    {
+      "variant": "personal band 2.5 SD (first version)",
+      "false flags": 0.0093,
+      "moderate caught": 0.1613,
+      "mild caught": 0.0161
+    },
+    {
+      "variant": "full baseline at 14 readings",
+      "false flags": 0.0144,
+      "moderate caught": 0.6774,
+      "mild caught": 0.1613
+    },
+    {
+      "variant": "full baseline at 30 readings",
+      "false flags": 0.0151,
+      "moderate caught": 0.6613,
+      "mild caught": 0.1613
+    },
+    {
+      "variant": "no spread floor",
+      "false flags": 0.0914,
+      "moderate caught": 0.9839,
+      "mild caught": 0.7903
+    },
+    {
+      "variant": "old placeholder",
+      "false flags": 0.2464,
+      "moderate caught": 0.1613,
+      "mild caught": 0.1935
+    }
+  ],
+  "grid": [
+    {
+      "PERSONAL_OK_Z": 1.5,
+      "FLAG_THRESHOLD": 0.25,
+      "false flags": 0.0368,
+      "mild": 0.371,
+      "moderate": 0.871,
+      "strong": 1.0
+    },
+    {
+      "PERSONAL_OK_Z": 1.5,
+      "FLAG_THRESHOLD": 0.5,
+      "false flags": 0.0147,
+      "mild": 0.1613,
+      "moderate": 0.6774,
+      "strong": 0.9839
+    },
+    {
+      "PERSONAL_OK_Z": 2.0,
+      "FLAG_THRESHOLD": 0.25,
+      "false flags": 0.0307,
+      "mild": 0.0806,
+      "moderate": 0.5968,
+      "strong": 0.9839
+    },
+    {
+      "PERSONAL_OK_Z": 2.0,
+      "FLAG_THRESHOLD": 0.5,
+      "false flags": 0.0104,
+      "mild": 0.0323,
+      "moderate": 0.4516,
+      "strong": 0.9677
+    },
+    {
+      "PERSONAL_OK_Z": 2.5,
+      "FLAG_THRESHOLD": 0.25,
+      "false flags": 0.0273,
+      "mild": 0.0161,
+      "moderate": 0.3548,
+      "strong": 0.9355
+    },
+    {
+      "PERSONAL_OK_Z": 2.5,
+      "FLAG_THRESHOLD": 0.5,
+      "false flags": 0.0093,
+      "mild": 0.0161,
+      "moderate": 0.1613,
+      "strong": 0.7581
+    }
+  ],
+  "spikes": [
+    {
+      "rule": "with second-reading rule (shipped)",
+      "false flags, clean": 0.0147,
+      "false flags, with spikes": 0.0149,
+      "moderate caught": 0.6774
+    },
+    {
+      "rule": "without it",
+      "false flags, clean": 0.0165,
+      "false flags, with spikes": 0.051,
+      "moderate caught": 0.7419
+    }
+  ]
+}

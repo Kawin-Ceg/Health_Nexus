@@ -9,8 +9,8 @@ from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
-ACCESS_TOKEN_TTL = timedelta(minutes=15)
-REFRESH_TOKEN_TTL = timedelta(days=30)
+ACCESS_TOKEN_TTL = timedelta(minutes=get_settings().ACCESS_TOKEN_EXPIRE_MINUTES)
+REFRESH_TOKEN_TTL = timedelta(days=get_settings().REFRESH_TOKEN_EXPIRE_DAYS)
 # A refresh token unused for this long is rejected even though it has not expired.
 REFRESH_IDLE_TIMEOUT = timedelta(hours=48)
 # A token rotated this recently and presented again is a race between two tabs,
@@ -24,6 +24,8 @@ REFRESH_COOKIE_NAME = "hn_refresh"
 # Only ever sent to the auth endpoints.
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
+# Fixed on purpose: an environment-supplied algorithm is a way in for
+# "alg: none" and key-confusion attacks.
 JWT_ALGORITHM = "HS256"
 
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")

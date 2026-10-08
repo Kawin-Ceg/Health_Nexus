@@ -1,68 +1,28 @@
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: var(--hn-space-2);
   min-height: var(--hn-tap);
-  font-weight: 700;
-  font-size: var(--hn-text-lg);
-  letter-spacing: -0.02em;
-}
-
-.default {
-  color: rgb(var(--hn-ink));
-}
-
-.light {
-  color: rgb(var(--hn-on-panel));
 }
 
 .mark {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--hn-radius-sm);
-  background: rgb(var(--hn-brand));
+  height: 36px;
+  width: auto;
 }
 
-.light .mark {
-  background: rgb(var(--hn-on-panel));
+.icon {
+  height: 32px;
+  width: 32px;
 }
 
-/* A plus sign with a terracotta centre */
-.mark::before,
-.mark::after {
-  content: "";
-  position: absolute;
-  background: rgb(var(--hn-on-brand));
-  border-radius: 2px;
+/* Which wordmark shows follows the active theme, set as .dark on <html>. */
+.onDark {
+  display: none;
 }
 
-.light .mark::before,
-.light .mark::after {
-  background: rgb(var(--hn-panel));
+:global(html.dark) .onLight {
+  display: none;
 }
 
-.mark::before {
-  width: 14px;
-  height: 4px;
-}
-
-.mark::after {
-  width: 4px;
-  height: 14px;
-}
-
-.dot {
-  position: relative;
-  z-index: 1;
-  width: 4px;
-  height: 4px;
-  border-radius: 1px;
-  background: rgb(var(--hn-accent));
-}
-
-.name {
-  line-height: 1;
+:global(html.dark) .onDark {
+  display: block;
 }

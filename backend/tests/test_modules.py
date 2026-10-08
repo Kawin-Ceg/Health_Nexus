@@ -403,3 +403,37 @@ async def test_password_change_and_profile(client, world):
     assert r.json()["bio"] == "Teacher"
     r = await client.post(f"{BASE}/profile/avatar", files={"file": ("a.png", b"not an image", "image/png")}, headers=ph)
     assert r.status_code == 415
+
+
+# --- Anomaly model: score breakdown and baselines -------------------------------
+
+
+async def test_scores_explain_themselves_and_baselines_build_up(client, world):
+    priya, ph = world["priya"]
+    _, wh = world["worker"]
+    start = utcnow() - timedelta(days=20)
+    for day in range(8):
+        reading = {**NORMAL, "heart_rate": 68 + day % 3}
+        r = await submit(client, ph, reading, measured_at=(start + timedelta(days=day)).isoformat())
+        assert r.status_code == 201, r.text
+
+    status = (await client.get(f"{BASE}/health/baseline", headers=ph)).json()
+    heart = next(v for v in status["vitals"] if v["key"] == "heart_rate")
+    assert heart["readings"] == 8 and heart["stage"] == "blending"
+    assert heart["baseline"] is not None and heart["readings_to_full"] == status["full_readings"] - 8
+
+    r = (await submit(client, ph, NORMAL)).json()
+    assert r["flagged"] is False and r["basis"] == "personal_baseline"
+    assert r["model_version"] and r["watch"] == []
+    check = next(c for c in r["checks"] if c["key"] == "heart_rate")
+    assert check["stage"] == "blending" and check["readings"] == 8 and check["contribution"] == 0
+
+    flagged = (await submit(client, ph, HIGH_BP)).json()
+    assert flagged["flagged"] is True
+    assert any(c["safety"] for c in flagged["checks"] if c["key"] in ("systolic", "diastolic"))
+
+    record = (await client.get(f"{BASE}/phc/citizens/{priya.id}/record", headers=wh)).json()
+    newest = record["timeline"][0]
+    assert newest["flagged"] and newest["basis"] == "personal_baseline" and newest["checks"]
+    rhr = next(v for v in record["vitals"] if v["key"] == "heart_rate")
+    assert rhr["baseline"]["usual"] > 0 and rhr["baseline"]["spread"] >= 4.0

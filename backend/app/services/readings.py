@@ -4,7 +4,6 @@ Used by POST /health/vitals and by the seed scripts, so demo data is scored
 exactly the way real data is.
 """
 
-import statistics
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,7 +15,7 @@ from app.models import Alert, HealthRecord, ProcessedData, User
 from app.models.enums import AlertType
 
 from .catchment import workers_serving
-from .scoring import MIN_BASELINE_READINGS, ScoreResult, score_reading
+from .scoring import BASELINE_WINDOW, MIN_BASELINE_READINGS, ScoreResult, robust_baseline, score_reading
 from .triage import alert_severity, describe_signal, severity_of
 from .visit_state import format_local
 
@@ -36,16 +35,18 @@ class Recorded:
 
 @dataclass(frozen=True)
 class Baseline:
-    mean: float
-    sd: float
+    usual: float  # the model's personal median
+    spread: float  # its robust SD
     n: int
 
 
-def baseline_of(values: list[float]) -> Baseline | None:
-    """A personal mean and SD, or None below MIN_BASELINE_READINGS: no baseline is better than a fake one."""
+def baseline_of(key: str, values: list[float]) -> Baseline | None:
+    """The scorer's own baseline for display, or None below MIN_BASELINE_READINGS:
+    no baseline is better than a fake one. `values` oldest first."""
     if len(values) < MIN_BASELINE_READINGS:
         return None
-    return Baseline(mean=statistics.fmean(values), sd=statistics.pstdev(values), n=len(values))
+    usual, spread = robust_baseline(key, values)
+    return Baseline(usual=usual, spread=spread, n=min(len(values), BASELINE_WINDOW))
 
 
 async def earlier_vitals(session: AsyncSession, user_id: uuid.UUID, before: datetime) -> list[dict[str, float]]:
@@ -100,6 +101,9 @@ async def record_reading(
         features=score.features,
         anomaly_score=score.anomaly_score,
         is_anomaly=score.is_anomaly,
+        basis=score.basis,
+        model_version=score.model_version,
+        details=score.details_json(),
     )
     if stored_at is not None:
         processed.processed_at = stored_at

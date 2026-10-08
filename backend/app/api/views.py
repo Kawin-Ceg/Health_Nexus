@@ -2,8 +2,8 @@
 
 from datetime import datetime
 
-from app.models import Alert, ScheduledVisit, User
-from app.schemas.health import AlertOut, VisitOut, VisitPerson
+from app.models import Alert, ProcessedData, ScheduledVisit, User
+from app.schemas.health import AlertOut, VitalCheck, VisitOut, VisitPerson
 from app.services.triage import citizen_ref
 from app.services.visit_state import visit_state
 
@@ -34,3 +34,13 @@ def visit_for_citizen(visit: ScheduledVisit, worker_name: str | None, now: datet
 
 def visit_for_worker(visit: ScheduledVisit, citizen: User, now: datetime) -> VisitOut:
     return VisitOut(**_base(visit, now), citizen=person(citizen))
+
+
+def checks_of(processed: ProcessedData | None) -> list[VitalCheck]:
+    """The stored per-vital judgement of a score. Empty for rows scored before it was stored."""
+    if processed is None or not processed.details:
+        return []
+    return [
+        VitalCheck(**detail, key=key, contribution=processed.features.get(key, 0.0))
+        for key, detail in processed.details.items()
+    ]

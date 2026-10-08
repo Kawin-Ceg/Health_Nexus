@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Phone } from "lucide-react";
+import { BasisTag, ScoreBreakdown } from "../../components/app/ModelInsights";
 import { BookVisitForm, NoFacility, ResolveControls } from "../../components/app/phc";
 import { TrendChart } from "../../components/app/TrendChart";
 import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, Stat, VisitBadge, cx } from "../../components/app/ui";
@@ -69,7 +70,7 @@ export function CitizenRecord() {
         actions={
           <>
             {id.phone && (
-              <a href={`tel:${id.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-ink">
+              <a href={`tel:${id.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-ink">
                 <Phone size={16} aria-hidden="true" /> {id.phone}
               </a>
             )}
@@ -85,7 +86,7 @@ export function CitizenRecord() {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="text-sm text-ink-soft" htmlFor="window">Showing the last</label>
-        <select id="window" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-9 rounded-lg border border-line bg-surface px-2 text-sm">
+        <select id="window" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-lg border border-line bg-surface px-2 text-sm">
           {WINDOWS.map((w) => <option key={w} value={w}>{w} days</option>)}
         </select>
         <span className="text-xs text-ink-soft">{fmtDate(r.window.start)} – {fmtDate(r.window.end)}. Every figure below covers this period.</span>
@@ -120,7 +121,7 @@ export function CitizenRecord() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[420px] text-left text-sm">
                 <thead className="text-xs uppercase tracking-wide text-ink-soft">
-                  <tr><th className="py-2 font-medium">Vital</th><th className="py-2 font-medium">Latest</th><th className="py-2 font-medium">Their usual (mean ± SD)</th><th className="py-2 font-medium">Deviation</th></tr>
+                  <tr><th className="py-2 font-medium">Vital</th><th className="py-2 font-medium">Latest</th><th className="py-2 font-medium">Their usual (model baseline)</th><th className="py-2 font-medium">Deviation</th></tr>
                 </thead>
                 <tbody className="divide-y divide-line">
                   {r.vitals.map((v) => {
@@ -134,7 +135,7 @@ export function CitizenRecord() {
                           {v.latest.toFixed(m.decimals)} {m.unit}
                         </td>
                         <td className="py-2 tabular-nums text-ink-soft">
-                          {v.baseline ? `${v.baseline.mean.toFixed(m.decimals)} ± ${v.baseline.sd.toFixed(m.decimals)} (n=${v.baseline.n})` : `too few readings (need ${r.min_baseline_readings})`}
+                          {v.baseline ? `${v.baseline.usual.toFixed(m.decimals)} ± ${v.baseline.spread.toFixed(m.decimals)} (last ${v.baseline.n})` : `too few readings (need ${r.min_baseline_readings})`}
                         </td>
                         <td className={cx("py-2 tabular-nums", far ? "font-semibold text-sev-high" : "text-ink-soft")}>
                           {v.z_score === null ? "—" : `${v.z_score > 0 ? "+" : ""}${v.z_score} SD`}
@@ -164,7 +165,7 @@ export function CitizenRecord() {
           className="mb-6"
           title={`${metric.label} in this period`}
           aside={charted.length > 1 && (
-            <select aria-label="Measurement to chart" value={metric.key} onChange={(e) => setChosen(e.target.value)} className="min-h-9 rounded-lg border border-line bg-surface px-2 text-sm">
+            <select aria-label="Measurement to chart" value={metric.key} onChange={(e) => setChosen(e.target.value)} className="min-h-11 rounded-lg border border-line bg-surface px-2 text-sm">
               {charted.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
           )}
@@ -183,8 +184,17 @@ export function CitizenRecord() {
                     <span className="text-ink">{fmtDateTime(t.measured_at)}</span>
                     {t.severity && <SeverityBadge severity={t.severity} />}
                     {t.flagged && <span className="text-xs text-ink-soft">{t.resolution ? t.resolution : "open"}</span>}
+                    {t.flagged && <BasisTag basis={t.basis} />}
                   </div>
                   {t.signal && <p className="text-sev-high">{t.signal}</p>}
+                  {t.flagged && t.checks.length > 0 && (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-xs font-semibold text-brand">Why it was flagged</summary>
+                      <div className="mt-2">
+                        <ScoreBreakdown checks={t.checks} metrics={metrics} who="worker" />
+                      </div>
+                    </details>
+                  )}
                   <p className="text-xs text-ink-soft">
                     {Object.entries(t.vitals).map(([k, v]) => `${metrics.get(k)?.label ?? k} ${v.toFixed(metrics.get(k)?.decimals ?? 0)}`).join(" · ")}
                     {t.symptoms.length > 0 && ` · ${t.symptoms.join(", ")}`}

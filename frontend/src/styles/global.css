@@ -20,6 +20,7 @@
   --color-accent-ink: rgb(var(--hn-accent-ink));
   --color-warn: rgb(var(--hn-warn));
   --color-danger: rgb(var(--hn-danger));
+  --color-on-danger: rgb(var(--hn-on-danger));
   --color-danger-soft: rgb(var(--hn-danger-soft));
   --color-success: rgb(var(--hn-success));
   --color-success-soft: rgb(var(--hn-success-soft));

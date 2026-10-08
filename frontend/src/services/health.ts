@@ -30,6 +30,53 @@ export interface VitalsResult {
   earlier_readings: number;
   basis_note: string;
   reviewed_by_someone: boolean;
+  model_version: string;
+  checks: VitalCheck[];
+  /** Unusual for this person, but waiting for a second reading before it flags. */
+  watch: string[];
+}
+
+export type BaselineStage = "learning" | "blending" | "personal";
+
+/** How one vital of a reading was judged by the anomaly model (backend services/scoring.py). */
+export interface VitalCheck {
+  key: string;
+  value: number;
+  stage: BaselineStage;
+  /** Earlier readings of this vital the baseline could use. */
+  readings: number;
+  /** 0 = published normal range only, 1 = this person's baseline only. */
+  weight: number;
+  /** How far outside the published normal range, in half-band widths (0 inside). */
+  published: number;
+  /** Past a safety limit: counts whatever the person's usual is. */
+  safety: boolean;
+  baseline: number | null;
+  spread: number | null;
+  z: number | null;
+  personal: number | null;
+  confirmed: boolean;
+  /** What it added to the score. Above 0 means it counted toward the flag. */
+  contribution: number;
+}
+
+export interface VitalBaseline {
+  key: string;
+  readings: number;
+  stage: BaselineStage;
+  weight: number;
+  baseline: number | null;
+  spread: number | null;
+  readings_to_start: number;
+  readings_to_full: number;
+}
+
+export interface BaselineStatus {
+  model_version: string;
+  min_readings: number;
+  full_readings: number;
+  window: number;
+  vitals: VitalBaseline[];
 }
 
 export interface Reading {
@@ -50,9 +97,10 @@ export interface Page<T> {
   page_size: number;
 }
 
+/** The model's personal baseline: the median and robust spread of the last n readings. */
 export interface Baseline {
-  mean: number;
-  sd: number;
+  usual: number;
+  spread: number;
   n: number;
 }
 
@@ -136,6 +184,9 @@ export const getHistory = (q: HistoryQuery, signal?: AbortSignal) =>
     .then((r) => r.data);
 
 export const getSummary = (signal?: AbortSignal) => api.get<Summary>("/health/summary", { signal }).then((r) => r.data);
+
+export const getBaselineStatus = (signal?: AbortSignal) =>
+  api.get<BaselineStatus>("/health/baseline", { signal }).then((r) => r.data);
 
 export const deleteReading = (id: string) => api.delete(`/health/readings/${id}`);
 

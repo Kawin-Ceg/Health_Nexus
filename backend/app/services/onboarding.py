@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User, UserProfile, ValidPhcFacility
-from app.models.enums import ConsentType
+from app.models.enums import ConsentType, UserRole
 from app.schemas.onboarding import ConsentAnswers, FacilityOut, ProfileFields, ProfileOut
 from app.services.consent import current_consents
 
@@ -36,9 +36,26 @@ async def list_districts(db: AsyncSession, state: str) -> list[str]:
     return list(rows)
 
 
-async def list_facilities(db: AsyncSession, state: str, district: str) -> list[ValidPhcFacility]:
-    rows = await db.scalars(
-        select(ValidPhcFacility)
+async def list_facilities(db: AsyncSession, state: str, district: str) -> list[tuple[ValidPhcFacility, int]]:
+    """Centres in a district, each with the number of workers reviewing readings there.
+
+    A centre with no worker still appears: people live in that catchment. The
+    count lets the picker say so before the choice is made, instead of the
+    dashboard reporting it afterwards.
+    """
+    workers = (
+        select(func.count())
+        .select_from(User)
+        .where(
+            User.phc_id == ValidPhcFacility.id,
+            User.role == UserRole.phc_worker,
+            User.is_active.is_(True),
+        )
+        .correlate(ValidPhcFacility)
+        .scalar_subquery()
+    )
+    rows = await db.execute(
+        select(ValidPhcFacility, workers.label("workers_assigned"))
         .where(
             ValidPhcFacility.is_active.is_(True),
             _same(ValidPhcFacility.state, state),
@@ -46,7 +63,7 @@ async def list_facilities(db: AsyncSession, state: str, district: str) -> list[V
         )
         .order_by(ValidPhcFacility.name)
     )
-    return list(rows)
+    return [(facility, count) for facility, count in rows.all()]
 
 
 async def resolve_facility(db: AsyncSession, state: str, district: str, phc_id: uuid.UUID) -> ValidPhcFacility:

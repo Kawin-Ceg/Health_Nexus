@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Building2, Phone } from "lucide-react";
-import { fromLocalInput, toLocalInput } from "../../lib/format";
+import { fmtAgo, fmtDateTime, fmtVisit, fromLocalInput, plural, toLocalInput } from "../../lib/format";
 import { citizenRecordPath, paths } from "../../lib/routes";
 import { getPreferences } from "../../services/account";
 import { errorMessage } from "../../services/api";
 import type { VisitPerson } from "../../services/health";
-import { bookVisit, type DismissReason, type ResolveBody } from "../../services/phc";
-import { Btn, ErrorNote, Labelled, inputCls } from "./ui";
+import { bookVisit, resolveCitizen, type DismissReason, type ResolveBody, type WorkItem } from "../../services/phc";
+import { BasisTag } from "./ModelInsights";
+import { Btn, ErrorNote, Labelled, SeverityBadge, VisitBadge, inputCls } from "./ui";
 
 /**
  * Shown instead of any worker page when the API answers 409: the account has no
@@ -124,6 +125,94 @@ export function ResolveControls({
       </Btn>
       {error && <p className="w-full text-sm text-danger">{error}</p>}
     </div>
+  );
+}
+
+/**
+ * One citizen, one piece of work: every open flag for that person in a single
+ * card, worst first. The dashboard and the alerts page both render this, so a
+ * worker sees the same unit of work wherever they look, and the same person
+ * never appears as five separate rows to act on.
+ */
+export function CitizenWorkCard({ item, onChanged }: { item: WorkItem; onChanged: () => void }) {
+  const [booking, setBooking] = useState(false);
+  const older = item.open_flags - 1;
+  return (
+    <li className="rounded-2xl border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+        <div className="min-w-56 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <SeverityBadge severity={item.worst_severity} />
+            {item.open_flags > 1 && (
+              <span className="rounded-full bg-paper-raised px-2 py-0.5 text-xs font-semibold text-ink-soft">
+                {plural(item.open_flags, "open flag")}
+              </span>
+            )}
+          </div>
+          <div className="mt-2">
+            <PersonLine person={item.citizen} />
+          </div>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink">
+            {item.worst_signal ?? "Reading outside the usual range"} <BasisTag basis={item.flags[0]?.basis ?? null} />
+          </p>
+          <p className="text-xs text-ink-soft">
+            Latest {fmtAgo(item.last_flagged_at)}
+            {older > 0 && ` · first flagged ${fmtAgo(item.first_flagged_at)}`}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ResolveControls
+            reviewLabel={item.open_flags > 1 ? `Resolve all ${item.open_flags}` : "Mark seen"}
+            onResolve={async (body) => {
+              await resolveCitizen(item.citizen.id, body);
+              onChanged();
+            }}
+          />
+          {!item.next_visit && <Btn onClick={() => setBooking((b) => !b)}>Book visit</Btn>}
+          <Link
+            to={citizenRecordPath(item.citizen.id)}
+            className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-brand hover:bg-paper-raised"
+          >
+            Record
+          </Link>
+        </div>
+      </div>
+      {item.next_visit && (
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+          Visit {fmtVisit(item.next_visit.scheduled_for)} <VisitBadge state={item.next_visit.state} />
+        </p>
+      )}
+      {item.flags.length > 1 && (
+        <details className="text-sm">
+          <summary className="inline-flex min-h-11 w-fit cursor-pointer items-center text-xs font-medium text-ink-soft hover:text-ink">
+            {item.open_flags > item.flags_shown
+              ? `Show the worst ${item.flags_shown} of ${item.open_flags} flags`
+              : `Show all ${item.flags_shown} flags`}
+          </summary>
+          <ul className="mt-1 flex flex-col gap-1">
+            {item.flags.map((f) => (
+              <li key={f.processed_id} className="flex flex-wrap items-center gap-2">
+                <SeverityBadge severity={f.severity} />
+                <span className="text-ink">{f.signal}</span>
+                <BasisTag basis={f.basis} />
+                <span className="text-xs text-ink-soft">{fmtDateTime(f.measured_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {booking && (
+        <BookVisitForm
+          citizen={item.citizen}
+          caseId={item.flags[0]?.processed_id}
+          onCancel={() => setBooking(false)}
+          onBooked={() => {
+            setBooking(false);
+            onChanged();
+          }}
+        />
+      )}
+    </li>
   );
 }
 

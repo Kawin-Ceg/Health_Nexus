@@ -36,7 +36,7 @@ const TONES: Record<Tone, string> = {
   primary: "bg-brand text-on-brand hover:opacity-90",
   secondary: "border border-line bg-surface text-ink hover:bg-paper-raised",
   ghost: "text-ink-soft hover:bg-paper-raised hover:text-ink",
-  danger: "bg-danger text-white hover:opacity-90",
+  danger: "bg-danger text-on-danger hover:opacity-90",
 };
 
 export function Btn({
@@ -53,7 +53,7 @@ export function Btn({
       disabled={rest.disabled || busy}
       aria-busy={busy || undefined}
       className={cx(
-        "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold hn-fade active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold hn-fade active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
         TONES[tone],
         className,
       )}
@@ -156,7 +156,7 @@ export function Tabs<T extends string>({
           aria-selected={value === t.id}
           onClick={() => onChange(t.id)}
           className={cx(
-            "min-h-9 rounded-lg px-3 text-sm font-medium",
+            "min-h-11 rounded-lg px-3 text-sm font-medium",
             value === t.id ? "bg-surface text-ink shadow-[var(--hn-shadow-sm)]" : "text-ink-soft hover:text-ink",
           )}
         >
@@ -168,7 +168,7 @@ export function Tabs<T extends string>({
 }
 
 export const inputCls =
-  "min-h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-soft/70 focus:border-brand focus:outline-none";
+  "min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-soft/70 focus:border-brand focus:outline-none";
 
 export function Labelled({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
   return (

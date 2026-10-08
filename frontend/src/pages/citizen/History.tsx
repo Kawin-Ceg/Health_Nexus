@@ -43,7 +43,7 @@ export function History() {
 
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   const byKey = new Map((info?.metrics ?? []).map((m) => [m.key, m]));
-  const selectCls = "min-h-10 rounded-xl border border-line bg-surface px-3 text-sm";
+  const selectCls = "min-h-11 rounded-xl border border-line bg-surface px-3 text-sm";
 
   return (
     <>

@@ -98,6 +98,7 @@ export function LocationStep({ form }: { form: OnboardingForm }) {
   const stateField = form.field("state");
   const districtField = form.field("district");
   const centreField = form.field("phc_id");
+  const chosenCentre = facilities.data.find((f) => f.id === phc_id);
 
   return (
     <div className={styles.grid}>
@@ -144,10 +145,24 @@ export function LocationStep({ form }: { form: OnboardingForm }) {
       />
       <Select
         label="Health centre"
-        options={facilities.data.map((f) => ({ value: f.id, label: f.block ? `${f.name} (${f.block})` : f.name }))}
+        options={facilities.data.map((f) => ({
+          value: f.id,
+          // Staffing is shown in the option itself: choosing a centre with no
+          // worker means nobody reviews your readings, and finding that out on
+          // the dashboard afterwards is too late.
+          label: `${f.block ? `${f.name} (${f.block})` : f.name} - ${
+            f.workers_assigned > 0
+              ? `${f.workers_assigned} health worker${f.workers_assigned > 1 ? "s" : ""}`
+              : "no health worker yet"
+          }`,
+        }))}
         placeholder={facilities.loading ? "Loading" : "Choose your health centre"}
         disabled={facilities.data.length === 0}
-        hint="The clinic that will follow your care. Pick the one you would actually visit."
+        hint={
+          chosenCentre && chosenCentre.workers_assigned === 0
+            ? "No health worker is assigned to this centre yet, so your readings will not be reviewed. You can still choose it and change it later in Settings."
+            : "The clinic that will follow your care. Pick the one you would actually visit."
+        }
         className={styles.span}
         {...centreField}
       />

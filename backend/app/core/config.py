@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,10 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str | None = None
     # False so the refresh cookie works over plain http in development.
     COOKIE_SECURE: bool = False
+    # Token lifetimes. The signing algorithm is deliberately not configurable:
+    # reading it from the environment is how "alg: none" bugs get in.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     # Where the email links point, and which browser origins may call the API
     # directly (comma-separated). Through the Vite proxy the API is same-origin.
     FRONTEND_URL: str = "http://localhost:5173"
@@ -39,7 +44,20 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        """Accepts a comma-separated list or a JSON array.
+
+        Both spellings turn up in .env files, and a mis-parsed origin fails
+        silently: the browser just refuses every request.
+        """
+        raw = self.CORS_ORIGINS.strip()
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError:
+                parsed = []
+            if isinstance(parsed, list):
+                return [str(o).strip() for o in parsed if str(o).strip()]
+        return [o.strip().strip('"').strip("'") for o in raw.split(",") if o.strip().strip('"').strip("'")]
 
 
 @lru_cache

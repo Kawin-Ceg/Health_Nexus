@@ -71,11 +71,11 @@ def test_describe_signal_below_range_and_nothing_flagged():
     assert describe_signal(score_reading(uuid.uuid4(), normal, []).features, normal) is None
 
 
-def test_placeholder_scorer_contract():
-    result = score_reading(uuid.uuid4(), {"temperature_c": 38.9, "weight_kg": 70}, [{"temperature_c": 36.6}] * 10)
+def test_scorer_contract():
+    result = score_reading(uuid.uuid4(), {"temperature_c": 38.9, "weight_kg": 70}, [{"temperature_c": 36.6}] * 3)
     assert result.is_anomaly and 0 < result.anomaly_score <= 1
-    assert set(result.features) == {"temperature_c"}  # weight has no normal band
-    assert result.basis == "published_ranges"
+    assert set(result.features) == {"temperature_c"}  # weight: no normal band and no baseline yet
+    assert result.basis == "published_ranges"  # 3 earlier readings: below MIN_BASELINE_READINGS
     assert not score_reading(uuid.uuid4(), {"heart_rate": 70}, []).is_anomaly
 
 

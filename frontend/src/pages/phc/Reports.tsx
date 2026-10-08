@@ -24,7 +24,7 @@ export function Reports() {
         title="Reports"
         lead={r ? `${fmtDate(r.window.start)} – ${fmtDate(r.window.end)} (whole days, India time).` : undefined}
         actions={
-          <select aria-label="Period" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm">
+          <select aria-label="Period" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-xl border border-line bg-surface px-3 text-sm">
             {WINDOWS.map((w) => <option key={w} value={w}>Last {w} days</option>)}
           </select>
         }
@@ -65,7 +65,7 @@ export function Reports() {
           </Card>
 
           <Card title="By locality" aside={<span className="text-xs text-ink-soft">Localities with fewer than {r.min_cell} citizens are grouped as "Other localities".</span>}>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Flags by locality">
               <table className="w-full min-w-[520px] text-left text-sm">
                 <thead className="text-xs uppercase tracking-wide text-ink-soft">
                   <tr>

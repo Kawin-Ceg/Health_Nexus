@@ -82,6 +82,24 @@ class VitalsIn(BaseModel):
 Severity = Literal["critical", "high", "moderate", "low"]
 
 
+class VitalCheck(BaseModel):
+    """How one vital of a reading was judged (services/scoring.VitalDetail, plus its final contribution)."""
+
+    key: str
+    value: float
+    stage: Literal["learning", "blending", "personal"]
+    readings: int
+    weight: float
+    published: float
+    safety: bool
+    baseline: float | None = None
+    spread: float | None = None
+    z: float | None = None
+    personal: float | None = None
+    confirmed: bool = True
+    contribution: float
+
+
 class VitalsResult(BaseModel):
     id: uuid.UUID
     measured_at: datetime
@@ -95,6 +113,10 @@ class VitalsResult(BaseModel):
     earlier_readings: int
     basis_note: str
     reviewed_by_someone: bool
+    model_version: str
+    checks: list[VitalCheck]
+    # Unusual for this person but waiting for a second reading before it flags.
+    watch: list[str]
 
 
 class ReadingOut(BaseModel):
@@ -116,8 +138,10 @@ class HistoryOut(BaseModel):
 
 
 class BaselineOut(BaseModel):
-    mean: float
-    sd: float
+    """The scorer's personal baseline: median and robust SD of the last readings (n of them)."""
+
+    usual: float
+    spread: float
     n: int
 
 
@@ -206,3 +230,24 @@ class MarkRead(BaseModel):
 
 class Updated(BaseModel):
     updated: int
+
+
+class VitalBaseline(BaseModel):
+    """Where one vital stands on the way from published ranges to a personal baseline."""
+
+    key: str
+    readings: int
+    stage: Literal["learning", "blending", "personal"]
+    weight: float
+    baseline: float | None
+    spread: float | None
+    readings_to_start: int  # until the personal baseline starts to count
+    readings_to_full: int  # until it is used on its own
+
+
+class BaselineStatusOut(BaseModel):
+    model_version: str
+    min_readings: int
+    full_readings: int
+    window: int
+    vitals: list[VitalBaseline]

@@ -9,6 +9,8 @@ export interface Facility {
   block: string | null;
   district: string;
   state: string;
+  /** Workers reviewing readings at this centre; 0 means nobody is watching it yet. */
+  workers_assigned: number;
 }
 
 export interface ProfilePayload {

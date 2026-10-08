@@ -15,6 +15,7 @@
   --hn-accent-ink: 236 158 122;
   --hn-warn: 226 178 84;
   --hn-danger: 246 138 126;
+  --hn-on-danger: 12 20 19; /* the dark-mode danger is light, so its text is dark */
   --hn-danger-soft: 62 27 25;
   --hn-success: 120 210 160;
   --hn-success-soft: 21 50 38;

@@ -15,16 +15,17 @@
   --hn-on-brand: 255 255 255; /* text on brand fills */
   --hn-accent: 193 101 59; /* #C1653B terracotta, decorative + large text */
   --hn-accent-ink: 158 74 38; /* terracotta dark enough for small text (AA) */
-  --hn-warn: 166 112 18; /* chart "elevated" */
+  --hn-warn: 140 92 10; /* 'elevated'; AA as small text on paper and surface */
   --hn-danger: 176 38 31; /* form errors; AA on paper and surface */
+  --hn-on-danger: 255 255 255; /* text on a solid danger fill */
   --hn-danger-soft: 252 234 231;
   --hn-success: 24 110 72;
   --hn-success-soft: 224 242 232;
 
   /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
   --hn-sev-critical: 176 38 31;
-  --hn-sev-high: 193 86 30;
-  --hn-sev-moderate: 166 112 18;
+  --hn-sev-high: 166 64 16;
+  --hn-sev-moderate: 140 92 10;
   --hn-sev-low: 74 96 92;
 
   --hn-panel: 12 38 35; /* dark surface for hero side + footer */

@@ -135,7 +135,7 @@ function PreferencesTab() {
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Theme">
           {(["system", "light", "dark"] as const).map((t) => (
             <button key={t} type="button" role="radio" aria-checked={local.theme === t} onClick={() => void save({ theme: t })}
-              className={cx("min-h-10 rounded-xl border px-4 text-sm capitalize", local.theme === t ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
+              className={cx("min-h-11 rounded-xl border px-4 text-sm capitalize", local.theme === t ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
               {t === "system" ? "Match device" : t}
             </button>
           ))}

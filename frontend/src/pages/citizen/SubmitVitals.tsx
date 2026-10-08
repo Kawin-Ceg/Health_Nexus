@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, X } from "lucide-react";
+import { ScoreBreakdown } from "../../components/app/ModelInsights";
 import { Btn, Card, ErrorNote, Loading, PageHeader, SeverityBadge, cx, inputCls } from "../../components/app/ui";
 import { fmtDateTime, fromLocalInput, toLocalInput } from "../../lib/format";
 import { paths } from "../../lib/routes";
@@ -119,15 +120,22 @@ export function SubmitVitals() {
                   </p>
                 </>
               )}
+              {result.watch.length > 0 && (
+                <p className="text-warn">
+                  {result.watch.map((k) => byKey.get(k)?.label ?? k).join(", ")} {result.watch.length === 1 ? "was" : "were"} unusual
+                  for you, though still inside the normal range. One reading like this is often just noise; if your next
+                  reading is unusual too, it will be flagged.
+                </p>
+              )}
               <p className="text-ink-soft">{result.basis_note}</p>
               <p className="text-xs text-ink-soft">Measured {fmtDateTime(result.measured_at)}</p>
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
-            <Link to={paths.citizenHome} className="inline-flex min-h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand">
+            <Link to={paths.citizenHome} className="inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand">
               Back to dashboard
             </Link>
-            <Link to={paths.history} className="inline-flex min-h-10 items-center rounded-xl border border-line px-4 text-sm font-semibold text-ink">
+            <Link to={paths.history} className="inline-flex min-h-11 items-center rounded-xl border border-line px-4 text-sm font-semibold text-ink">
               See history
             </Link>
             <Btn tone="ghost" onClick={reset}>
@@ -135,6 +143,15 @@ export function SubmitVitals() {
             </Btn>
           </div>
         </Card>
+        {result.checks.length > 0 && (
+          <Card className="mt-6 max-w-2xl" title="How this reading was checked">
+            <p className="mb-3 text-sm text-ink-soft">
+              New users are compared with published normal ranges. As you log more readings, each vital is compared more
+              and more with your own usual values instead, so a value that is normal for you is not flagged again and again.
+            </p>
+            <ScoreBreakdown checks={result.checks} metrics={byKey} who="citizen" />
+          </Card>
+        )}
       </>
     );
   }
@@ -182,7 +199,7 @@ export function SubmitVitals() {
                   aria-pressed={on}
                   onClick={() => toggle(s)}
                   className={cx(
-                    "inline-flex min-h-9 items-center gap-1 rounded-full border px-3 text-sm capitalize",
+                    "inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-sm capitalize",
                     on ? "border-brand bg-brand-soft text-brand" : "border-line text-ink-soft hover:text-ink",
                   )}
                 >

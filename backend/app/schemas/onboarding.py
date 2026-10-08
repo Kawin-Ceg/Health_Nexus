@@ -127,6 +127,12 @@ class FacilityOut(BaseModel):
     state: str
 
 
+class FacilityOption(FacilityOut):
+    """A centre as offered during onboarding: how many workers review readings there."""
+
+    workers_assigned: int = 0
+
+
 class ProfileOut(BaseModel):
     age: int
     gender: Gender

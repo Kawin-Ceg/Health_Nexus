@@ -9,7 +9,7 @@ from app.core.dependencies import require_onboarding_user
 from app.db.session import get_session
 from app.models import User, UserProfile
 from app.models.enums import ConsentType
-from app.schemas.onboarding import FacilityOut, ProfileCreate, ProfileFields, ProfileOut, ProfilePatch
+from app.schemas.onboarding import FacilityOption, FacilityOut, ProfileCreate, ProfileFields, ProfileOut, ProfilePatch
 from app.services import onboarding as svc
 from app.services.consent import record_consents
 from app.services.sessions import client_ip
@@ -34,13 +34,16 @@ async def districts(state: str = Query(min_length=1, max_length=100), db: AsyncS
     return await svc.list_districts(db, state)
 
 
-@router.get("/facilities", response_model=list[FacilityOut])
+@router.get("/facilities", response_model=list[FacilityOption])
 async def facilities(
     state: str = Query(min_length=1, max_length=100),
     district: str = Query(min_length=1, max_length=100),
     db: AsyncSession = Depends(get_session),
 ):
-    return await svc.list_facilities(db, state, district)
+    return [
+        FacilityOption(**FacilityOut.model_validate(facility).model_dump(), workers_assigned=workers)
+        for facility, workers in await svc.list_facilities(db, state, district)
+    ]
 
 
 @router.post("/profile", response_model=ProfileOut, status_code=status.HTTP_201_CREATED)

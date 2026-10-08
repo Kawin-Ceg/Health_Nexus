@@ -14,6 +14,9 @@ from app.models import Alert, AuditLog, HealthRecord, ProcessedData, ScheduledVi
 from app.models.enums import VisitStatus
 from app.schemas.health import (
     BaselineOut,
+    BaselineStatusOut,
+    VitalBaseline,
+    VitalCheck,
     FacilitySummary,
     HistoryOut,
     LatestVital,
@@ -27,8 +30,17 @@ from app.schemas.health import (
 )
 from app.services.catchment import workers_serving
 from app.services.metrics import COMMON_SYMPTOMS, VITALS, position
-from app.services.readings import baseline_of, record_reading
-from app.services.scoring import MIN_BASELINE_READINGS
+from app.services.readings import SCORING_HISTORY, baseline_of, earlier_vitals, record_reading
+from app.services.scoring import (
+    BASELINE_WINDOW,
+    FULL_BASELINE_READINGS,
+    MIN_BASELINE_READINGS,
+    MODEL_VERSION,
+    ScoreResult,
+    baseline_weight,
+    robust_baseline,
+    stage_of,
+)
 from app.services.sessions import client_ip
 from app.services.triage import describe_signal, severity_of, top_signal
 from app.services.visit_state import now_utc
@@ -74,16 +86,6 @@ async def submit_vitals(
     await db.commit()
 
     score = recorded.score
-    if recorded.earlier_readings < MIN_BASELINE_READINGS:
-        remaining = MIN_BASELINE_READINGS - recorded.earlier_readings
-        note = (
-            f"Compared with published normal ranges. You need {remaining} more "
-            f"reading{'s' if remaining != 1 else ''} before we can learn what is normal for you."
-        )
-    elif score.basis == "personal_baseline":
-        note = "Compared with your own usual readings."
-    else:
-        note = "Compared with published normal ranges."
     return VitalsResult(
         id=recorded.record.id,
         measured_at=measured_at,
@@ -95,9 +97,34 @@ async def submit_vitals(
         features=score.features,
         basis=score.basis,
         earlier_readings=recorded.earlier_readings,
-        basis_note=note,
+        basis_note=_basis_note(score),
         reviewed_by_someone=recorded.reviewed_by_someone,
+        model_version=score.model_version,
+        checks=_checks(score),
+        watch=score.watch,
     )
+
+
+def _checks(score: ScoreResult) -> list[VitalCheck]:
+    return [
+        VitalCheck(**vars(detail), key=key, contribution=score.features.get(key, 0.0))
+        for key, detail in score.details.items()
+    ]
+
+
+def _basis_note(score: ScoreResult) -> str:
+    """One sentence on what the reading was compared with, from the least-known vital up."""
+    stages = {d.stage for d in score.details.values()}
+    if not stages or stages == {"learning"}:
+        fewest = min((d.readings for d in score.details.values()), default=0)
+        remaining = MIN_BASELINE_READINGS - fewest
+        return (
+            f"Compared with published normal ranges. After {remaining} more "
+            f"reading{'s' if remaining != 1 else ''} we start learning what is normal for you."
+        )
+    if stages == {"personal"}:
+        return "Compared with your own usual readings."
+    return "Compared partly with published normal ranges and partly with your own usual readings, which count for more as you log more."
 
 
 def _reading_out(record: HealthRecord, processed: ProcessedData | None) -> ReadingOut:
@@ -111,6 +138,39 @@ def _reading_out(record: HealthRecord, processed: ProcessedData | None) -> Readi
         severity=severity_of(processed.anomaly_score) if flagged and processed else None,
         signal=describe_signal(processed.features, record.vitals) if flagged and processed else None,
         reviewed=bool(processed and processed.resolution is not None),
+    )
+
+
+@router.get("/baseline", response_model=BaselineStatusOut)
+async def baseline_status(
+    user: User = Depends(require_onboarding_user), db: AsyncSession = Depends(get_session)
+) -> BaselineStatusOut:
+    """Per vital: how many readings the model has, and how far it is from published ranges to personal."""
+    history = await earlier_vitals(db, user.id, now_utc() + timedelta(minutes=1))
+    vitals = []
+    for key in VITALS:
+        values = [float(h[key]) for h in history if h.get(key) is not None]
+        if not values:
+            continue
+        median, spread = robust_baseline(key, values) if len(values) >= MIN_BASELINE_READINGS else (None, None)
+        vitals.append(
+            VitalBaseline(
+                key=key,
+                readings=len(values),
+                stage=stage_of(len(values)),
+                weight=round(baseline_weight(len(values)), 3),
+                baseline=round(median, 2) if median is not None else None,
+                spread=round(spread, 2) if spread is not None else None,
+                readings_to_start=max(0, MIN_BASELINE_READINGS - len(values)),
+                readings_to_full=max(0, FULL_BASELINE_READINGS - len(values)),
+            )
+        )
+    return BaselineStatusOut(
+        model_version=MODEL_VERSION,
+        min_readings=MIN_BASELINE_READINGS,
+        full_readings=FULL_BASELINE_READINGS,
+        window=min(BASELINE_WINDOW, SCORING_HISTORY),
+        vitals=vitals,
     )
 
 
@@ -171,14 +231,14 @@ async def summary(user: User = Depends(require_onboarding_user), db: AsyncSessio
         if not series:
             continue
         newest_record, value = series[0]
-        base = baseline_of([v for _, v in series[1:]])
+        base = baseline_of(key, [v for _, v in reversed(series[1:])])
         latest.append(
             LatestVital(
                 key=key,
                 value=value,
                 measured_at=newest_record.timestamp,
                 position=position(key, value),
-                baseline=BaselineOut(mean=round(base.mean, 2), sd=round(base.sd, 2), n=base.n) if base else None,
+                baseline=BaselineOut(usual=round(base.usual, 2), spread=round(base.spread, 2), n=base.n) if base else None,
             )
         )
 
