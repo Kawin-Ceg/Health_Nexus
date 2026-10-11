@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     SMTP_FROM: str = "HealthNexus <no-reply@healthnexus.local>"
     SMTP_STARTTLS: bool = True
 
+    # AI assistant. With no key the assistant still works, using its rule-based
+    # router and templated answers (services/assistant).
+    # GEMINI_API_KEYS takes a comma-separated list; a key that fails hands over to the next.
+    GEMINI_API_KEY: str | None = None
+    GEMINI_API_KEYS: str | None = None
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    ASSISTANT_QUESTIONS_PER_MINUTE: int = 20
+
     # Uploaded avatars and cover images, served at /api/v1/media.
     MEDIA_DIR: str = "media"
 
@@ -41,6 +49,12 @@ class Settings(BaseSettings):
     PHC_WORKER_EMAIL: str = "phc.worker@example.com"
     PHC_WORKER_PASSWORD: str | None = None
     DEMO_CITIZEN_PASSWORD: str | None = None
+
+    @property
+    def gemini_keys(self) -> list[str]:
+        raw = ",".join(k for k in (self.GEMINI_API_KEY, self.GEMINI_API_KEYS) if k)
+        # "key1,key2" is the placeholder in .env.example, not a real key.
+        return [k.strip() for k in raw.split(",") if k.strip() and k.strip() not in ("key1", "key2")]
 
     @property
     def cors_origins(self) -> list[str]:

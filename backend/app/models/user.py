@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .valid_phc_facility import ValidPhcFacility
 
 DEFAULT_PREFERENCES: dict[str, Any] = {
-    "theme": "system",
+    "theme": "light",
     "language": "en",
     "notifications": {
         "alerts": {"email": True, "sms": False, "in_app": True},

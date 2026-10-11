@@ -1,76 +1,68 @@
 .section {
-  padding-block: var(--hn-space-16);
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  padding-block: var(--hn-space-20);
+  border-top: 1px solid rgb(var(--hn-line));
 }
 
-.layout {
-  display: grid;
-  gap: var(--hn-space-10);
+.inner {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  text-align: center;
 }
 
 .title {
-  font-size: var(--hn-text-3xl);
-}
-
-.title em {
-  color: rgb(var(--hn-brand));
+  max-width: 16ch;
+  font-size: clamp(2.25rem, 1.4rem + 3.6vw, 4rem);
+  text-wrap: balance;
 }
 
 .body {
-  margin-top: var(--hn-space-4);
+  max-width: 36rem;
+  margin-top: var(--hn-space-5);
   color: rgb(var(--hn-ink-soft));
   font-size: var(--hn-text-lg);
 }
 
-.cta {
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--hn-space-3);
   margin-top: var(--hn-space-8);
 }
 
-/* Equal 2x2 tiles: every row the same height, every tile the same width. */
-.benefits {
-  display: grid;
-  grid-auto-rows: 1fr;
-  gap: var(--hn-space-4);
-}
-
-.benefit {
-  display: flex;
-  flex-direction: column;
-  padding: var(--hn-space-6);
-  border: 1px solid rgb(var(--hn-line));
-  border-radius: var(--hn-radius-xl);
-  background: rgb(var(--hn-surface));
-  color: rgb(var(--hn-brand));
-}
-
-.benefitTitle {
-  margin-top: var(--hn-space-4);
-  color: rgb(var(--hn-ink));
-  font-size: var(--hn-text-base);
-  letter-spacing: -0.01em;
-}
-
-.benefitBody {
-  margin-top: var(--hn-space-1);
-  color: rgb(var(--hn-ink-soft));
+.note {
+  margin-top: var(--hn-space-5);
+  color: rgb(var(--hn-ink-muted));
   font-size: var(--hn-text-sm);
 }
 
-@media (min-width: 640px) {
-  .benefits {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.tree {
+  bottom: -30px;
+  left: 2%;
+  width: 230px;
+  --doodle-opacity: 0.7;
 }
 
-@media (min-width: 768px) {
-  .section {
-    padding-block: var(--hn-space-24);
-  }
+.ecg {
+  top: 50px;
+  right: 4%;
+  width: 180px;
+  rotate: 6deg;
+}
+
+.capsules {
+  bottom: 30px;
+  right: 14%;
+  width: 110px;
+  rotate: -12deg;
 }
 
 @media (min-width: 1024px) {
-  .layout {
-    grid-template-columns: 1fr 1.1fr;
-    gap: var(--hn-space-16);
+  .section {
+    padding-block: var(--hn-space-24);
   }
 }

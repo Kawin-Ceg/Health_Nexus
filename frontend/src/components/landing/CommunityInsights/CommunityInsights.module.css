@@ -1,4 +1,7 @@
 .section {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
   padding-block: var(--hn-space-16);
 }
 
@@ -10,9 +13,6 @@
   font-size: var(--hn-text-3xl);
 }
 
-.title em {
-  color: rgb(var(--hn-brand));
-}
 
 .body {
   margin-top: var(--hn-space-4);
@@ -70,20 +70,27 @@
 /* Series colours. Recharts sets a fill attribute on each bar; CSS wins over it. */
 .swatch.normal,
 .normal path {
-  background: rgb(var(--hn-brand));
-  fill: rgb(var(--hn-brand));
+  background: rgb(var(--hn-chart-normal, var(--hn-brand)));
+  fill: rgb(var(--hn-chart-normal, var(--hn-brand)));
 }
 
 .swatch.elevated,
 .elevated path {
-  background: rgb(var(--hn-warn));
-  fill: rgb(var(--hn-warn));
+  background: rgb(var(--hn-accent));
+  fill: rgb(var(--hn-accent));
 }
 
 .swatch.high,
 .high path {
-  background: rgb(var(--hn-accent));
-  fill: rgb(var(--hn-accent));
+  background: rgb(var(--hn-sev-critical));
+  fill: rgb(var(--hn-sev-critical));
+}
+
+.normal path,
+.elevated path,
+.high path {
+  stroke: rgb(var(--hn-surface));
+  stroke-width: 2px;
 }
 
 .chart {
@@ -157,12 +164,9 @@
 
 .stat {
   padding: var(--hn-space-5) var(--hn-space-6);
-  border-radius: var(--hn-radius-xl);
-  background: rgb(var(--hn-paper-raised));
-}
-
-.stat:last-child {
-  background: rgb(var(--hn-accent) / 0.12);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: var(--hn-radius-lg);
+  background: rgb(var(--hn-surface));
 }
 
 .statValue {
@@ -171,10 +175,6 @@
   letter-spacing: -0.03em;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
-}
-
-.stat:last-child .statValue {
-  color: rgb(var(--hn-accent-ink));
 }
 
 .statLabel {
@@ -214,4 +214,55 @@
     flex-direction: column;
     justify-content: flex-end;
   }
+}
+
+.periodNote {
+  margin-top: var(--hn-space-3);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-xs);
+}
+
+.dataTable {
+  margin-top: var(--hn-space-3);
+  font-size: var(--hn-text-sm);
+}
+
+.dataTable summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: rgb(var(--hn-brand));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dataTable table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: var(--hn-space-2);
+  border-top: 1px solid rgb(var(--hn-line));
+  text-align: right;
+}
+
+.dataTable th:first-child {
+  text-align: left;
+}
+
+.ecg {
+  top: 50px;
+  left: 2%;
+  width: 170px;
+  rotate: -6deg;
+}
+
+.honeycomb {
+  top: 120px;
+  right: -60px;
+  width: 200px;
+  --doodle-opacity: 0.4;
 }

@@ -8,8 +8,7 @@ export function PHCSignup() {
   return (
     <AuthLayout
       title="Apply as a PHC worker"
-      subtitle="Tell us where you work. An administrator reviews every application."
-      wide
+      subtitle="Three short steps. An administrator checks every application before you can see anyone's records."
       footer={
         <>
           Already registered? <Link to={paths.login}>Sign in</Link>

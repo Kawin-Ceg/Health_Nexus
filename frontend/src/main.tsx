@@ -1,7 +1,6 @@
 import { StrictMode, Suspense, lazy, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { ComingSoon } from "./components/ComingSoon";
 import { AppShell } from "./components/app/AppShell";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -14,6 +13,7 @@ import { initTheme } from "./lib/theme";
 const page = <T extends string>(loader: () => Promise<Record<string, unknown>>, name: T) =>
   lazy(() => loader().then((m) => ({ default: m[name] as ComponentType })));
 
+const Assistant = page(() => import("./pages/Assistant"), "Assistant");
 const ConfirmEmail = page(() => import("./pages/ConfirmEmail"), "ConfirmEmail");
 const Notifications = page(() => import("./pages/Notifications"), "Notifications");
 const Profile = page(() => import("./pages/Profile"), "Profile");
@@ -29,6 +29,13 @@ const PhcDashboard = page(() => import("./pages/phc/PhcDashboard"), "PhcDashboar
 const Reports = page(() => import("./pages/phc/Reports"), "Reports");
 const RiskMap = page(() => import("./pages/phc/RiskMap"), "RiskMap");
 const Schedule = page(() => import("./pages/phc/Schedule"), "Schedule");
+const AdminDashboard = page(() => import("./pages/admin/AdminDashboard"), "AdminDashboard");
+const Applications = page(() => import("./pages/admin/Applications"), "Applications");
+const Accounts = page(() => import("./pages/admin/Accounts"), "Accounts");
+const Concerns = page(() => import("./pages/admin/Concerns"), "Concerns");
+const AuditLog = page(() => import("./pages/admin/AuditLog"), "AuditLog");
+const PrivacyPolicy = page(() => import("./pages/legal/PrivacyPolicy"), "PrivacyPolicy");
+const Terms = page(() => import("./pages/legal/Terms"), "Terms");
 const ForgotPassword = page(() => import("./pages/ForgotPassword"), "ForgotPassword");
 const LandingPage = page(() => import("./pages/LandingPage"), "LandingPage");
 const LoginPage = page(() => import("./pages/LoginPage"), "LoginPage");
@@ -75,6 +82,8 @@ createRoot(root).render(
             <Route path={paths.verifyEmail} element={<VerifyEmail />} />
             <Route path={paths.forgotPassword} element={<ForgotPassword />} />
             <Route path={paths.resetPassword} element={<ResetPassword />} />
+            <Route path={paths.privacy} element={<PrivacyPolicy />} />
+            <Route path={paths.terms} element={<Terms />} />
 
             {/* Every signed-in role */}
             <Route element={<ProtectedRoute allowedRoles={["user", "pending_phc", "phc_worker", "admin"]} allowUnverified />}>
@@ -117,8 +126,19 @@ createRoot(root).render(
                 <Route path={paths.profile} element={<Profile />} />
               </Route>
             </Route>
+            <Route element={<ProtectedRoute allowedRoles={["user", "phc_worker", "admin"]} />}>
+              <Route element={<AppShell />}>
+                <Route path={paths.assistant} element={<Assistant />} />
+              </Route>
+            </Route>
             <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-              <Route path={paths.adminHome} element={<ComingSoon title="Admin console" />} />
+              <Route element={<AppShell />}>
+                <Route path={paths.adminHome} element={<AdminDashboard />} />
+                <Route path={paths.adminApplications} element={<Applications />} />
+                <Route path={paths.adminAccounts} element={<Accounts />} />
+                <Route path={paths.adminConcerns} element={<Concerns />} />
+                <Route path={paths.adminAudit} element={<AuditLog />} />
+              </Route>
             </Route>
 
             <Route path={paths.unauthorized} element={<Unauthorized />} />

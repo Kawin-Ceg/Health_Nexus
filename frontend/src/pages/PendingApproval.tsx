@@ -19,6 +19,7 @@ export function PendingApproval() {
 
   const application = user.application;
   const designation = DESIGNATIONS.find((d) => d.value === application?.designation)?.label;
+  const rejected = application?.status === "rejected";
 
   const check = async () => {
     setChecking(true);
@@ -35,10 +36,11 @@ export function PendingApproval() {
         <span className={styles.icon}>
           <Hourglass size={28} aria-hidden="true" />
         </span>
-        <h1>Your application is awaiting approval</h1>
+        <h1>{rejected ? "Your application was not approved" : "Your application is awaiting approval"}</h1>
         <p className={styles.lead}>
-          An administrator has to approve your PHC worker application before you can use the worker tools. Until then
-          your account has no access to patient information.
+          {rejected
+            ? "An administrator reviewed your PHC worker application and did not approve it. If you think this is a mistake, contact your block health office."
+            : "An administrator has to approve your PHC worker application before you can use the worker tools. Until then your account has no access to patient information."}
         </p>
 
         {application && (
@@ -67,8 +69,14 @@ export function PendingApproval() {
             </div>
             <div>
               <dt>Status</dt>
-              <dd>Pending review</dd>
+              <dd>{rejected ? "Not approved" : "Pending review"}</dd>
             </div>
+            {rejected && application.rejection_reason && (
+              <div>
+                <dt>Reason</dt>
+                <dd>{application.rejection_reason}</dd>
+              </div>
+            )}
           </dl>
         )}
 

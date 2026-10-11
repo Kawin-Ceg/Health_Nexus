@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../components/auth/AuthLayout";
 import { Banner } from "../components/auth/Banner";
+import { PasswordChecklist } from "../components/auth/PasswordChecklist";
 import { Button } from "../components/ui/Button/Button";
 import { Field } from "../components/ui/Field/Field";
 import { paths } from "../lib/routes";
@@ -58,10 +59,20 @@ export function ResetPassword() {
           type="password"
           revealable
           autoComplete="new-password"
-          hint="At least 8 characters"
+          required
+          aria-describedby="reset-password-rules"
           {...form.field("password")}
         />
-        <Field label="Confirm new password" type="password" revealable autoComplete="new-password" {...form.field("confirm")} />
+        <PasswordChecklist value={form.values.password} id="reset-password-rules" />
+        <Field
+          label="Confirm new password"
+          type="password"
+          revealable
+          autoComplete="new-password"
+          required
+          {...form.field("confirm")}
+          success={form.values.confirm && !form.problems.confirm ? "Passwords match" : undefined}
+        />
         <Button type="submit" size="lg" fullWidth loading={form.submitting}>
           {form.submitting ? "Saving" : "Set new password"}
         </Button>

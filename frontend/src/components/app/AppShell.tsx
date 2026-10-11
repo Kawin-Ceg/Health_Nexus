@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
+  BadgeCheck,
   Bell,
+  Bot,
+  LifeBuoy,
+  ScrollText,
   CalendarDays,
   ClipboardList,
   HeartPulse,
@@ -74,7 +78,16 @@ export function AppShell() {
   useEffect(() => setOpen(false), [location.pathname]);
 
   const items: Item[] =
-    user?.role === "phc_worker"
+    user?.role === "admin"
+      ? [
+          { to: paths.adminHome, label: "Overview", icon: LayoutDashboard, end: true },
+          { to: paths.adminApplications, label: "Applications", icon: BadgeCheck },
+          { to: paths.adminAccounts, label: "Accounts", icon: Users },
+          { to: paths.adminConcerns, label: "Concerns", icon: LifeBuoy },
+          { to: paths.adminAudit, label: "Audit trail", icon: ScrollText },
+          { to: paths.assistant, label: "Assistant", icon: Bot },
+        ]
+      : user?.role === "phc_worker"
       ? [
           { to: paths.phcHome, label: "Dashboard", icon: LayoutDashboard, end: true },
           { to: paths.phcAlerts, label: "Alerts", icon: Bell, badge: phc.citizens_flagged },
@@ -82,6 +95,7 @@ export function AppShell() {
           { to: paths.phcSchedule, label: "Schedule", icon: CalendarDays },
           { to: paths.phcReports, label: "Reports", icon: BarChart3 },
           { to: paths.phcMap, label: "Risk map", icon: Map },
+          { to: paths.assistant, label: "Assistant", icon: Bot },
           { to: paths.notifications, label: "Notifications", icon: ClipboardList, badge: phc.unread },
         ]
       : [
@@ -89,11 +103,16 @@ export function AppShell() {
           { to: paths.submitVitals, label: "Log vitals", icon: PlusCircle },
           { to: paths.history, label: "History", icon: History },
           { to: paths.citizenAlerts, label: "Alerts & visits", icon: Bell, badge: citizenUnread },
+          { to: paths.assistant, label: "Assistant", icon: Bot },
         ];
-  const account: Item[] = [
-    { to: paths.profile, label: "Profile", icon: UserRound },
-    { to: paths.settings, label: "Settings", icon: Settings },
-  ];
+  // Profile and settings are citizen and worker pages; an admin has neither.
+  const account: Item[] =
+    user?.role === "admin"
+      ? []
+      : [
+          { to: paths.profile, label: "Profile", icon: UserRound },
+          { to: paths.settings, label: "Settings", icon: Settings },
+        ];
 
   const link = (item: Item) => (
     <NavLink

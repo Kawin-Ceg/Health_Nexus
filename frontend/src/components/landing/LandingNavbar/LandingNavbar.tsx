@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { nav, routes } from "../../../content/landing";
 import { Button } from "../../ui/Button/Button";
 import { Container } from "../../ui/Container/Container";
@@ -9,6 +10,8 @@ import styles from "./LandingNavbar.module.css";
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function LandingNavbar() {
+  const onHome = useLocation().pathname === routes.home;
+  const anchor = (href: string) => (onHome ? href : routes.home + href);
   const [open, setOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -73,7 +76,7 @@ export function LandingNavbar() {
           <ul className={styles.links}>
             {nav.links.map((link) => (
               <li key={link.href}>
-                <a href={link.href} className={styles.link}>
+                <a href={anchor(link.href)} className={styles.link}>
                   {link.label}
                 </a>
               </li>
@@ -88,17 +91,22 @@ export function LandingNavbar() {
           <Button to={routes.signup}>{nav.getStarted}</Button>
         </div>
 
-        <button
-          ref={toggleRef}
-          type="button"
-          className={styles.toggle}
-          aria-label={nav.openMenu}
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          onClick={() => setOpen(true)}
-        >
-          <Menu size={22} aria-hidden="true" />
-        </button>
+        <div className={styles.mobileBar}>
+          <Button to={routes.signup} className={styles.mobileCta}>
+            {nav.getStarted}
+          </Button>
+          <button
+            ref={toggleRef}
+            type="button"
+            className={styles.toggle}
+            aria-label={nav.openMenu}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            onClick={() => setOpen(true)}
+          >
+            <Menu size={22} aria-hidden="true" />
+          </button>
+        </div>
       </Container>
 
       {open && (
@@ -122,7 +130,7 @@ export function LandingNavbar() {
               <ul className={styles.mobileLinks}>
                 {nav.links.map((link) => (
                   <li key={link.href}>
-                    <a href={link.href} className={styles.mobileLink} onClick={() => setOpen(false)}>
+                    <a href={anchor(link.href)} className={styles.mobileLink} onClick={() => setOpen(false)}>
                       {link.label}
                     </a>
                   </li>

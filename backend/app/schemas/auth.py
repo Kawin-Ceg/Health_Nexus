@@ -100,6 +100,7 @@ class ApplicationOut(BaseModel):
     state: str
     years_of_service: int
     status: ApplicationStatus
+    rejection_reason: str | None = None
     created_at: datetime
 
 

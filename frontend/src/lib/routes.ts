@@ -25,8 +25,15 @@ export const paths = {
   profile: "/profile",
   confirmEmail: "/confirm-email",
   adminHome: "/admin",
+  adminApplications: "/admin/applications",
+  adminAccounts: "/admin/accounts",
+  adminConcerns: "/admin/concerns",
+  adminAudit: "/admin/audit",
+  assistant: "/assistant",
   sessions: "/account/sessions",
   unauthorized: "/unauthorized",
+  privacy: "/privacy-policy",
+  terms: "/terms",
 } as const;
 
 export const citizenRecordPath = (userId: string) => `/phc/citizens/${userId}`;

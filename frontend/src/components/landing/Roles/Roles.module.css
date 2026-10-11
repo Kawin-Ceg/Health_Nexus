@@ -1,0 +1,124 @@
+.section {
+  padding-block: var(--hn-space-16);
+  border-top: 1px solid rgb(var(--hn-line));
+}
+
+.header {
+  max-width: 40rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.title {
+  font-size: clamp(2rem, 1.4rem + 2.2vw, 3rem);
+}
+
+.body {
+  margin-top: var(--hn-space-3);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-lg);
+}
+
+.grid {
+  display: grid;
+  gap: var(--hn-space-5);
+  margin-top: var(--hn-space-12);
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  display: flex;
+}
+
+.card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: var(--hn-space-5) var(--hn-space-5) var(--hn-space-6);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: 28px;
+  background: rgb(var(--hn-surface));
+  color: rgb(var(--hn-ink));
+  transition:
+    border-color var(--hn-duration-hover) var(--hn-ease-out),
+    box-shadow 400ms var(--hn-ease-out);
+}
+
+.card:hover {
+  border-color: rgb(var(--hn-ink) / 0.3);
+  box-shadow: 0 0 48px rgb(var(--hn-glow, var(--hn-brand-soft)));
+}
+
+.art {
+  display: block;
+  padding: var(--hn-space-4);
+  border-radius: 20px;
+  background: rgb(var(--hn-paper));
+}
+
+.art svg {
+  width: 100%;
+  height: auto;
+  transition: transform 500ms var(--hn-ease-out);
+}
+
+.card:hover .art svg {
+  transform: scale(1.04);
+}
+
+.who {
+  margin-top: var(--hn-space-5);
+  color: rgb(var(--hn-ink-muted));
+  font-size: var(--hn-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  margin-top: var(--hn-space-2);
+  font-size: var(--hn-text-2xl);
+}
+
+.cardBody {
+  margin-top: var(--hn-space-2);
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-sm);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-2);
+  align-self: flex-start;
+  min-height: var(--hn-tap);
+  margin-top: auto;
+  padding-top: var(--hn-space-4);
+  font-family: var(--hn-font-display, inherit);
+  font-size: var(--hn-text-lg);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color var(--hn-duration-hover) var(--hn-ease-out);
+}
+
+.card:hover .cta {
+  text-decoration-color: currentColor;
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-block: var(--hn-space-24);
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover .art svg {
+    transform: none;
+  }
+}

@@ -4,36 +4,37 @@
 }
 
 .panel {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
   display: none;
   flex-direction: column;
   justify-content: space-between;
   gap: var(--hn-space-12);
   padding: var(--hn-space-10);
-  background: rgb(var(--hn-panel));
-  color: rgb(var(--hn-on-panel));
-}
-
-.panel :focus-visible {
-  outline-color: rgb(var(--hn-on-panel));
+  border-right: 1px solid rgb(var(--hn-line));
+  background: rgb(var(--hn-paper-raised));
 }
 
 .pitch {
   display: grid;
   gap: var(--hn-space-8);
-  max-width: 40ch;
+  max-width: 34ch;
 }
 
 .tagline {
-  font-size: var(--hn-text-2xl);
-  font-weight: 600;
-  line-height: var(--hn-leading-snug);
+  font-family: var(--hn-font-display, inherit);
+  font-size: clamp(2rem, 1.4rem + 1.6vw, 2.75rem);
+  line-height: 1.08;
   letter-spacing: -0.02em;
 }
 
 .points {
   display: grid;
   gap: var(--hn-space-4);
-  color: rgb(var(--hn-on-panel-soft));
+  padding: 0;
+  list-style: none;
+  color: rgb(var(--hn-ink-soft));
 }
 
 .points li {
@@ -42,10 +43,48 @@
   align-items: flex-start;
 }
 
-.points svg {
+.pointIcon {
+  display: inline-grid;
   flex-shrink: 0;
-  margin-top: 2px;
-  color: rgb(var(--hn-on-panel));
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgb(var(--hn-lime, var(--hn-brand-soft)));
+  color: rgb(var(--hn-olive, var(--hn-brand)));
+}
+
+.note {
+  color: rgb(var(--hn-ink-muted));
+  font-size: var(--hn-text-sm);
+}
+
+.beads {
+  top: 20px;
+  right: 8%;
+  width: 120px;
+  --doodle-opacity: 0.85;
+}
+
+.ecg {
+  right: -20px;
+  top: 42%;
+  width: 170px;
+  rotate: 6deg;
+}
+
+.tree {
+  bottom: -20px;
+  right: 6%;
+  width: 200px;
+  --doodle-opacity: 0.6;
+}
+
+.capsules {
+  bottom: 120px;
+  left: 50%;
+  width: 90px;
+  rotate: -14deg;
 }
 
 .main {
@@ -53,23 +92,48 @@
   flex-direction: column;
   align-items: center;
   gap: var(--hn-space-6);
-  padding: var(--hn-space-6) var(--hn-gutter) var(--hn-space-12);
+  padding: var(--hn-space-5) var(--hn-gutter) var(--hn-space-12);
+  background: rgb(var(--hn-paper));
 }
 
-.mobileLogo {
-  align-self: flex-start;
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  gap: var(--hn-space-4);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hn-space-2);
+  min-height: var(--hn-tap);
+  margin-left: auto;
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-sm);
+  font-weight: 500;
+}
+
+.back:hover {
+  color: rgb(var(--hn-ink));
 }
 
 .card {
-  width: 100%;
-  max-width: 420px;
-  margin-block: auto;
   display: grid;
-  gap: var(--hn-space-6);
+  gap: var(--hn-space-5);
+  width: 100%;
+  max-width: 520px;
+  margin-block: auto;
+  padding: var(--hn-space-6) var(--hn-space-5);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: 28px;
+  background: rgb(var(--hn-surface));
+  box-shadow: 0 30px 80px -50px rgb(var(--hn-ink) / 0.35);
 }
 
 .wide {
-  max-width: 560px;
+  max-width: 600px;
 }
 
 .header {
@@ -78,7 +142,7 @@
 }
 
 .header h1 {
-  font-size: var(--hn-text-3xl);
+  font-size: clamp(1.75rem, 1.5rem + 1vw, 2.25rem);
 }
 
 .subtitle {
@@ -86,13 +150,16 @@
 }
 
 .footer {
+  padding-top: var(--hn-space-4);
+  border-top: 1px solid rgb(var(--hn-line));
   color: rgb(var(--hn-ink-soft));
   font-size: var(--hn-text-sm);
+  line-height: 1.8;
   text-align: center;
 }
 
 .footer a {
-  color: rgb(var(--hn-brand));
+  color: rgb(var(--hn-ink));
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -100,11 +167,21 @@
 
 @media (min-width: 900px) {
   .layout {
-    grid-template-columns: minmax(360px, 5fr) 7fr;
+    grid-template-columns: minmax(380px, 5fr) 7fr;
   }
 
   .panel {
+    position: sticky;
+    top: 0;
     display: flex;
+    height: 100dvh;
+  }
+
+  .panel .beads,
+  .panel .ecg,
+  .panel .tree,
+  .panel .capsules {
+    display: block;
   }
 
   .mobileLogo {
@@ -113,6 +190,10 @@
 
   .main {
     justify-content: center;
-    padding-block: var(--hn-space-12);
+    padding-block: var(--hn-space-4);
+  }
+
+  .card {
+    padding: var(--hn-space-8) var(--hn-space-10);
   }
 }

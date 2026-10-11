@@ -2,43 +2,48 @@
    color: rgb(var(--hn-ink));  background: rgb(var(--hn-brand) / 0.08); */
 
 :root {
-  /* Colour (light defaults; themes.css swaps these under .dark) */
-  --hn-ink: 22 33 31;
-  --hn-ink-soft: 61 74 71;
-  --hn-paper: 250 247 242;
-  --hn-paper-raised: 243 238 229;
+  /* Colour (light is the default; themes.css swaps these under .dark) */
+  --hn-ink: 26 35 33; /* #1A2321 */
+  --hn-ink-soft: 70 82 79; /* #46524F body copy */
+  --hn-ink-muted: 95 107 104; /* #5F6B68 captions, timestamps */
+  --hn-paper: 247 246 243; /* #F7F6F3 page */
+  --hn-paper-raised: 239 238 234; /* #EFEEEA sunken bands, table heads */
   --hn-surface: 255 255 255;
-  --hn-line: 228 221 207;
+  --hn-line: 222 225 221; /* #DEE1DD dividers */
+  --hn-line-strong: 125 137 134; /* #7D8986 control borders, 3:1 */
 
-  --hn-brand: 14 70 64; /* #0E4640 teal, primary */
-  --hn-brand-soft: 222 236 232; /* tinted brand fill */
-  --hn-on-brand: 255 255 255; /* text on brand fills */
-  --hn-accent: 193 101 59; /* #C1653B terracotta, decorative + large text */
-  --hn-accent-ink: 158 74 38; /* terracotta dark enough for small text (AA) */
-  --hn-warn: 140 92 10; /* 'elevated'; AA as small text on paper and surface */
-  --hn-danger: 176 38 31; /* form errors; AA on paper and surface */
-  --hn-on-danger: 255 255 255; /* text on a solid danger fill */
-  --hn-danger-soft: 252 234 231;
-  --hn-success: 24 110 72;
-  --hn-success-soft: 224 242 232;
+  --hn-brand: 11 107 95; /* #0B6B5F teal, the only brand colour */
+  --hn-brand-strong: 8 89 79; /* #08594F hover */
+  --hn-brand-soft: 227 241 238; /* #E3F1EE tinted fill */
+  --hn-on-brand: 255 255 255;
+  --hn-accent: 178 106 0; /* #B26A00 warning graphics */
+  --hn-accent-ink: 122 79 0; /* #7A4F00 warning text */
+  --hn-warn: 122 79 0;
+  --hn-warn-soft: 255 244 214;
+  --hn-danger: 180 35 24; /* #B42318 */
+  --hn-on-danger: 255 255 255;
+  --hn-danger-soft: 253 237 235;
+  --hn-success: 43 98 54; /* #2B6236 */
+  --hn-success-soft: 232 243 234;
+  --hn-info: 30 90 150; /* #1E5A96 */
+  --hn-info-soft: 232 240 250;
 
   /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
-  --hn-sev-critical: 176 38 31;
+  --hn-sev-critical: 176 53 43;
   --hn-sev-high: 166 64 16;
   --hn-sev-moderate: 140 92 10;
   --hn-sev-low: 74 96 92;
 
-  --hn-panel: 12 38 35; /* dark surface for hero side + footer */
-  --hn-panel-raised: 22 55 51;
-  --hn-on-panel: 240 236 228;
-  --hn-on-panel-soft: 183 199 194;
-  --hn-on-panel-error: 240 164 128; /* readable error text on the dark panel */
+  --hn-panel: 16 42 38; /* deep teal-ink for the footer and auth aside */
+  --hn-panel-raised: 24 58 53;
+  --hn-on-panel: 238 243 241;
+  --hn-on-panel-soft: 176 196 191;
+  --hn-on-panel-error: 240 164 128;
 
-  --hn-focus: 14 70 64;
+  --hn-focus: 31 79 168; /* #1F4FA8, never mistaken for selection */
 
   /* Type */
   --hn-font-sans: "Inter Variable", "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --hn-font-serif: Georgia, "Times New Roman", serif; /* italic emphasis words only */
 
   --hn-text-xs: 0.75rem;
   --hn-text-sm: 0.875rem;
@@ -67,11 +72,11 @@
   --hn-space-20: 80px;
   --hn-space-24: 96px;
 
-  /* Radii: cards 16/24, controls 12, small chips 8 */
-  --hn-radius-sm: 8px;
-  --hn-radius-md: 12px;
-  --hn-radius-lg: 16px;
-  --hn-radius-xl: 24px;
+  /* Radii: badges and inputs 6, buttons 8, panels 12, feature hub 16 */
+  --hn-radius-sm: 6px;
+  --hn-radius-md: 8px;
+  --hn-radius-lg: 12px;
+  --hn-radius-xl: 16px;
   --hn-radius-pill: 999px;
 
   /* Shadows are tinted with ink, never pure black */

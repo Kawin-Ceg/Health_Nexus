@@ -1,0 +1,725 @@
+"""The admin console: PHC worker approvals, accounts, support concerns and the audit trail.
+
+Every route needs an admin. Decisions on PHC applications are written to
+phc_verification_audit_log; account changes go to audit_logs. An admin can never
+act on their own account or on another admin from here.
+"""
+
+import uuid
+from datetime import datetime, timedelta
+from typing import Annotated, Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, ConfigDict, StringConstraints
+from sqlalchemy import delete, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
+
+from app.core.dependencies import require_admin
+from app.db.session import get_session
+from app.models import (
+    Alert,
+    AuditLog,
+    ChatMessage,
+    ChatSession,
+    Concern,
+    HealthRecord,
+    PhcApplication,
+    PhcVerificationAuditLog,
+    ProcessedData,
+    ScheduledVisit,
+    User,
+    ValidPhcFacility,
+)
+from app.models.base import utcnow
+from app.models.enums import (
+    AlertSeverity,
+    AlertType,
+    ApplicationStatus,
+    ChatMessageRole,
+    ConcernCategory,
+    ConcernStatus,
+    Designation,
+    PhcVerificationAction,
+    UserRole,
+    VisitStatus,
+)
+from app.services import sessions
+from app.services.phc_registry import match_facility, normalise_facility_name
+from app.services.visits import notify_changed
+
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+APPLICATION_NOT_FOUND = "Application not found."
+USER_NOT_FOUND = "Account not found."
+CONCERN_NOT_FOUND = "Concern not found."
+FACILITY_NOT_FOUND = "That health centre is not in the registry, or is inactive."
+
+Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=500)]
+
+
+def _ip(request: Request) -> str:
+    return sessions.client_ip(request) or "unknown"
+
+
+# --- Overview -------------------------------------------------------------------
+
+
+class Overview(BaseModel):
+    users_by_role: dict[str, int]
+    inactive_accounts: int
+    unverified_accounts: int
+    pending_applications: int
+    workers_without_facility: int
+    open_concerns: int
+    readings_last_7_days: int
+    open_flags: int
+    facilities_active: int
+    assistant_questions_last_7_days: int
+
+
+@router.get("/overview", response_model=Overview)
+async def overview(db: AsyncSession = Depends(get_session)) -> Overview:
+    week_ago = utcnow() - timedelta(days=7)
+    by_role = dict((await db.execute(select(User.role, func.count()).group_by(User.role))).all())
+
+    async def count(query) -> int:
+        return await db.scalar(query) or 0
+
+    return Overview(
+        users_by_role={r.value: by_role.get(r, 0) for r in UserRole},
+        inactive_accounts=await count(select(func.count()).where(User.is_active.is_(False))),
+        unverified_accounts=await count(select(func.count()).where(User.is_verified.is_(False))),
+        pending_applications=await count(
+            select(func.count()).where(PhcApplication.status == ApplicationStatus.pending)
+        ),
+        workers_without_facility=await count(
+            select(func.count()).where(User.role == UserRole.phc_worker, User.phc_id.is_(None))
+        ),
+        open_concerns=await count(
+            select(func.count()).where(Concern.status.in_([ConcernStatus.open, ConcernStatus.in_review]))
+        ),
+        readings_last_7_days=await count(select(func.count()).where(HealthRecord.created_at >= week_ago)),
+        open_flags=await count(
+            select(func.count()).where(ProcessedData.is_anomaly.is_(True), ProcessedData.resolution.is_(None))
+        ),
+        facilities_active=await count(select(func.count()).where(ValidPhcFacility.is_active.is_(True))),
+        assistant_questions_last_7_days=await count(
+            select(func.count()).where(ChatMessage.role == ChatMessageRole.user, ChatMessage.created_at >= week_ago)
+        ),
+    )
+
+
+# --- Health centre registry -------------------------------------------------------
+
+
+class FacilityOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    facility_code: str
+    name: str
+    district: str
+    state: str
+    block: str | None
+    is_active: bool
+
+
+@router.get("/facilities", response_model=list[FacilityOut])
+async def facilities(
+    q: str | None = Query(None, max_length=120),
+    district: str | None = Query(None, max_length=120),
+    state: str | None = Query(None, max_length=120),
+    limit: int = Query(25, ge=1, le=100),
+    db: AsyncSession = Depends(get_session),
+) -> list[ValidPhcFacility]:
+    query = select(ValidPhcFacility).where(ValidPhcFacility.is_active.is_(True))
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.where(
+            or_(
+                ValidPhcFacility.name.ilike(like),
+                ValidPhcFacility.normalised_name.ilike(f"%{normalise_facility_name(q)}%"),
+                ValidPhcFacility.facility_code.ilike(like),
+            )
+        )
+    if district:
+        query = query.where(ValidPhcFacility.district.ilike(district.strip()))
+    if state:
+        query = query.where(ValidPhcFacility.state.ilike(state.strip()))
+    return list((await db.scalars(query.order_by(ValidPhcFacility.name).limit(limit))).all())
+
+
+# --- PHC worker applications --------------------------------------------------------
+
+
+class Applicant(BaseModel):
+    id: uuid.UUID
+    name: str
+    email: str
+    role: UserRole
+    is_verified: bool
+    is_active: bool
+    phc_id: uuid.UUID | None
+
+
+class ApplicationItem(BaseModel):
+    id: uuid.UUID
+    applicant: Applicant
+    employee_id: str
+    designation: Designation
+    phc_name: str
+    district: str
+    state: str
+    years_of_service: int
+    status: ApplicationStatus
+    rejection_reason: str | None
+    facility: FacilityOut | None
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+    created_at: datetime
+
+
+class ApplicationsOut(BaseModel):
+    items: list[ApplicationItem]
+    total: int
+    counts: dict[str, int]
+
+
+class HistoryItem(BaseModel):
+    action: PhcVerificationAction
+    from_status: str | None
+    to_status: str
+    reason: str | None
+    actor: str | None
+    created_at: datetime
+
+
+class ApplicationDetail(ApplicationItem):
+    # The registry's single exact match for what the applicant claimed, if any.
+    suggested_facility: FacilityOut | None
+    history: list[HistoryItem]
+
+
+def _applicant(user: User) -> Applicant:
+    return Applicant(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        is_verified=user.is_verified,
+        is_active=user.is_active,
+        phc_id=user.phc_id,
+    )
+
+
+def _item(app_: PhcApplication, user: User, facility: ValidPhcFacility | None, reviewer: str | None) -> dict:
+    return dict(
+        id=app_.id,
+        applicant=_applicant(user),
+        employee_id=app_.employee_id,
+        designation=app_.designation,
+        phc_name=app_.phc_name,
+        district=app_.district,
+        state=app_.state,
+        years_of_service=app_.years_of_service,
+        status=app_.status,
+        rejection_reason=app_.rejection_reason,
+        facility=FacilityOut.model_validate(facility) if facility else None,
+        reviewed_by=reviewer,
+        reviewed_at=app_.reviewed_at,
+        created_at=app_.created_at,
+    )
+
+
+Reviewer = aliased(User)
+
+
+def _applications_query():
+    return (
+        select(PhcApplication, User, ValidPhcFacility, Reviewer.name)
+        .join(User, User.id == PhcApplication.user_id)
+        .outerjoin(ValidPhcFacility, ValidPhcFacility.id == PhcApplication.facility_id)
+        .outerjoin(Reviewer, Reviewer.id == PhcApplication.reviewed_by)
+    )
+
+
+@router.get("/applications", response_model=ApplicationsOut)
+async def list_applications(
+    status_: ApplicationStatus | None = Query(None, alias="status"),
+    q: str | None = Query(None, max_length=120),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_session),
+) -> ApplicationsOut:
+    query = _applications_query()
+    if status_:
+        query = query.where(PhcApplication.status == status_)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.where(
+            or_(User.name.ilike(like), User.email.ilike(like), PhcApplication.phc_name.ilike(like),
+                PhcApplication.employee_id.ilike(like))
+        )
+    total = await db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    # Oldest pending first: whoever has waited longest is reviewed first.
+    rows = (await db.execute(query.order_by(PhcApplication.created_at).limit(limit).offset(offset))).all()
+    counts = dict(
+        (await db.execute(select(PhcApplication.status, func.count()).group_by(PhcApplication.status))).all()
+    )
+    return ApplicationsOut(
+        items=[ApplicationItem(**_item(a, u, f, r)) for a, u, f, r in rows],
+        total=total,
+        counts={s.value: counts.get(s, 0) for s in ApplicationStatus},
+    )
+
+
+async def _load_application(db: AsyncSession, application_id: uuid.UUID, lock: bool = False) -> PhcApplication:
+    query = select(PhcApplication).where(PhcApplication.id == application_id)
+    if lock:
+        query = query.with_for_update()
+    app_ = await db.scalar(query)
+    if app_ is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, APPLICATION_NOT_FOUND)
+    return app_
+
+
+async def _detail(db: AsyncSession, application_id: uuid.UUID) -> ApplicationDetail:
+    row = (await db.execute(_applications_query().where(PhcApplication.id == application_id))).first()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, APPLICATION_NOT_FOUND)
+    app_, user, facility, reviewer = row
+    suggested = await match_facility(db, app_.phc_name, app_.district, app_.state)
+    Actor = aliased(User)
+    history = (
+        await db.execute(
+            select(PhcVerificationAuditLog, Actor.name)
+            .outerjoin(Actor, Actor.id == PhcVerificationAuditLog.actor_user_id)
+            .where(PhcVerificationAuditLog.application_id == app_.id)
+            .order_by(PhcVerificationAuditLog.created_at.desc())
+        )
+    ).all()
+    return ApplicationDetail(
+        **_item(app_, user, facility, reviewer),
+        suggested_facility=FacilityOut.model_validate(suggested) if suggested else None,
+        history=[
+            HistoryItem(action=h.action, from_status=h.from_status, to_status=h.to_status, reason=h.reason,
+                        actor=actor, created_at=h.created_at)
+            for h, actor in history
+        ],
+    )
+
+
+@router.get("/applications/{application_id}", response_model=ApplicationDetail)
+async def get_application(application_id: uuid.UUID, db: AsyncSession = Depends(get_session)) -> ApplicationDetail:
+    return await _detail(db, application_id)
+
+
+class Approve(BaseModel):
+    facility_id: uuid.UUID
+    note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
+
+
+class Decision(BaseModel):
+    reason: Reason
+
+
+def _log(db: AsyncSession, app_: PhcApplication, admin: User, action: PhcVerificationAction, from_status: str,
+         reason: str | None, request: Request) -> None:
+    db.add(
+        PhcVerificationAuditLog(
+            application_id=app_.id,
+            subject_user_id=app_.user_id,
+            actor_user_id=admin.id,
+            action=action,
+            from_status=from_status,
+            to_status=app_.status.value,
+            reason=reason,
+            ip_address=_ip(request),
+        )
+    )
+
+
+@router.post("/applications/{application_id}/approve", response_model=ApplicationDetail)
+async def approve(
+    application_id: uuid.UUID,
+    data: Approve,
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> ApplicationDetail:
+    app_ = await _load_application(db, application_id, lock=True)
+    if app_.status == ApplicationStatus.approved:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This application is already approved.")
+    user = await db.get(User, app_.user_id, with_for_update=True)
+    if user is None or not user.is_active:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The applicant's account is deactivated.")
+    if not user.is_verified:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The applicant has not confirmed their email address yet.")
+    facility = await db.get(ValidPhcFacility, data.facility_id)
+    if facility is None or not facility.is_active:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, FACILITY_NOT_FOUND)
+
+    now = utcnow()
+    from_status = app_.status.value
+    app_.status = ApplicationStatus.approved
+    app_.rejection_reason = None
+    app_.facility_id = facility.id
+    app_.last_checked_at = now
+    app_.reviewed_by = admin.id
+    app_.reviewed_at = now
+    # The catchment link: from here the worker sees citizens of this facility.
+    user.role = UserRole.phc_worker
+    user.phc_id = facility.id
+    user.district = facility.district
+    user.state = facility.state
+    _log(db, app_, admin, PhcVerificationAction.application_approved, from_status, data.note, request)
+    db.add(
+        Alert(
+            user_id=user.id,
+            alert_type=AlertType.personal,
+            severity=AlertSeverity.low,
+            message=f"Your PHC worker account is approved. You are linked to {facility.name}.",
+        )
+    )
+    await db.commit()
+    return await _detail(db, app_.id)
+
+
+@router.post("/applications/{application_id}/reject", response_model=ApplicationDetail)
+async def reject(
+    application_id: uuid.UUID,
+    data: Decision,
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> ApplicationDetail:
+    app_ = await _load_application(db, application_id, lock=True)
+    if app_.status != ApplicationStatus.pending:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Only a pending application can be rejected. Revoke an approved one instead.",
+        )
+    now = utcnow()
+    app_.status = ApplicationStatus.rejected
+    app_.rejection_reason = data.reason
+    app_.reviewed_by = admin.id
+    app_.reviewed_at = now
+    _log(db, app_, admin, PhcVerificationAction.application_rejected, ApplicationStatus.pending.value, data.reason,
+         request)
+    await db.commit()
+    return await _detail(db, app_.id)
+
+
+@router.post("/applications/{application_id}/revoke", response_model=ApplicationDetail)
+async def revoke(
+    application_id: uuid.UUID,
+    data: Decision,
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> ApplicationDetail:
+    """Take worker access away. The account goes back to pending_phc with no catchment."""
+    app_ = await _load_application(db, application_id, lock=True)
+    if app_.status != ApplicationStatus.approved:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Only an approved application can be revoked.")
+    worker = await db.get(User, app_.user_id, with_for_update=True)
+    now = utcnow()
+    app_.status = ApplicationStatus.rejected
+    app_.rejection_reason = data.reason
+    app_.reviewed_by = admin.id
+    app_.reviewed_at = now
+    if worker is not None:
+        worker.role = UserRole.pending_phc
+        worker.phc_id = None
+        # Citizens should not wait for a visit from someone who can no longer see them.
+        visits = await db.execute(
+            select(ScheduledVisit, User)
+            .join(User, User.id == ScheduledVisit.citizen_id)
+            .where(ScheduledVisit.worker_id == worker.id, ScheduledVisit.status == VisitStatus.scheduled)
+        )
+        for visit, citizen in visits.all():
+            visit.status = VisitStatus.cancelled
+            notify_changed(db, visit, citizen, worker, "cancelled")
+        # Their assistant history quotes catchment records they may no longer see.
+        await db.execute(delete(ChatSession).where(ChatSession.user_id == worker.id))
+    _log(db, app_, admin, PhcVerificationAction.application_revoked, ApplicationStatus.approved.value, data.reason,
+         request)
+    await db.commit()
+    return await _detail(db, app_.id)
+
+
+# --- Accounts ---------------------------------------------------------------------
+
+
+class AccountItem(BaseModel):
+    id: uuid.UUID
+    name: str
+    email: str
+    role: UserRole
+    is_active: bool
+    is_verified: bool
+    profile_completed: bool
+    facility: str | None
+    district: str | None
+    state: str | None
+    created_at: datetime
+    deactivated_at: datetime | None
+
+
+class AccountsOut(BaseModel):
+    items: list[AccountItem]
+    total: int
+    limit: int
+    offset: int
+
+
+@router.get("/users", response_model=AccountsOut)
+async def list_users(
+    role: UserRole | None = None,
+    state_: Literal["active", "inactive", "unverified"] | None = Query(None, alias="status"),
+    q: str | None = Query(None, max_length=120),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_session),
+) -> AccountsOut:
+    query = select(User, ValidPhcFacility.name).outerjoin(ValidPhcFacility, ValidPhcFacility.id == User.phc_id)
+    if role:
+        query = query.where(User.role == role)
+    if state_ == "active":
+        query = query.where(User.is_active.is_(True))
+    elif state_ == "inactive":
+        query = query.where(User.is_active.is_(False))
+    elif state_ == "unverified":
+        query = query.where(User.is_verified.is_(False))
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.where(or_(User.name.ilike(like), User.email.ilike(like)))
+    total = await db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    rows = (await db.execute(query.order_by(User.created_at.desc()).limit(limit).offset(offset))).all()
+    return AccountsOut(
+        items=[
+            AccountItem(
+                id=u.id, name=u.name, email=u.email, role=u.role, is_active=u.is_active, is_verified=u.is_verified,
+                profile_completed=u.profile_completed, facility=facility, district=u.district, state=u.state,
+                created_at=u.created_at, deactivated_at=u.deactivated_at,
+            )
+            for u, facility in rows
+        ],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+async def _target(db: AsyncSession, admin: User, user_id: uuid.UUID) -> User:
+    user = await db.get(User, user_id, with_for_update=True)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, USER_NOT_FOUND)
+    if user.id == admin.id or user.role == UserRole.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Administrator accounts cannot be changed here.")
+    return user
+
+
+@router.post("/users/{user_id}/deactivate", response_model=AccountItem)
+async def deactivate_user(
+    user_id: uuid.UUID,
+    data: Decision,
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> AccountItem:
+    user = await _target(db, admin, user_id)
+    if not user.is_active:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This account is already deactivated.")
+    user.is_active = False
+    user.deactivated_at = utcnow()
+    # Signed out everywhere at once; get_current_user also re-reads is_active on every request.
+    await sessions.revoke_all_for_user(db, user.id, "deactivated_by_admin")
+    db.add(AuditLog(user_id=admin.id, action=f"admin_deactivate: {data.reason}", entity="users",
+                    entity_id=user.id, ip_address=_ip(request)))
+    await db.commit()
+    return await _account(db, user)
+
+
+@router.post("/users/{user_id}/reactivate", response_model=AccountItem)
+async def reactivate_user(
+    user_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> AccountItem:
+    user = await _target(db, admin, user_id)
+    if user.is_active:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This account is already active.")
+    user.is_active = True
+    user.deactivated_at = None
+    db.add(AuditLog(user_id=admin.id, action="admin_reactivate", entity="users", entity_id=user.id,
+                    ip_address=_ip(request)))
+    await db.commit()
+    return await _account(db, user)
+
+
+async def _account(db: AsyncSession, u: User) -> AccountItem:
+    facility = await db.scalar(select(ValidPhcFacility.name).where(ValidPhcFacility.id == u.phc_id)) if u.phc_id else None
+    return AccountItem(
+        id=u.id, name=u.name, email=u.email, role=u.role, is_active=u.is_active, is_verified=u.is_verified,
+        profile_completed=u.profile_completed, facility=facility, district=u.district, state=u.state,
+        created_at=u.created_at, deactivated_at=u.deactivated_at,
+    )
+
+
+# --- Support concerns ---------------------------------------------------------------
+
+
+class ConcernItem(BaseModel):
+    id: uuid.UUID
+    ticket_ref: str
+    category: ConcernCategory
+    description: str
+    status: ConcernStatus
+    admin_note: str | None
+    raised_by: str
+    raised_by_email: str
+    raised_by_role: UserRole
+    handled_by: str | None
+    created_at: datetime
+    updated_at: datetime
+    resolved_at: datetime | None
+
+
+class ConcernsOut(BaseModel):
+    items: list[ConcernItem]
+    total: int
+    counts: dict[str, int]
+
+
+Raiser = aliased(User)
+Handler = aliased(User)
+
+
+def _concerns_query():
+    return (
+        select(Concern, Raiser, Handler.name)
+        .join(Raiser, Raiser.id == Concern.user_id)
+        .outerjoin(Handler, Handler.id == Concern.handled_by)
+    )
+
+
+def _concern(c: Concern, raiser: User, handler: str | None) -> ConcernItem:
+    return ConcernItem(
+        id=c.id, ticket_ref=c.ticket_ref, category=c.category, description=c.description, status=c.status,
+        admin_note=c.admin_note, raised_by=raiser.name, raised_by_email=raiser.email, raised_by_role=raiser.role,
+        handled_by=handler, created_at=c.created_at, updated_at=c.updated_at, resolved_at=c.resolved_at,
+    )
+
+
+@router.get("/concerns", response_model=ConcernsOut)
+async def list_concerns(
+    status_: ConcernStatus | None = Query(None, alias="status"),
+    category: ConcernCategory | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_session),
+) -> ConcernsOut:
+    query = _concerns_query()
+    if status_:
+        query = query.where(Concern.status == status_)
+    if category:
+        query = query.where(Concern.category == category)
+    total = await db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    rows = (await db.execute(query.order_by(Concern.created_at.desc()).limit(limit).offset(offset))).all()
+    counts = dict((await db.execute(select(Concern.status, func.count()).group_by(Concern.status))).all())
+    return ConcernsOut(
+        items=[_concern(*r) for r in rows],
+        total=total,
+        counts={s.value: counts.get(s, 0) for s in ConcernStatus},
+    )
+
+
+class ConcernUpdate(BaseModel):
+    status: ConcernStatus
+    admin_note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
+
+
+@router.patch("/concerns/{concern_id}", response_model=ConcernItem)
+async def update_concern(
+    concern_id: uuid.UUID,
+    data: ConcernUpdate,
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> ConcernItem:
+    concern = await db.get(Concern, concern_id, with_for_update=True)
+    if concern is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, CONCERN_NOT_FOUND)
+    closing = data.status in (ConcernStatus.resolved, ConcernStatus.rejected)
+    if closing and not (data.admin_note or concern.admin_note):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Add a note for the person before closing this.")
+    concern.status = data.status
+    if data.admin_note is not None:
+        concern.admin_note = data.admin_note or None
+    concern.handled_by = admin.id
+    concern.resolved_at = utcnow() if closing else None
+    db.add(AuditLog(user_id=admin.id, action=f"concern_{data.status.value}", entity="concerns",
+                    entity_id=concern.id, ip_address=_ip(request)))
+    await db.commit()
+    row = (await db.execute(_concerns_query().where(Concern.id == concern.id))).one()
+    return _concern(*row)
+
+
+# --- Audit trail --------------------------------------------------------------------
+
+
+class AuditItem(BaseModel):
+    source: Literal["account", "verification"]
+    action: str
+    actor: str | None
+    entity: str
+    entity_id: uuid.UUID | None
+    detail: str | None
+    ip_address: str
+    created_at: datetime
+
+
+@router.get("/audit", response_model=list[AuditItem])
+async def audit(
+    source: Literal["account", "verification"] | None = None,
+    limit: int = Query(100, ge=1, le=500),
+    db: AsyncSession = Depends(get_session),
+) -> list[AuditItem]:
+    """Both trails, newest first. Each is append-only; this only reads them."""
+    items: list[AuditItem] = []
+    if source in (None, "account"):
+        Actor = aliased(User)
+        rows = await db.execute(
+            select(AuditLog, Actor.name)
+            .outerjoin(Actor, Actor.id == AuditLog.user_id)
+            .order_by(AuditLog.created_at.desc())
+            .limit(limit)
+        )
+        items += [
+            AuditItem(source="account", action=a.action, actor=name, entity=a.entity, entity_id=a.entity_id,
+                      detail=None, ip_address=a.ip_address, created_at=a.created_at)
+            for a, name in rows.all()
+        ]
+    if source in (None, "verification"):
+        Actor = aliased(User)
+        Subject = aliased(User)
+        rows = await db.execute(
+            select(PhcVerificationAuditLog, Actor.name, Subject.name)
+            .outerjoin(Actor, Actor.id == PhcVerificationAuditLog.actor_user_id)
+            .join(Subject, Subject.id == PhcVerificationAuditLog.subject_user_id)
+            .order_by(PhcVerificationAuditLog.created_at.desc())
+            .limit(limit)
+        )
+        items += [
+            AuditItem(
+                source="verification", action=v.action.value, actor=actor, entity="phc_applications",
+                entity_id=v.application_id,
+                detail=f"{subject}: {v.from_status or '-'} -> {v.to_status}" + (f" ({v.reason})" if v.reason else ""),
+                ip_address=v.ip_address, created_at=v.created_at,
+            )
+            for v, actor, subject in rows.all()
+        ]
+    items.sort(key=lambda i: i.created_at, reverse=True)
+    return items[:limit]

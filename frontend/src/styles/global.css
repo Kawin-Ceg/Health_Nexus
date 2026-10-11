@@ -1,5 +1,6 @@
 @layer theme, base, components, utilities;
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/newsreader";
 @import "./tokens.css";
 @import "./themes.css";
 @import "tailwindcss/theme.css" layer(theme);
@@ -9,11 +10,14 @@
 @theme inline {
   --color-ink: rgb(var(--hn-ink));
   --color-ink-soft: rgb(var(--hn-ink-soft));
+  --color-ink-muted: rgb(var(--hn-ink-muted));
   --color-paper: rgb(var(--hn-paper));
   --color-paper-raised: rgb(var(--hn-paper-raised));
   --color-surface: rgb(var(--hn-surface));
   --color-line: rgb(var(--hn-line));
+  --color-line-strong: rgb(var(--hn-line-strong));
   --color-brand: rgb(var(--hn-brand));
+  --color-brand-strong: rgb(var(--hn-brand-strong));
   --color-brand-soft: rgb(var(--hn-brand-soft));
   --color-on-brand: rgb(var(--hn-on-brand));
   --color-accent: rgb(var(--hn-accent));
@@ -24,6 +28,9 @@
   --color-danger-soft: rgb(var(--hn-danger-soft));
   --color-success: rgb(var(--hn-success));
   --color-success-soft: rgb(var(--hn-success-soft));
+  --color-warn-soft: rgb(var(--hn-warn-soft));
+  --color-info: rgb(var(--hn-info));
+  --color-info-soft: rgb(var(--hn-info-soft));
   --color-sev-critical: rgb(var(--hn-sev-critical));
   --color-sev-high: rgb(var(--hn-sev-high));
   --color-sev-moderate: rgb(var(--hn-sev-moderate));
@@ -121,20 +128,8 @@ p {
   text-wrap: pretty;
 }
 
-/* The one serif moment: italic emphasis words inside headings. Extra bottom
-   padding keeps descenders (y, g, p) from clipping at tight leading. */
-h1 em,
-h2 em,
-h3 em {
-  font-family: var(--hn-font-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  padding-bottom: 0.08em;
-}
-
 :focus-visible {
-  outline: 2px solid rgb(var(--hn-focus));
+  outline: 3px solid rgb(var(--hn-focus));
   outline-offset: 3px;
   border-radius: var(--hn-radius-sm);
 }
@@ -177,4 +172,60 @@ h3 em {
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* The public pages (landing, privacy, terms): a cream, editorial look with serif
+   headlines and pill buttons. The signed-in app keeps the default tokens. */
+.landing {
+  --hn-ink: 17 17 17;
+  --hn-ink-soft: 82 82 77;
+  --hn-ink-muted: 110 110 104;
+  --hn-paper: 250 249 243;
+  --hn-paper-raised: 242 241 235;
+  --hn-surface: 255 255 255;
+  --hn-line: 235 234 230;
+  --hn-line-strong: 17 17 17;
+  --hn-brand: 17 17 17;
+  --hn-brand-strong: 0 0 0;
+  --hn-brand-soft: 233 237 76;
+  --hn-on-brand: 250 249 243;
+  --hn-panel: 17 17 17;
+  --hn-panel-raised: 34 34 32;
+  --hn-on-panel: 250 249 243;
+  --hn-on-panel-soft: 196 195 186;
+  --hn-lime: 233 237 76;
+  --hn-olive: 98 99 30;
+  --hn-glow: 255 245 198;
+  --hn-chart-normal: 140 139 128;
+  --hn-button-radius: 999px;
+  --hn-button-border: 1.5px;
+  --hn-button-outline: 17 17 17;
+  --hn-button-glow: 0 0 48px rgb(255 245 198);
+  --hn-font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
+  --hn-button-font: var(--hn-font-display);
+  --hn-button-weight: 450;
+  --hn-button-lg-size: 1.0625rem;
+  background: rgb(var(--hn-paper));
+  color: rgb(var(--hn-ink));
+  color-scheme: light;
+}
+
+.landing h1,
+.landing h2 {
+  font-family: var(--hn-font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+
+.landing h3 {
+  font-family: var(--hn-font-display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.landing p,
+.landing li {
+  letter-spacing: -0.01em;
 }

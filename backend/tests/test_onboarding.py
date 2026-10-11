@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import select, text
 
 from app.models import ConsentRecord, User, UserProfile, ValidPhcFacility
+from app.seeds.data import tamil_nadu
 from tests.conftest import BASE, PASSWORD, register_and_login
 from tests.test_auth import WORKER
 
@@ -62,12 +63,15 @@ async def test_dropdowns_load_from_the_registry(client, db, outbox):
     headers = await register_and_login(client, outbox)
     assert (await client.get(f"{BASE}/onboarding/states", headers=headers)).json() == [STATE]
 
+    # Expected values come from the same data the registry seed loads.
+    registry = tamil_nadu.facilities()
+
     districts = (await client.get(f"{BASE}/onboarding/districts", params={"state": "tamil nadu"}, headers=headers)).json()
-    assert districts == ["Chengalpattu", "Chennai", "Kanchipuram", "Tiruvallur"]
+    assert districts == sorted({r["district"] for r in registry})
     assert (await client.get(f"{BASE}/onboarding/districts", params={"state": "Kerala"}, headers=headers)).json() == []
 
     facilities = (await client.get(f"{BASE}/onboarding/facilities", params={"state": STATE, "district": DISTRICT}, headers=headers)).json()
-    assert [f["name"] for f in facilities] == ["Adyar PHC", "Ambattur PHC", "Mylapore PHC", "Perambur PHC", "Velachery PHC"]
+    assert [f["name"] for f in facilities] == sorted(r["name"] for r in registry if r["district"] == DISTRICT)
 
 
 async def test_inactive_facilities_are_hidden(client, db, outbox):
