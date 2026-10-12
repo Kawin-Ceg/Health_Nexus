@@ -283,3 +283,17 @@
   width: 130px;
   rotate: 10deg;
 }
+
+.flask {
+  bottom: 18%;
+  left: 3%;
+  width: 90px;
+  --doodle-opacity: 0.5;
+}
+
+.speckle {
+  top: 22%;
+  right: 4%;
+  width: 120px;
+  --doodle-opacity: 0.55;
+}

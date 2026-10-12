@@ -5,6 +5,7 @@ import { nav, routes } from "../../../content/landing";
 import { Button } from "../../ui/Button/Button";
 import { Container } from "../../ui/Container/Container";
 import { Logo } from "../../ui/Logo/Logo";
+import { SoundToggle } from "../SoundToggle/SoundToggle";
 import styles from "./LandingNavbar.module.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -85,6 +86,7 @@ export function LandingNavbar() {
         </nav>
 
         <div className={styles.actions}>
+          <SoundToggle />
           <Button to={routes.login} variant="ghost">
             {nav.login}
           </Button>
@@ -92,6 +94,7 @@ export function LandingNavbar() {
         </div>
 
         <div className={styles.mobileBar}>
+          <SoundToggle />
           <Button to={routes.signup} className={styles.mobileCta}>
             {nav.getStarted}
           </Button>

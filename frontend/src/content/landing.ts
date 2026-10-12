@@ -230,7 +230,7 @@ export const privacy = {
 export const finalCta = {
   headingId: "final-cta-heading",
   eyebrow: "Get started",
-  heading: "Start looking after your health today",
+  heading: { lead: "Start looking after your health,", rest: "and your community's, today" },
   body: "Free for citizens. Create an account, confirm your email, and set up your health profile.",
   cta: "Create account",
   secondaryCta: "I'm a PHC worker",

@@ -1,8 +1,23 @@
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
+import { illustrationSound } from "../../../lib/sound";
 import { BlurIn } from "../BlurIn/BlurIn";
 import styles from "./Doodle.module.css";
 
-export type Piece = "beads" | "tissue" | "tree" | "ecg" | "honeycomb" | "radial" | "helix" | "capsules";
+export type Piece =
+  | "beads"
+  | "tissue"
+  | "tree"
+  | "ecg"
+  | "honeycomb"
+  | "radial"
+  | "helix"
+  | "capsules"
+  | "network"
+  | "botanical"
+  | "flask"
+  | "speckle"
+  | "microbe"
+  | "coral";
 
 const BEADS = [
   [30, 40, 14], [62, 30, 11], [92, 46, 13], [70, 66, 10], [40, 78, 12], [104, 86, 9], [130, 60, 11], [150, 92, 8],
@@ -153,6 +168,140 @@ function Capsules() {
   );
 }
 
+// Deterministic pseudo-random, so the drawings are identical on every render.
+const rand = (seed: number) => {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+};
+
+const NET_NODES = Array.from({ length: 46 }, (_, i) => {
+  const a = rand(i) * Math.PI * 2;
+  const r = 40 + rand(i + 100) * 150;
+  return [200 + Math.cos(a) * r * 1.1, 200 + Math.sin(a) * r] as const;
+});
+const NET_EDGES = NET_NODES.flatMap(([x, y], i) =>
+  NET_NODES.slice(i + 1)
+    .map(([x2, y2], j) => [i, i + 1 + j, Math.hypot(x2 - x, y2 - y)] as const)
+    .filter(([, , d]) => d < 62)
+    .map(([a, b]) => [a, b] as const),
+);
+
+function Network({ id }: { id: string }) {
+  return (
+    <svg viewBox="0 0 400 400">
+      <defs>
+        <radialGradient id={id} cx="45%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#dfe7f3" />
+          <stop offset="100%" stopColor="#b8c6dc" />
+        </radialGradient>
+      </defs>
+      {NET_NODES.map(([x, y], i) => (
+        <circle key={`b${i}`} cx={x} cy={y} r={14 + rand(i + 7) * 18} fill={`url(#${id})`} opacity="0.55" />
+      ))}
+      {NET_EDGES.map(([a, b]) => (
+        <line key={`${a}-${b}`} x1={NET_NODES[a][0]} y1={NET_NODES[a][1]} x2={NET_NODES[b][0]} y2={NET_NODES[b][1]} stroke="#ffffff" strokeWidth="1" />
+      ))}
+      {NET_NODES.map(([x, y], i) => (
+        <circle key={`n${i}`} cx={x} cy={y} r={i % 9 === 0 ? 4 : 2} fill={i % 9 === 0 ? "#e3a33b" : "#ffffff"} />
+      ))}
+    </svg>
+  );
+}
+
+function Botanical() {
+  const sprigs = [
+    [60, 150, 30, 90],
+    [90, 120, 120, 70],
+    [140, 100, 190, 80],
+    [170, 95, 210, 130],
+    [110, 110, 95, 55],
+  ] as const;
+  return (
+    <svg viewBox="0 0 240 240">
+      <path d="M10 230 C60 170 120 120 220 70" fill="none" stroke="#9a9a8c" strokeWidth="1.2" />
+      {sprigs.map(([x1, y1, x2, y2]) => (
+        <g key={`${x1}-${y1}`}>
+          <path d={`M${x1} ${y1} Q${(x1 + x2) / 2 + 6} ${(y1 + y2) / 2 - 6} ${x2} ${y2}`} fill="none" stroke="#a8a89a" strokeWidth="0.9" />
+          {[0, 1, 2, 3].map((k) => (
+            <circle key={k} cx={x2 + Math.cos(k * 1.6) * 7} cy={y2 + Math.sin(k * 1.6) * 7} r="1.8" fill="#9a9a8c" />
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function Flask() {
+  return (
+    <svg viewBox="0 0 120 150">
+      <path d="M45 10 H75 M50 10 V55 L18 125 C14 134 20 142 30 142 H90 C100 142 106 134 102 125 L70 55 V10" fill="none" stroke="#a8a89a" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M28 112 C48 104 72 120 92 110" fill="none" stroke="#9fb3d6" strokeWidth="1.2" />
+      {[[40, 125], [60, 118], [76, 128]].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="2.5" fill="none" stroke="#9fb3d6" />
+      ))}
+    </svg>
+  );
+}
+
+function Speckle() {
+  return (
+    <svg viewBox="0 0 160 140">
+      {Array.from({ length: 240 }, (_, i) => {
+        const a = rand(i + 300) * Math.PI * 2;
+        const r = Math.sqrt(rand(i + 600)) * 60;
+        const colors = ["#3a4fa0", "#c2408f", "#e3a33b", "#62631e", "#7a8fb8"];
+        return <circle key={i} cx={80 + Math.cos(a) * r * 1.1} cy={70 + Math.sin(a) * r} r={0.8 + rand(i + 900) * 1.4} fill={colors[i % colors.length]} opacity="0.55" />;
+      })}
+    </svg>
+  );
+}
+
+function Microbe() {
+  return (
+    <svg viewBox="0 0 260 220">
+      <g transform="translate(120 100)">
+        {Array.from({ length: 28 }, (_, i) => (
+          <line key={i} x1="0" y1="-52" x2="0" y2={i % 2 ? -66 : -74} transform={`rotate(${i * (360 / 28)})`} stroke="#e07a3c" strokeWidth="1.6" />
+        ))}
+        <circle r="52" fill="#fdf1e8" stroke="#e07a3c" strokeWidth="2" />
+        {Array.from({ length: 14 }, (_, i) => {
+          const a = rand(i + 40) * Math.PI * 2;
+          const r = 10 + rand(i + 80) * 32;
+          return <rect key={i} x={Math.cos(a) * r - 4} y={Math.sin(a) * r - 4} width="8" height="8" rx="2" fill="none" stroke="#e07a3c" strokeWidth="1.2" transform={`rotate(${i * 25} ${Math.cos(a) * r} ${Math.sin(a) * r})`} />;
+        })}
+      </g>
+      <path d="M180 60 L232 30 M70 150 L20 190 M190 150 L240 170" stroke="#5a5a52" strokeWidth="0.8" />
+      {[[236, 28, "12"], [10, 200, "4"], [244, 176, "7"]].map(([x, y, n]) => (
+        <text key={String(n)} x={Number(x)} y={Number(y)} fontFamily="Georgia, serif" fontSize="11" fontStyle="italic" fill="#5a5a52">
+          {n}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+function Coral({ id }: { id: string }) {
+  return (
+    <svg viewBox="0 0 240 260">
+      <defs>
+        <radialGradient id={id} cx="40%" cy="35%" r="75%">
+          <stop offset="0%" stopColor="#d9b6f0" />
+          <stop offset="55%" stopColor="#9b5cc7" />
+          <stop offset="100%" stopColor="#5b2a85" />
+        </radialGradient>
+      </defs>
+      <path
+        d="M120 20 C150 10 170 40 160 60 C190 50 220 80 200 105 C235 115 230 160 195 165 C215 195 185 225 155 205 C150 240 105 245 98 212 C70 235 35 210 52 180 C15 175 12 130 45 122 C20 95 45 60 78 72 C75 40 98 22 120 20 Z"
+        fill={`url(#${id})`}
+        stroke="#e9ed4c"
+        strokeWidth="5"
+        strokeLinejoin="round"
+      />
+      <path d="M110 70 C130 90 120 120 140 140 M80 130 C100 140 110 170 130 175" fill="none" stroke="#e9ed4c" strokeWidth="1.5" opacity="0.7" />
+    </svg>
+  );
+}
+
 function render(piece: Piece, id: string): ReactNode {
   switch (piece) {
     case "beads":
@@ -171,14 +320,108 @@ function render(piece: Piece, id: string): ReactNode {
       return <Helix />;
     case "capsules":
       return <Capsules />;
+    case "network":
+      return <Network id={id} />;
+    case "botanical":
+      return <Botanical />;
+    case "flask":
+      return <Flask />;
+    case "speckle":
+      return <Speckle />;
+    case "microbe":
+      return <Microbe />;
+    case "coral":
+      return <Coral id={id} />;
   }
 }
 
-export function Doodle({ piece, className, delay = 0 }: { piece: Piece; className?: string; delay?: 0 | 1 | 2 | 3 | 4 }) {
+/** How far each illustration drifts with the cursor, in px: bigger moves read as closer. */
+const DEPTH: Record<Piece, number> = {
+  beads: 34,
+  tissue: 22,
+  tree: 18,
+  ecg: 38,
+  honeycomb: 14,
+  radial: 20,
+  helix: 30,
+  capsules: 42,
+  network: 10,
+  botanical: 16,
+  flask: 26,
+  speckle: 24,
+  microbe: 32,
+  coral: 36,
+};
+
+const live = new Set<HTMLDivElement>();
+let frame = 0;
+let pointer: { x: number; y: number } | null = null;
+
+/**
+ * One pointer listener for every illustration on the page. Each one tilts towards the
+ * cursor and drifts by a depth of its own; the one under the cursor lifts and animates.
+ * Hover is worked out from positions, so the illustrations never sit above the text.
+ */
+function update() {
+  frame = 0;
+  if (!pointer) return;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  for (const el of live) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || r.bottom < 0 || r.top > vh) continue;
+    const dx = (pointer.x - (r.left + r.width / 2)) / vw;
+    const dy = (pointer.y - (r.top + r.height / 2)) / vh;
+    const depth = Number(el.dataset.depth);
+    el.style.setProperty("--ry", `${(dx * 28).toFixed(2)}deg`);
+    el.style.setProperty("--rx", `${(-dy * 28).toFixed(2)}deg`);
+    el.style.setProperty("--tx", `${(dx * depth).toFixed(1)}px`);
+    el.style.setProperty("--ty", `${(dy * depth).toFixed(1)}px`);
+    if (el.dataset.ambient === "true") continue;
+    const over = pointer.x >= r.left && pointer.x <= r.right && pointer.y >= r.top && pointer.y <= r.bottom;
+    if (over !== (el.dataset.hover === "true")) {
+      el.dataset.hover = String(over);
+      if (over) illustrationSound(el.dataset.piece ?? "");
+    }
+  }
+}
+
+function onPointer(event: PointerEvent) {
+  if (event.pointerType === "touch") return;
+  pointer = { x: event.clientX, y: event.clientY };
+  if (!frame) frame = requestAnimationFrame(update);
+}
+
+function register(el: HTMLDivElement) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return () => undefined;
+  if (live.size === 0) window.addEventListener("pointermove", onPointer, { passive: true });
+  live.add(el);
+  return () => {
+    live.delete(el);
+    if (live.size === 0) window.removeEventListener("pointermove", onPointer);
+  };
+}
+
+/** `ambient`: a large faint background piece. It tilts with the cursor but never reacts to hover. */
+export function Doodle({
+  piece,
+  className,
+  delay = 0,
+  ambient = false,
+}: {
+  piece: Piece;
+  className?: string;
+  delay?: 0 | 1 | 2 | 3 | 4;
+  ambient?: boolean;
+}) {
   const id = `doodle${useId().replace(/:/g, "")}`;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => (ref.current ? register(ref.current) : undefined), []);
   return (
     <BlurIn delay={delay} className={[styles.doodle, className].filter(Boolean).join(" ")}>
-      <div aria-hidden="true">{render(piece, id)}</div>
+      <div ref={ref} aria-hidden="true" data-piece={piece} data-ambient={ambient} data-depth={DEPTH[piece]} className={styles.art}>
+        {render(piece, id)}
+      </div>
     </BlurIn>
   );
 }

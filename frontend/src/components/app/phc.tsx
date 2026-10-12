@@ -8,6 +8,7 @@ import { errorMessage } from "../../services/api";
 import type { VisitPerson } from "../../services/health";
 import { bookVisit, resolveCitizen, type DismissReason, type ResolveBody, type WorkItem } from "../../services/phc";
 import { BasisTag } from "./ModelInsights";
+import { useToast } from "./Toaster";
 import { Btn, ErrorNote, Labelled, SeverityBadge, VisitBadge, inputCls } from "./ui";
 
 /**
@@ -24,7 +25,7 @@ export function NoFacility({ message }: { message: string }) {
         Until then there is nothing to show here, and that is not the same as nobody needing help. Readings from your
         area are not reaching you.
       </p>
-      <Link to={`${paths.settings}?tab=concerns`} className="mt-4 inline-block text-sm font-semibold text-brand underline">
+      <Link to={`${paths.settings}?tab=support`} className="mt-4 inline-block text-sm font-semibold text-brand underline">
         Contact support
       </Link>
     </div>
@@ -82,12 +83,18 @@ export function ResolveControls({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { notify } = useToast();
 
   const run = async (body: ResolveBody) => {
     setBusy(true);
     setError(null);
     try {
       await onResolve(body);
+      notify(
+        body.resolution === "dismissed"
+          ? { tone: "success", title: "Flag dismissed", body: "The reason is kept in the audit trail." }
+          : { tone: "success", title: "Flags cleared", body: "Marked as reviewed." },
+      );
     } catch (e) {
       setError(errorMessage(e));
       setBusy(false);
@@ -171,7 +178,7 @@ export function CitizenWorkCard({ item, onChanged }: { item: WorkItem; onChanged
           {!item.next_visit && <Btn onClick={() => setBooking((b) => !b)}>Book visit</Btn>}
           <Link
             to={citizenRecordPath(item.citizen.id)}
-            className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-brand hover:bg-paper-raised"
+            className="inline-flex min-h-11 items-center rounded-full px-4 font-display text-[15px] text-ink underline-offset-4 hover:underline"
           >
             Record
           </Link>
@@ -249,6 +256,7 @@ export function BookVisitForm({
   const [location, setLocation] = useState(citizen.area ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { notify } = useToast();
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -262,6 +270,7 @@ export function BookVisitForm({
         reason: reason || undefined,
         location: location || undefined,
       });
+      notify({ tone: "success", title: "Visit booked", body: `${citizen.name}, ${fmtVisit(new Date(fromLocalInput(when)).toISOString())}. They have been notified.` });
       onBooked();
     } catch (err) {
       setError(errorMessage(err));
@@ -270,7 +279,7 @@ export function BookVisitForm({
   };
 
   return (
-    <form onSubmit={submit} className="mt-3 grid gap-3 rounded-xl border border-line bg-paper-raised p-4 sm:grid-cols-3">
+    <form onSubmit={submit} className="mt-3 grid gap-3 rounded-2xl border border-line bg-paper-raised p-4 sm:grid-cols-3">
       <p className="text-sm font-semibold text-ink sm:col-span-3">Book a follow-up visit for {citizen.name}</p>
       <Labelled label="When (India time)">
         <input type="datetime-local" required value={when} min={toLocalInput(new Date())} onChange={(e) => setWhen(e.target.value)} className={inputCls} />

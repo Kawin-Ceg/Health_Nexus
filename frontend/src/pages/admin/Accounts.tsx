@@ -6,6 +6,7 @@ import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import type { Role } from "../../services/auth";
 import { deactivateAccount, getAccounts, reactivateAccount, type Account, type AccountStatus } from "../../services/admin";
+import { useToast } from "../../components/app/Toaster";
 
 const PAGE = 50;
 const ROLE_LABEL: Record<Role, string> = { user: "Citizen", pending_phc: "Awaiting approval", phc_worker: "PHC worker", admin: "Admin" };
@@ -83,12 +84,14 @@ function AccountRow({ account: a, onChanged }: { account: Account; onChanged: ()
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { notify } = useToast();
 
   const run = async (fn: () => Promise<Account>) => {
     setBusy(true);
     setError(null);
     try {
-      await fn();
+      const updated = await fn();
+      notify({ tone: "success", title: updated.is_active ? "Account reactivated" : "Account deactivated", body: updated.name });
       setAsking(false);
       setReason("");
       onChanged();

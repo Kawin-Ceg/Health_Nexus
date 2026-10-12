@@ -24,6 +24,8 @@ export function FeatureShowcase() {
     <section id={features.id} className={styles.section} aria-labelledby={features.headingId}>
       <Doodle piece="helix" className={styles.helix} />
       <Doodle piece="capsules" className={styles.capsules} delay={2} />
+      <Doodle piece="flask" className={styles.flask} delay={1} />
+      <Doodle piece="speckle" className={styles.speckle} delay={3} />
       <Container>
         <BlurIn className={styles.header}>
           <Eyebrow>{features.eyebrow}</Eyebrow>

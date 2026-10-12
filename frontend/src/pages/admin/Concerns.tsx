@@ -4,6 +4,7 @@ import { fmtAgo, fmtDateTime } from "../../lib/format";
 import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import { getConcerns, updateConcern, type ConcernCategory, type ConcernItem, type ConcernStatus } from "../../services/admin";
+import { useToast } from "../../components/app/Toaster";
 
 const STATUS_LABEL: Record<ConcernStatus, string> = { open: "Open", in_review: "In review", resolved: "Resolved", rejected: "Declined" };
 const CATEGORY_LABEL: Record<ConcernCategory, string> = {
@@ -53,12 +54,14 @@ function ConcernCard({ concern: c, onChanged }: { concern: ConcernItem; onChange
   const [note, setNote] = useState(c.admin_note ?? "");
   const [busy, setBusy] = useState<ConcernStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { notify } = useToast();
 
   const move = async (status: ConcernStatus) => {
     setBusy(status);
     setError(null);
     try {
       await updateConcern(c.id, { status, admin_note: note });
+      notify({ tone: "success", title: `Concern ${STATUS_LABEL[status].toLowerCase()}`, body: c.ticket_ref });
       onChanged();
     } catch (e) {
       setError(errorMessage(e));

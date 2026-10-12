@@ -266,3 +266,10 @@
   width: 200px;
   --doodle-opacity: 0.4;
 }
+
+.botanical {
+  bottom: 20px;
+  left: 2%;
+  width: 200px;
+  --doodle-opacity: 0.45;
+}

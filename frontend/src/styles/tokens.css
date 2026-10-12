@@ -2,48 +2,63 @@
    color: rgb(var(--hn-ink));  background: rgb(var(--hn-brand) / 0.08); */
 
 :root {
-  /* Colour (light is the default; themes.css swaps these under .dark) */
-  --hn-ink: 26 35 33; /* #1A2321 */
-  --hn-ink-soft: 70 82 79; /* #46524F body copy */
-  --hn-ink-muted: 95 107 104; /* #5F6B68 captions, timestamps */
-  --hn-paper: 247 246 243; /* #F7F6F3 page */
-  --hn-paper-raised: 239 238 234; /* #EFEEEA sunken bands, table heads */
+  /* Colour (light is the default; themes.css swaps these under .dark).
+     Cream paper, near-black ink and buttons, lime for highlights and selection. */
+  --hn-ink: 17 17 17;
+  --hn-ink-soft: 82 82 77; /* 7.4:1 on paper */
+  --hn-ink-muted: 110 110 104; /* 4.9:1 on paper */
+  --hn-paper: 250 249 243; /* #FAF9F3 */
+  --hn-paper-raised: 242 241 235; /* #F2F1EB sunken bands */
   --hn-surface: 255 255 255;
-  --hn-line: 222 225 221; /* #DEE1DD dividers */
-  --hn-line-strong: 125 137 134; /* #7D8986 control borders, 3:1 */
+  --hn-line: 235 234 230; /* #EBEAE6 */
+  --hn-line-strong: 140 139 128;
 
-  --hn-brand: 11 107 95; /* #0B6B5F teal, the only brand colour */
-  --hn-brand-strong: 8 89 79; /* #08594F hover */
-  --hn-brand-soft: 227 241 238; /* #E3F1EE tinted fill */
-  --hn-on-brand: 255 255 255;
-  --hn-accent: 178 106 0; /* #B26A00 warning graphics */
-  --hn-accent-ink: 122 79 0; /* #7A4F00 warning text */
+  --hn-brand: 17 17 17; /* buttons, links, active states */
+  --hn-brand-strong: 0 0 0;
+  --hn-brand-soft: 233 237 76; /* #E9ED4C lime fill, with ink or olive text */
+  --hn-on-brand: 250 249 243;
+  --hn-lime: 233 237 76;
+  --hn-olive: 98 99 30; /* #62631E text on lime, 5:1 */
+  --hn-glow: 255 245 198; /* #FFF5C6 hover glow */
+  --hn-accent: 178 106 0;
+  --hn-accent-ink: 122 79 0;
   --hn-warn: 122 79 0;
   --hn-warn-soft: 255 244 214;
-  --hn-danger: 180 35 24; /* #B42318 */
+  --hn-danger: 180 35 24;
   --hn-on-danger: 255 255 255;
   --hn-danger-soft: 253 237 235;
-  --hn-success: 43 98 54; /* #2B6236 */
+  --hn-success: 43 98 54;
   --hn-success-soft: 232 243 234;
-  --hn-info: 30 90 150; /* #1E5A96 */
+  --hn-info: 58 79 160; /* #3A4FA0, the illustration blue */
   --hn-info-soft: 232 240 250;
+  --hn-chart-normal: 140 139 128;
 
   /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
   --hn-sev-critical: 176 53 43;
   --hn-sev-high: 166 64 16;
   --hn-sev-moderate: 140 92 10;
-  --hn-sev-low: 74 96 92;
+  --hn-sev-low: 98 99 30;
 
-  --hn-panel: 16 42 38; /* deep teal-ink for the footer and auth aside */
-  --hn-panel-raised: 24 58 53;
-  --hn-on-panel: 238 243 241;
-  --hn-on-panel-soft: 176 196 191;
+  --hn-panel: 17 17 17;
+  --hn-panel-raised: 34 34 32;
+  --hn-on-panel: 250 249 243;
+  --hn-on-panel-soft: 196 195 186;
   --hn-on-panel-error: 240 164 128;
 
   --hn-focus: 31 79 168; /* #1F4FA8, never mistaken for selection */
 
+  /* Buttons: pills with a soft glow on hover */
+  --hn-button-radius: 999px;
+  --hn-button-border: 1.5px;
+  --hn-button-outline: 17 17 17;
+  --hn-button-glow: 0 0 48px rgb(var(--hn-glow));
+  --hn-button-font: var(--hn-font-display);
+  --hn-button-weight: 450;
+  --hn-button-lg-size: 1.0625rem;
+
   /* Type */
   --hn-font-sans: "Inter Variable", "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --hn-font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
 
   --hn-text-xs: 0.75rem;
   --hn-text-sm: 0.875rem;

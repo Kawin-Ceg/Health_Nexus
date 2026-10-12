@@ -167,10 +167,6 @@ export function SignupForm({ variant }: { variant: "citizen" | "phc" }) {
         </div>
       )}
 
-      <p className={styles.requiredNote}>
-        Fields marked <span aria-hidden="true">*</span>
-        <span className="visually-hidden">with an asterisk</span> are required.
-      </p>
       {form.formError && <Banner tone="error">{form.formError}</Banner>}
 
       {step === 0 && (

@@ -68,3 +68,24 @@
     display: block;
   }
 }
+
+.network {
+  top: 12%;
+  right: 6%;
+  width: 460px;
+  --doodle-opacity: 0.22;
+}
+
+.botanical {
+  top: 46%;
+  left: 12%;
+  width: 170px;
+  --doodle-opacity: 0.45;
+}
+
+.speckle {
+  right: 24%;
+  bottom: 12%;
+  width: 120px;
+  --doodle-opacity: 0.6;
+}

@@ -1,24 +1,58 @@
 import { Link } from "react-router-dom";
-import { Card, ErrorNote, Loading, PageHeader, Stat } from "../../components/app/ui";
+import { BadgeCheck, LifeBuoy, ScrollText, Users } from "lucide-react";
+import { Card, ErrorNote, LinkBtn, Loading, Stat } from "../../components/app/ui";
+import { Doodle } from "../../components/landing/Doodle/Doodle";
+import { useAuth } from "../../context/AuthContext";
 import { paths } from "../../lib/routes";
 import { useResource } from "../../lib/useResource";
 import { getOverview } from "../../services/admin";
 
 export function AdminDashboard() {
+  const { user } = useAuth();
   const res = useResource((s) => getOverview(s), "overview");
   const o = res.data;
+  const waiting = o ? o.pending_applications + o.open_concerns : 0;
 
   return (
     <>
-      <PageHeader title="Admin console" lead="Approve health workers, look after accounts and answer support concerns." />
+      <section className="relative isolate mb-4 overflow-clip rounded-3xl border border-line bg-surface p-6 md:p-8" aria-labelledby="admin-greeting">
+        <Doodle piece="honeycomb" className="-top-10 -right-16 w-56 [--doodle-opacity:0.35]" />
+        <Doodle piece="beads" className="right-[22%] -bottom-6 w-28 [--doodle-opacity:0.8]" />
+        <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Admin console</p>
+        <h1 id="admin-greeting" className="mt-2 text-3xl text-ink md:text-4xl">
+          Welcome back, {user?.name.split(" ")[0] ?? "admin"}
+        </h1>
+        <p className="mt-2 max-w-xl font-display text-xl leading-snug text-ink-soft md:text-2xl">
+          {!o
+            ? "Loading what needs you today."
+            : waiting
+              ? `${o.pending_applications} application${o.pending_applications === 1 ? "" : "s"} and ${o.open_concerns} concern${o.open_concerns === 1 ? "" : "s"} are waiting on you.`
+              : "Nothing is waiting on you. Every application and concern is handled."}
+        </p>
+      </section>
+
+      <nav aria-label="Quick actions" className="mb-6 flex flex-wrap gap-2">
+        <LinkBtn to={paths.adminApplications}>
+          <BadgeCheck size={16} aria-hidden="true" /> Review applications
+        </LinkBtn>
+        <LinkBtn to={paths.adminConcerns}>
+          <LifeBuoy size={16} aria-hidden="true" /> Answer concerns
+        </LinkBtn>
+        <LinkBtn to={paths.adminAccounts}>
+          <Users size={16} aria-hidden="true" /> Accounts
+        </LinkBtn>
+        <LinkBtn to={paths.adminAudit}>
+          <ScrollText size={16} aria-hidden="true" /> Audit trail
+        </LinkBtn>
+      </nav>
       {res.error && <ErrorNote message={res.error} onRetry={res.reload} />}
       {!o ? (
         !res.error && <Loading />
       ) : (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Stat label="Pending applications" value={o.pending_applications} tone={o.pending_applications ? "warn" : undefined} hint={<Link className="text-brand underline" to={paths.adminApplications}>Review</Link>} />
-            <Stat label="Open concerns" value={o.open_concerns} tone={o.open_concerns ? "warn" : undefined} hint={<Link className="text-brand underline" to={paths.adminConcerns}>Answer</Link>} />
+            <Stat label="Pending applications" value={o.pending_applications} tone={o.pending_applications ? "warn" : undefined} hint={<Link className="text-ink underline underline-offset-4" to={paths.adminApplications}>Review</Link>} />
+            <Stat label="Open concerns" value={o.open_concerns} tone={o.open_concerns ? "warn" : undefined} hint={<Link className="text-ink underline underline-offset-4" to={paths.adminConcerns}>Answer</Link>} />
             <Stat label="Workers with no centre" value={o.workers_without_facility} tone={o.workers_without_facility ? "danger" : undefined} hint="They see no citizens" />
             <Stat label="Open flags" value={o.open_flags} hint="Across every centre" />
           </div>

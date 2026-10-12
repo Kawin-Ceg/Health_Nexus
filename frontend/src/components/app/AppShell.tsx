@@ -1,33 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   BadgeCheck,
+  BarChart3,
   Bell,
   Bot,
-  LifeBuoy,
-  ScrollText,
   CalendarDays,
   ClipboardList,
-  HeartPulse,
   History,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Map,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   PlusCircle,
+  ScrollText,
   Settings,
   UserRound,
   Users,
-  BarChart3,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { paths } from "../../lib/routes";
+import { setSoundEnabled, soundEnabled } from "../../lib/sound";
 import { setTheme } from "../../lib/theme";
 import { getPreferences } from "../../services/account";
+import { getOverview } from "../../services/admin";
+import type { Role } from "../../services/auth";
 import { getUnreadCount } from "../../services/health";
 import { getPhcBadge } from "../../services/phc";
+import { Doodle } from "../landing/Doodle/Doodle";
 import { Logo } from "../ui/Logo/Logo";
+import { useToast } from "./Toaster";
 import { cx } from "./ui";
 
 const BADGE_POLL_MS = 60_000;
@@ -40,35 +48,118 @@ interface Item {
   end?: boolean;
 }
 
-function useBadges(role: string | undefined) {
-  const [citizenUnread, setCitizenUnread] = useState(0);
-  const [phc, setPhc] = useState({ unread: 0, citizens_flagged: 0 });
+interface Badges {
+  citizenUnread: number;
+  phcUnread: number;
+  citizensFlagged: number;
+  pendingApplications: number;
+  openConcerns: number;
+}
+
+const NONE: Badges = { citizenUnread: 0, phcUnread: 0, citizensFlagged: 0, pendingApplications: 0, openConcerns: 0 };
+
+const ROLE_LABEL: Record<Role, string> = {
+  user: "Citizen",
+  phc_worker: "PHC worker",
+  admin: "Administrator",
+  pending_phc: "Awaiting approval",
+};
+
+async function loadBadges(role: Role, signal: AbortSignal): Promise<Partial<Badges>> {
+  if (role === "user") return { citizenUnread: await getUnreadCount(signal) };
+  if (role === "phc_worker") {
+    const b = await getPhcBadge(signal);
+    return { phcUnread: b.unread, citizensFlagged: b.citizens_flagged };
+  }
+  if (role === "admin") {
+    const o = await getOverview(signal);
+    return { pendingApplications: o.pending_applications, openConcerns: o.open_concerns };
+  }
+  return {};
+}
+
+/** What changed since the last check, worded for a toast. Null when nothing grew. */
+function newsBetween(before: Badges, after: Badges): { title: string; body: string } | null {
+  const grew = (k: keyof Badges) => after[k] - before[k];
+  if (grew("citizenUnread") > 0) return { title: "New alert", body: `You have ${after.citizenUnread} unread alert${after.citizenUnread === 1 ? "" : "s"}.` };
+  if (grew("citizensFlagged") > 0)
+    return { title: "A citizen needs review", body: `${after.citizensFlagged} citizen${after.citizensFlagged === 1 ? " has" : "s have"} open flags.` };
+  if (grew("phcUnread") > 0) return { title: "New notification", body: `You have ${after.phcUnread} unread notification${after.phcUnread === 1 ? "" : "s"}.` };
+  if (grew("pendingApplications") > 0)
+    return { title: "New PHC application", body: `${after.pendingApplications} application${after.pendingApplications === 1 ? " is" : "s are"} waiting.` };
+  if (grew("openConcerns") > 0) return { title: "New support concern", body: `${after.openConcerns} concern${after.openConcerns === 1 ? " is" : "s are"} open.` };
+  return null;
+}
+
+function useBadges(role: Role | undefined) {
+  const [badges, setBadges] = useState<Badges>(NONE);
+  const last = useRef<Badges | null>(null);
+  const { notify } = useToast();
   const location = useLocation();
 
   useEffect(() => {
     if (!role) return;
     const controller = new AbortController();
-    const load = () => {
-      if (role === "user") getUnreadCount(controller.signal).then(setCitizenUnread).catch(() => undefined);
-      if (role === "phc_worker") getPhcBadge(controller.signal).then(setPhc).catch(() => undefined);
-    };
-    load();
+    const load = () =>
+      loadBadges(role, controller.signal)
+        .then((partial) => {
+          const next = { ...NONE, ...partial };
+          const news = last.current && newsBetween(last.current, next);
+          if (news) notify({ tone: "alert", ...news });
+          last.current = next;
+          setBadges(next);
+        })
+        .catch(() => undefined);
+    void load();
     const timer = window.setInterval(load, BADGE_POLL_MS);
     return () => {
       controller.abort();
       window.clearInterval(timer);
     };
     // Re-read on navigation: reading the alerts page clears the badge.
-  }, [role, location.pathname]);
-  return { citizenUnread, phc };
+  }, [role, location.pathname, notify]);
+  return badges;
 }
 
-/** The signed-in layout for citizens and PHC workers: navigation, badges, theme. */
+const SIDEBAR_KEY = "hn.sidebar";
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) === "collapsed";
+  } catch {
+    return false;
+  }
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+/** The signed-in layout for every role: navigation, badges, sound, theme. */
 export function AppShell() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [sound, setSound] = useState(soundEnabled);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const hide = collapsed ? "lg:sr-only" : "";
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem(SIDEBAR_KEY, c ? "open" : "collapsed");
+      } catch {
+        // Storage blocked: the choice lasts until the page reloads.
+      }
+      return !c;
+    });
+  };
   const location = useLocation();
-  const { citizenUnread, phc } = useBadges(user?.role);
+  const badges = useBadges(user?.role);
 
   useEffect(() => {
     getPreferences()
@@ -77,34 +168,39 @@ export function AppShell() {
   }, []);
   useEffect(() => setOpen(false), [location.pathname]);
 
+  const toggleSound = () => {
+    setSoundEnabled(!sound);
+    setSound(!sound);
+  };
+
   const items: Item[] =
     user?.role === "admin"
       ? [
           { to: paths.adminHome, label: "Overview", icon: LayoutDashboard, end: true },
-          { to: paths.adminApplications, label: "Applications", icon: BadgeCheck },
+          { to: paths.adminApplications, label: "Applications", icon: BadgeCheck, badge: badges.pendingApplications },
           { to: paths.adminAccounts, label: "Accounts", icon: Users },
-          { to: paths.adminConcerns, label: "Concerns", icon: LifeBuoy },
+          { to: paths.adminConcerns, label: "Concerns", icon: LifeBuoy, badge: badges.openConcerns },
           { to: paths.adminAudit, label: "Audit trail", icon: ScrollText },
           { to: paths.assistant, label: "Assistant", icon: Bot },
         ]
       : user?.role === "phc_worker"
-      ? [
-          { to: paths.phcHome, label: "Dashboard", icon: LayoutDashboard, end: true },
-          { to: paths.phcAlerts, label: "Alerts", icon: Bell, badge: phc.citizens_flagged },
-          { to: paths.phcCitizens, label: "Citizens", icon: Users },
-          { to: paths.phcSchedule, label: "Schedule", icon: CalendarDays },
-          { to: paths.phcReports, label: "Reports", icon: BarChart3 },
-          { to: paths.phcMap, label: "Risk map", icon: Map },
-          { to: paths.assistant, label: "Assistant", icon: Bot },
-          { to: paths.notifications, label: "Notifications", icon: ClipboardList, badge: phc.unread },
-        ]
-      : [
-          { to: paths.citizenHome, label: "Dashboard", icon: LayoutDashboard, end: true },
-          { to: paths.submitVitals, label: "Log vitals", icon: PlusCircle },
-          { to: paths.history, label: "History", icon: History },
-          { to: paths.citizenAlerts, label: "Alerts & visits", icon: Bell, badge: citizenUnread },
-          { to: paths.assistant, label: "Assistant", icon: Bot },
-        ];
+        ? [
+            { to: paths.phcHome, label: "Dashboard", icon: LayoutDashboard, end: true },
+            { to: paths.phcAlerts, label: "Alerts", icon: Bell, badge: badges.citizensFlagged },
+            { to: paths.phcCitizens, label: "Citizens", icon: Users },
+            { to: paths.phcSchedule, label: "Schedule", icon: CalendarDays },
+            { to: paths.phcReports, label: "Reports", icon: BarChart3 },
+            { to: paths.phcMap, label: "Risk map", icon: Map },
+            { to: paths.assistant, label: "Assistant", icon: Bot },
+            { to: paths.notifications, label: "Notifications", icon: ClipboardList, badge: badges.phcUnread },
+          ]
+        : [
+            { to: paths.citizenHome, label: "Dashboard", icon: LayoutDashboard, end: true },
+            { to: paths.submitVitals, label: "Log vitals", icon: PlusCircle },
+            { to: paths.history, label: "History", icon: History },
+            { to: paths.citizenAlerts, label: "Alerts & visits", icon: Bell, badge: badges.citizenUnread },
+            { to: paths.assistant, label: "Assistant", icon: Bot },
+          ];
   // Profile and settings are citizen and worker pages; an admin has neither.
   const account: Item[] =
     user?.role === "admin"
@@ -119,17 +215,25 @@ export function AppShell() {
       key={item.to}
       to={item.to}
       end={item.end}
+      title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cx(
-          "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium",
-          isActive ? "bg-brand-soft text-brand" : "text-ink-soft hover:bg-paper-raised hover:text-ink",
+          "relative flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium transition-colors",
+          collapsed && "lg:justify-center lg:px-0",
+          isActive ? "bg-lime text-olive" : "text-ink-soft hover:bg-surface hover:text-ink",
         )
       }
     >
       <item.icon size={18} aria-hidden="true" />
-      <span className="flex-1">{item.label}</span>
+      <span className={cx("flex-1", hide)}>{item.label}</span>
       {!!item.badge && (
-        <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-semibold text-on-danger" aria-label={`${item.badge} new`}>
+        <span
+          className={cx(
+            "rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-paper",
+            collapsed && "lg:absolute lg:top-0.5 lg:right-1 lg:px-1.5 lg:text-[10px]",
+          )}
+          aria-label={`${item.badge} new`}
+        >
           {item.badge > 99 ? "99+" : item.badge}
         </span>
       )}
@@ -137,12 +241,12 @@ export function AppShell() {
   );
 
   return (
-    <div className="min-h-dvh bg-paper lg:grid lg:grid-cols-[240px_1fr]">
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-surface px-4 py-2 lg:hidden">
+    <div className={cx("min-h-dvh bg-paper lg:grid", collapsed ? "lg:grid-cols-[84px_1fr]" : "lg:grid-cols-[264px_1fr]")}>
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-paper/90 px-4 py-2 backdrop-blur lg:hidden">
         <Logo />
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-ink"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-ink hover:bg-paper-raised"
           aria-expanded={open}
           aria-controls="app-nav"
           onClick={() => setOpen((o) => !o)}
@@ -154,37 +258,82 @@ export function AppShell() {
       <aside
         id="app-nav"
         className={cx(
-          "border-r border-line bg-surface p-4 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col",
+          "relative isolate overflow-clip border-r border-line bg-paper-raised p-4 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col",
           open ? "flex flex-col" : "hidden",
         )}
       >
-        <div className="mb-6 hidden lg:block">
-          <Logo />
+        <div className={cx("mb-2 hidden items-center gap-2 pt-2 lg:flex", collapsed ? "flex-col" : "justify-between px-2")}>
+          {collapsed ? <Logo compact /> : <Logo />}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={!collapsed}
+            aria-controls="app-nav"
+            title={collapsed ? "Show the sidebar" : "Hide the sidebar"}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-surface hover:text-ink"
+          >
+            {collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
+            <span className="visually-hidden">{collapsed ? "Show the sidebar" : "Hide the sidebar"}</span>
+          </button>
         </div>
+        {user && (
+          <p className={cx("mb-5 hidden px-2", !collapsed && "lg:block")}>
+            <span className="inline-flex items-center rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold text-ink-soft">
+              {ROLE_LABEL[user.role]}
+            </span>
+          </p>
+        )}
         <nav aria-label="Main" className="flex flex-col gap-1">
           {items.map(link)}
         </nav>
-        <div className="mt-6 border-t border-line pt-4 lg:mt-auto">
-          <nav aria-label="Account" className="flex flex-col gap-1">
+        <div className="mt-6 lg:mt-auto">
+          {!collapsed && <Doodle piece="beads" className="static! -mb-2! ml-auto w-20 lg:block!" />}
+          <nav aria-label="Account" className="flex flex-col gap-1 border-t border-line pt-3">
             {account.map(link)}
             <button
               type="button"
+              onClick={toggleSound}
+              aria-pressed={sound}
+              title={collapsed ? `Sounds ${sound ? "on" : "off"}` : undefined}
+              className={cx(
+                "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
+                collapsed && "lg:justify-center lg:px-0",
+              )}
+            >
+              {sound ? <Volume2 size={18} aria-hidden="true" /> : <VolumeX size={18} aria-hidden="true" />}
+              <span className={cx("flex-1 text-left", hide)}>Sounds</span>
+              <span className={cx("text-xs text-ink-muted", hide)}>{sound ? "On" : "Off"}</span>
+            </button>
+            <button
+              type="button"
               onClick={() => void logout()}
-              className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-ink-soft hover:bg-paper-raised hover:text-ink"
+              title={collapsed ? "Sign out" : undefined}
+              className={cx(
+                "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
+                collapsed && "lg:justify-center lg:px-0",
+              )}
             >
               <LogOut size={18} aria-hidden="true" />
-              Sign out
+              <span className={hide}>Sign out</span>
             </button>
           </nav>
           {user && (
-            <p className="mt-3 flex items-center gap-2 px-3 text-xs text-ink-soft">
-              <HeartPulse size={14} aria-hidden="true" />
-              <span className="truncate">{user.name}</span>
-            </p>
+            <div
+              className={cx("mt-3 flex items-center gap-3 rounded-3xl border border-line bg-surface p-3", collapsed && "lg:justify-center lg:border-0 lg:bg-transparent lg:p-0")}
+              title={collapsed ? `${user.name} · ${user.email}` : undefined}
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-lime font-display text-base text-olive" aria-hidden="true">
+                {initials(user.name)}
+              </span>
+              <span className={cx("min-w-0", hide)}>
+                <span className="block truncate text-sm font-semibold text-ink">{user.name}</span>
+                <span className="block truncate text-xs text-ink-muted">{user.email}</span>
+              </span>
+            </div>
           )}
         </div>
       </aside>
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
+      <main className={location.pathname === paths.assistant ? "min-w-0" : "mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-10"}>
         <Outlet />
       </main>
     </div>

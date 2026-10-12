@@ -11,6 +11,7 @@ export function CommunityShowcase() {
     <section id={community.id} className={styles.section} aria-labelledby={community.headingId}>
       <Doodle piece="radial" className={styles.radial} />
       <Doodle piece="tissue" className={styles.tissue} delay={2} />
+      <Doodle piece="flask" className={styles.flask} delay={3} />
       <Container className={styles.layout}>
         <div>
           <BlurIn>

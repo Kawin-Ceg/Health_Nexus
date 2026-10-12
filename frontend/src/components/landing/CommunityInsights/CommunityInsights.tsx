@@ -52,6 +52,7 @@ export default function CommunityInsights() {
     <section id={insights.id} className={styles.section} aria-labelledby={insights.headingId}>
       <Doodle piece="ecg" className={styles.ecg} />
       <Doodle piece="honeycomb" className={styles.honeycomb} delay={2} />
+      <Doodle piece="botanical" className={styles.botanical} delay={3} />
       <Container>
         <BlurIn className={styles.header}>
           <Eyebrow>{insights.eyebrow}</Eyebrow>

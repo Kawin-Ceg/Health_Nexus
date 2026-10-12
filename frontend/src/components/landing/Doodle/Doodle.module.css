@@ -3,23 +3,358 @@
   z-index: -1;
   display: none;
   pointer-events: none;
+  perspective: 700px;
 }
 
-.doodle > div {
+.art {
   opacity: var(--doodle-opacity, 1);
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(var(--tx, 0px), var(--ty, 0px), 0)
+    scale(var(--s, 1));
+  transform-style: preserve-3d;
+  transition:
+    transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 400ms ease-out,
+    opacity 400ms ease-out;
+}
+
+.art[data-hover="true"] {
+  --s: 1.08;
+  opacity: 1;
+  filter: drop-shadow(0 22px 26px rgb(17 17 17 / 0.18));
 }
 
 .doodle svg {
   width: 100%;
   height: auto;
+  overflow: visible;
+  animation: float 7s ease-in-out infinite alternate;
+}
+
+.doodle:nth-of-type(2n) svg {
+  animation-duration: 9s;
+  animation-delay: -3s;
+}
+
+.doodle:nth-of-type(3n) svg {
+  animation-duration: 11s;
+  animation-delay: -5s;
 }
 
 .paper {
   box-shadow: 0 18px 40px -24px rgb(17 17 17 / 0.35);
 }
 
+@keyframes float {
+  from {
+    translate: 0 -8px;
+  }
+  to {
+    translate: 0 10px;
+  }
+}
+
+/* Some keep moving on their own, hovered or not. */
+.art[data-piece="capsules"] svg {
+  animation:
+    float 6s ease-in-out infinite alternate,
+    tumble 16s ease-in-out infinite alternate;
+}
+
+.art[data-piece="coral"] svg {
+  animation:
+    float 8s ease-in-out infinite alternate,
+    tumble 10s ease-in-out infinite alternate;
+}
+
+.art[data-piece="microbe"] svg {
+  animation:
+    float 9s ease-in-out infinite alternate,
+    turn 60s linear infinite;
+}
+
+.art[data-piece="network"] svg {
+  animation: turn 120s linear infinite;
+}
+
+.art[data-piece="botanical"] svg {
+  transform-origin: left bottom;
+  animation: breeze 5s ease-in-out infinite alternate;
+}
+
+.art[data-piece="helix"] svg {
+  animation: drift 12s ease-in-out infinite;
+}
+
+@keyframes tumble {
+  from {
+    rotate: -8deg;
+  }
+  to {
+    rotate: 8deg;
+  }
+}
+
+@keyframes turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes breeze {
+  from {
+    rotate: -3deg;
+  }
+  to {
+    rotate: 3deg;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: 10px -12px;
+  }
+  50% {
+    translate: 0 -20px;
+  }
+  75% {
+    translate: -10px -8px;
+  }
+}
+
+/* Heart-rate card: the trace redraws itself. */
+.art[data-piece="ecg"][data-hover="true"] path[stroke-linejoin] {
+  stroke-dasharray: 420;
+  animation: draw 1.4s ease-out;
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 420;
+  }
+}
+
+/* Beads bob, each a beat behind the last. */
+.art[data-piece="beads"][data-hover="true"] circle {
+  animation: bob 700ms ease-in-out infinite alternate;
+}
+
+.art[data-piece="beads"][data-hover="true"] circle:nth-of-type(3n) {
+  animation-delay: -250ms;
+}
+
+.art[data-piece="beads"][data-hover="true"] circle:nth-of-type(3n + 1) {
+  animation-delay: -500ms;
+}
+
+@keyframes bob {
+  to {
+    translate: 0 -6px;
+  }
+}
+
+/* Capsules wiggle in place. */
+.art[data-piece="capsules"] g {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.art[data-piece="capsules"][data-hover="true"] g {
+  animation: wiggle 500ms ease-in-out infinite alternate;
+}
+
+.art[data-piece="capsules"][data-hover="true"] g:nth-of-type(2) {
+  animation-delay: -200ms;
+}
+
+@keyframes wiggle {
+  from {
+    rotate: -10deg;
+  }
+  to {
+    rotate: 10deg;
+  }
+}
+
+/* Branch tips pulse like nodes lighting up. */
+.art[data-piece="tree"] circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: fill 300ms;
+}
+
+.art[data-piece="tree"][data-hover="true"] circle {
+  fill: #62631e;
+  animation: pulse 900ms ease-in-out infinite;
+}
+
+.art[data-piece="tree"][data-hover="true"] circle:nth-of-type(odd) {
+  animation-delay: -450ms;
+}
+
+@keyframes pulse {
+  50% {
+    scale: 1.7;
+  }
+}
+
+/* Radial cells spin slowly. */
+.art[data-piece="radial"] g {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.art[data-piece="radial"][data-hover="true"] g {
+  animation: spin 6s linear infinite;
+}
+
+.art[data-piece="radial"][data-hover="true"] g:nth-of-type(2) {
+  animation-direction: reverse;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Helix rungs and outlines flow. */
+.art[data-piece="helix"][data-hover="true"] line,
+.art[data-piece="honeycomb"][data-hover="true"] path[stroke-dasharray] {
+  animation: march 1.2s linear infinite;
+}
+
+@keyframes march {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+.art[data-piece="honeycomb"][data-hover="true"] rect {
+  animation: shimmer 1.6s ease-in-out infinite alternate;
+}
+
+/* Tissue cells shimmer, the waves move. */
+.art[data-piece="tissue"][data-hover="true"] rect:last-of-type {
+  animation: shimmer 900ms ease-in-out infinite alternate;
+}
+
+.art[data-piece="tissue"][data-hover="true"] path {
+  stroke-dasharray: 8 6;
+  animation: march 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    opacity: 0.35;
+  }
+}
+
+/* Network: links pulse, gold nodes flare. */
+.art[data-piece="network"][data-hover="true"] line {
+  animation: shimmer 800ms ease-in-out infinite alternate;
+}
+
+.art[data-piece="network"] circle[fill="#e3a33b"] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.art[data-piece="network"][data-hover="true"] circle[fill="#e3a33b"] {
+  animation: pulse 900ms ease-in-out infinite;
+}
+
+/* Botanical sprigs sway. */
+.art[data-piece="botanical"] g {
+  transform-box: fill-box;
+  transform-origin: left bottom;
+}
+
+.art[data-piece="botanical"][data-hover="true"] g {
+  animation: sway 1.4s ease-in-out infinite alternate;
+}
+
+.art[data-piece="botanical"][data-hover="true"] g:nth-of-type(even) {
+  animation-delay: -700ms;
+}
+
+@keyframes sway {
+  from {
+    rotate: -6deg;
+  }
+  to {
+    rotate: 6deg;
+  }
+}
+
+/* Flask bubbles rise. */
+.art[data-piece="flask"][data-hover="true"] circle {
+  animation: rise 1.2s ease-in infinite;
+}
+
+.art[data-piece="flask"][data-hover="true"] circle:nth-of-type(2) {
+  animation-delay: -400ms;
+}
+
+.art[data-piece="flask"][data-hover="true"] circle:nth-of-type(3) {
+  animation-delay: -800ms;
+}
+
+@keyframes rise {
+  to {
+    translate: 0 -40px;
+    opacity: 0;
+  }
+}
+
+/* Speckle cloud shimmers. */
+.art[data-piece="speckle"][data-hover="true"] circle:nth-of-type(3n) {
+  animation: shimmer 600ms ease-in-out infinite alternate;
+}
+
+/* Microbe spikes turn; coral breathes. */
+.art[data-piece="microbe"] > svg > g {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.art[data-piece="microbe"][data-hover="true"] > svg > g {
+  animation: spin 8s linear infinite;
+}
+
+.art[data-piece="coral"] path:first-of-type {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.art[data-piece="coral"][data-hover="true"] path:first-of-type {
+  animation: breathe-coral 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes breathe-coral {
+  to {
+    scale: 1.06 0.96;
+  }
+}
+
 @media (min-width: 1100px) {
   .doodle {
     display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art,
+  .art[data-hover="true"] {
+    transform: none;
+    transition: none;
+  }
+
+  .doodle svg,
+  .art[data-hover="true"] * {
+    animation: none !important;
   }
 }

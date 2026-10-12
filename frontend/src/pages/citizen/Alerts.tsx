@@ -13,7 +13,7 @@ const RECENT_MISSED_DAYS = 30;
 
 function VisitRow({ visit }: { visit: Visit }) {
   return (
-    <li className="flex flex-wrap items-start gap-3 rounded-lg border border-line p-3 text-sm">
+    <li className="flex flex-wrap items-start gap-3 rounded-xl border border-line p-3 text-sm">
       <CalendarClock size={18} className="mt-0.5 shrink-0 text-brand" aria-hidden="true" />
       <div className="flex-1">
         <p className="font-semibold text-ink">{fmtVisit(visit.scheduled_for)}</p>
@@ -61,11 +61,13 @@ export function CitizenAlerts() {
 
   return (
     <>
-      <PageHeader title="Alerts & visits" />
-      <div className="flex flex-col gap-6">
-        {attention.length > 0 && <Section title="Needs your attention" visits={attention} empty="" />}
-        <Section title="Your upcoming visits" visits={upcoming} empty="No visits booked." />
-        {past.length > 0 && <Section title="Past visits" visits={past} empty="" />}
+      <PageHeader title="Alerts & visits" lead="Visits your health worker has booked, and every alert about your readings, newest first." />
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="flex flex-col gap-6">
+          {attention.length > 0 && <Section title="Needs your attention" visits={attention} empty="" />}
+          <Section title="Your upcoming visits" visits={upcoming} empty="No visits booked. Your health worker books one when a reading needs a follow-up." />
+          {past.length > 0 && <Section title="Past visits" visits={past} empty="" />}
+        </div>
         <AlertList alerts={alerts.alerts} advisories={alerts.advisories} />
       </div>
     </>

@@ -135,7 +135,7 @@ function PreferencesTab() {
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Theme">
           {(["system", "light", "dark"] as const).map((t) => (
             <button key={t} type="button" role="radio" aria-checked={local.theme === t} onClick={() => void save({ theme: t })}
-              className={cx("min-h-11 rounded-xl border px-4 text-sm capitalize", local.theme === t ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
+              className={cx("min-h-11 rounded-2xl border px-4 text-sm capitalize", local.theme === t ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
               {t === "system" ? "Match device" : t}
             </button>
           ))}
@@ -293,7 +293,7 @@ function SupportTab() {
                   <span className="capitalize text-ink-soft">{c.status.replace("_", " ")} · {fmtDate(c.created_at)}</span>
                 </div>
                 <p className="text-ink">{c.description}</p>
-                {c.admin_note && <p className="mt-1 rounded-lg bg-paper-raised p-2 text-ink">Reply: {c.admin_note}</p>}
+                {c.admin_note && <p className="mt-1 rounded-xl bg-paper-raised p-2 text-ink">Reply: {c.admin_note}</p>}
               </li>
             ))}
           </ul>
@@ -349,7 +349,7 @@ function CentreTab() {
           <p className="text-sm text-ink-soft">Not linked to a health centre.</p>
         )}
         {(!c.current || c.current.workers_assigned === 0) && (
-          <p role="alert" className="mt-3 flex gap-2 rounded-xl bg-danger-soft p-3 text-sm text-danger">
+          <p role="alert" className="mt-3 flex gap-2 rounded-2xl bg-danger-soft p-3 text-sm text-danger">
             <ShieldAlert size={18} className="shrink-0" aria-hidden="true" />
             <span><strong>Nobody is reviewing your readings.</strong> No health worker is assigned to {c.current ? "this centre" : "you"}. Choose a staffed centre below, and see a doctor if you feel unwell.</span>
           </p>

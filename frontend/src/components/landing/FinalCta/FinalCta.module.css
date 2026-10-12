@@ -2,7 +2,7 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  padding-block: var(--hn-space-20);
+  padding-block: var(--hn-space-24);
   border-top: 1px solid rgb(var(--hn-line));
 }
 
@@ -14,24 +14,19 @@
 }
 
 .title {
-  max-width: 16ch;
-  font-size: clamp(2.25rem, 1.4rem + 3.6vw, 4rem);
+  font-size: clamp(2.25rem, 1.3rem + 3.6vw, 4rem);
+  font-style: italic;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
   text-wrap: balance;
-}
-
-.body {
-  max-width: 36rem;
-  margin-top: var(--hn-space-5);
-  color: rgb(var(--hn-ink-soft));
-  font-size: var(--hn-text-lg);
 }
 
 .ctas {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--hn-space-3);
-  margin-top: var(--hn-space-8);
+  gap: var(--hn-space-4);
+  margin-top: var(--hn-space-10);
 }
 
 .note {
@@ -40,29 +35,39 @@
   font-size: var(--hn-text-sm);
 }
 
-.tree {
-  bottom: -30px;
-  left: 2%;
+.network {
+  top: -60px;
+  left: 50%;
+  width: 520px;
+  margin-left: -260px;
+  --doodle-opacity: 0.18;
+}
+
+.microbe {
+  top: 20px;
+  left: 1%;
   width: 230px;
-  --doodle-opacity: 0.7;
+  --doodle-opacity: 0.9;
 }
 
-.ecg {
-  top: 50px;
-  right: 4%;
-  width: 180px;
+.tissue {
+  bottom: -30px;
+  left: 6%;
+  width: 150px;
   rotate: 6deg;
+  --doodle-opacity: 0.75;
 }
 
-.capsules {
-  bottom: 30px;
-  right: 14%;
-  width: 110px;
-  rotate: -12deg;
+.coral {
+  top: 40px;
+  right: 2%;
+  width: 200px;
+  rotate: -10deg;
 }
 
-@media (min-width: 1024px) {
-  .section {
-    padding-block: var(--hn-space-24);
-  }
+.botanical {
+  right: 18%;
+  bottom: -10px;
+  width: 180px;
+  --doodle-opacity: 0.6;
 }

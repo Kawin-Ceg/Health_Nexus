@@ -123,14 +123,7 @@
   outline: none;
 }
 
-.requiredNote {
-  color: rgb(var(--hn-ink-muted));
-  font-size: var(--hn-text-sm);
-}
 
-.requiredNote span[aria-hidden="true"] {
-  color: rgb(var(--hn-danger));
-}
 
 .stepActions {
   display: flex;

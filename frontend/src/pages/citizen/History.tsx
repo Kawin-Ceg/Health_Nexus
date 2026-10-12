@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, CircleCheck, Clock, Trash2, UserCheck } from "lucide-react";
 import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, cx } from "../../components/app/ui";
-import { fmtDateTime } from "../../lib/format";
+import { fmtAgo, fmtDateTime } from "../../lib/format";
+import { SEVERITY } from "../../lib/severity";
 import { intParam, oneOf, useQueryState } from "../../lib/params";
 import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import { deleteReading, getHistory, getMetrics } from "../../services/health";
+import { useToast } from "../../components/app/Toaster";
 
 const WINDOWS = ["7", "30", "90", "365", "all"] as const;
 const PAGE_SIZE = 20;
@@ -24,14 +26,24 @@ export function History() {
 
   const { data, error, loading, reload } = useResource((signal) => getHistory(query, signal), JSON.stringify(query));
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (id: string) =>
+    setOpen((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const { notify } = useToast();
   const remove = async (id: string) => {
     setDeleting(true);
     setActionError(null);
     try {
       await deleteReading(id);
+      notify({ tone: "success", title: "Reading deleted" });
       setConfirming(null);
       reload();
     } catch (e) {
@@ -43,11 +55,11 @@ export function History() {
 
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   const byKey = new Map((info?.metrics ?? []).map((m) => [m.key, m]));
-  const selectCls = "min-h-11 rounded-xl border border-line bg-surface px-3 text-sm";
+  const selectCls = "min-h-11 rounded-2xl border border-line bg-surface px-3 text-sm";
 
   return (
     <>
-      <PageHeader title="History" lead="Your readings, newest first." />
+      <PageHeader title="History" lead="Every reading, newest first. Open one to see its values and symptoms." />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select aria-label="Measurement" className={selectCls} value={metric ?? ""} onChange={(e) => set({ metric: e.target.value, page: null })}>
           <option value="">All measurements</option>
@@ -79,52 +91,117 @@ export function History() {
         <Empty title="No readings match these filters" />
       ) : (
         <Card className={cx("p-0", loading && "opacity-60")}>
+          <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_auto] gap-4 border-b border-line px-5 py-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted md:grid">
+            <span>When</span>
+            <span>Result</span>
+            <span>Health worker</span>
+            <span className="w-28" />
+          </div>
           <ul className="divide-y divide-line">
-            {data.items.map((r) => (
-              <li key={r.id} className={cx("flex flex-wrap items-start gap-4 p-4", r.flagged && "border-l-4 border-l-sev-high")}>
-                <div className="min-w-40">
-                  <p className="text-sm font-semibold text-ink">{fmtDateTime(r.measured_at)}</p>
-                  {r.flagged && r.severity && (
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <SeverityBadge severity={r.severity} />
-                      <span className="text-xs text-ink-soft">{r.reviewed ? "Reviewed" : "Awaiting review"}</span>
+            {data.items.map((r) => {
+              const isOpen = open.has(r.id);
+              const tone = r.flagged && r.severity ? SEVERITY[r.severity] : null;
+              return (
+                <li key={r.id} className={cx("border-l-4", tone ? tone.border : "border-l-transparent")}>
+                  <div className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center md:gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className={cx("h-2.5 w-2.5 shrink-0 rounded-full", tone ? tone.dot : "bg-success")} aria-hidden="true" />
+                      <span>
+                        <span className="block text-sm font-semibold text-ink">{fmtDateTime(r.measured_at)}</span>
+                        <span className="block text-xs text-ink-muted">{fmtAgo(r.measured_at)}</span>
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-                    {Object.entries(r.vitals).map(([k, v]) => {
-                      const m = byKey.get(k);
-                      return (
-                        <div key={k} className={cx(metric === k && "font-semibold")}>
-                          <dt className="inline text-ink-soft">{m?.label ?? k}: </dt>
-                          <dd className="inline tabular-nums text-ink">
-                            {m ? v.toFixed(m.decimals) : v} {m?.unit}
-                          </dd>
-                        </div>
-                      );
-                    })}
-                  </dl>
-                  {r.signal && <p className="mt-1 text-sm text-sev-high">{r.signal}</p>}
-                  {r.symptoms.length > 0 && <p className="mt-1 text-xs capitalize text-ink-soft">Symptoms: {r.symptoms.join(", ")}</p>}
-                </div>
-                {confirming === r.id ? (
-                  <div className="flex items-center gap-2" role="group" aria-label="Confirm delete">
-                    <span className="text-sm text-ink">Delete this reading?</span>
-                    <Btn tone="danger" busy={deleting} onClick={() => void remove(r.id)}>
-                      Delete
-                    </Btn>
-                    <Btn tone="ghost" onClick={() => setConfirming(null)}>
-                      Keep
+                    <div className="min-w-0">
+                      {r.flagged && r.severity ? (
+                        <>
+                          <SeverityBadge severity={r.severity} />
+                          {r.signal && <p className="mt-1 truncate text-xs text-ink-soft">{r.signal}</p>}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success">
+                          <CircleCheck size={12} aria-hidden="true" /> Normal
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm">
+                      {!r.flagged ? (
+                        <span className="text-ink-muted">Not needed</span>
+                      ) : r.reviewed ? (
+                        <span className="inline-flex items-center gap-1.5 text-success">
+                          <UserCheck size={16} aria-hidden="true" /> Reviewed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-warn">
+                          <Clock size={16} aria-hidden="true" /> Awaiting review
+                        </span>
+                      )}
+                    </div>
+                    <Btn
+                      tone="ghost"
+                      className="w-28 justify-self-start md:justify-self-end"
+                      aria-expanded={isOpen}
+                      aria-controls={`reading-${r.id}`}
+                      onClick={() => toggle(r.id)}
+                    >
+                      {isOpen ? "Less" : "More info"}
+                      <ChevronDown size={16} className={cx("transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
                     </Btn>
                   </div>
-                ) : (
-                  <Btn tone="ghost" onClick={() => setConfirming(r.id)} aria-label={`Delete reading from ${fmtDateTime(r.measured_at)}`}>
-                    <Trash2 size={16} aria-hidden="true" /> Entered by mistake
-                  </Btn>
-                )}
-              </li>
-            ))}
+
+                  {isOpen && (
+                    <div id={`reading-${r.id}`} className="border-t border-line bg-paper px-5 py-5">
+                      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        {Object.entries(r.vitals).map(([k, v]) => {
+                          const m = byKey.get(k);
+                          const off = m?.normal ? v < m.normal[0] || v > m.normal[1] : false;
+                          return (
+                            <li key={k} className={cx("rounded-2xl border bg-surface p-3", off ? "border-warn/50" : "border-line", metric === k && "ring-2 ring-ink/20")}>
+                              <p className="text-xs text-ink-muted">{m?.label ?? k}</p>
+                              <p className="font-display text-2xl tabular-nums text-ink">
+                                {m ? v.toFixed(m.decimals) : v} <span className="font-sans text-xs text-ink-soft">{m?.unit}</span>
+                              </p>
+                              {m?.normal && (
+                                <p className={cx("text-xs", off ? "text-warn" : "text-ink-muted")}>
+                                  {off ? "Outside" : "Within"} {m.normal[0]}–{m.normal[1]}
+                                </p>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {r.signal && <p className="mt-4 text-sm text-ink">{r.signal}</p>}
+                      {r.symptoms.length > 0 && (
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Symptoms</span>
+                          {r.symptoms.map((s) => (
+                            <span key={s} className="rounded-full border border-line bg-surface px-3 py-1 text-xs capitalize text-ink">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
+                        {confirming === r.id ? (
+                          <div className="flex items-center gap-2" role="group" aria-label="Confirm delete">
+                            <span className="text-sm text-ink">Delete this reading?</span>
+                            <Btn tone="danger" busy={deleting} onClick={() => void remove(r.id)}>
+                              Delete
+                            </Btn>
+                            <Btn tone="ghost" onClick={() => setConfirming(null)}>
+                              Keep
+                            </Btn>
+                          </div>
+                        ) : (
+                          <Btn tone="ghost" onClick={() => setConfirming(r.id)} aria-label={`Delete reading from ${fmtDateTime(r.measured_at)}`}>
+                            <Trash2 size={16} aria-hidden="true" /> Entered by mistake
+                          </Btn>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </Card>
       )}

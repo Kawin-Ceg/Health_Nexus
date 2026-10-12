@@ -9,13 +9,14 @@ export const SEVERITIES: Severity[] = ["critical", "high", "moderate", "low"];
  * two pages reads as two different severities, so every page imports this.
  * Colour is never the only signal: each band has a label and an icon too.
  */
-export const SEVERITY: Record<Severity, { label: string; icon: LucideIcon; text: string; badge: string; dot: string }> = {
+export const SEVERITY: Record<Severity, { label: string; icon: LucideIcon; text: string; badge: string; dot: string; border: string }> = {
   critical: {
     label: "Critical",
     icon: AlertOctagon,
     text: "text-sev-critical",
     badge: "bg-sev-critical/12 text-sev-critical ring-1 ring-sev-critical/30",
     dot: "bg-sev-critical",
+    border: "border-l-sev-critical",
   },
   high: {
     label: "High",
@@ -23,6 +24,7 @@ export const SEVERITY: Record<Severity, { label: string; icon: LucideIcon; text:
     text: "text-sev-high",
     badge: "bg-sev-high/12 text-sev-high ring-1 ring-sev-high/30",
     dot: "bg-sev-high",
+    border: "border-l-sev-high",
   },
   moderate: {
     label: "Moderate",
@@ -30,6 +32,7 @@ export const SEVERITY: Record<Severity, { label: string; icon: LucideIcon; text:
     text: "text-sev-moderate",
     badge: "bg-sev-moderate/12 text-sev-moderate ring-1 ring-sev-moderate/30",
     dot: "bg-sev-moderate",
+    border: "border-l-sev-moderate",
   },
   low: {
     label: "Low",
@@ -37,6 +40,7 @@ export const SEVERITY: Record<Severity, { label: string; icon: LucideIcon; text:
     text: "text-sev-low",
     badge: "bg-sev-low/12 text-sev-low ring-1 ring-sev-low/30",
     dot: "bg-sev-low",
+    border: "border-l-sev-low",
   },
 };
 

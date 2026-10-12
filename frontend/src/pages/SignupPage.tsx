@@ -7,12 +7,13 @@ export function SignupPage() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Track your health and stay connected to your health centre."
+      subtitle="Free for citizens."
       footer={
         <>
-          Already registered? <Link to={paths.login}>Sign in</Link>
-          <br />
-          Health worker? <Link to={paths.phcSignup}>Apply as a PHC worker</Link>
+          <span>
+            Have an account? <Link to={paths.login}>Sign in</Link>
+          </span>
+          <Link to={paths.phcSignup}>Apply as a PHC worker</Link>
         </>
       }
     >

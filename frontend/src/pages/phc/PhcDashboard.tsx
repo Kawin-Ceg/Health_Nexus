@@ -2,7 +2,10 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { CitizenWorkCard, workerState } from "../../components/app/phc";
-import { Card, Empty, Loading, PageHeader, Stat, Tabs, cx } from "../../components/app/ui";
+import { Card, Empty, LinkBtn, Loading, Stat, Tabs, cx } from "../../components/app/ui";
+import { Doodle } from "../../components/landing/Doodle/Doodle";
+import { useAuth } from "../../context/AuthContext";
+import { Bell, Bot, CalendarDays, Map } from "lucide-react";
 import { fmtShortDay, plural } from "../../lib/format";
 import { oneOf, useQueryState } from "../../lib/params";
 import { paths } from "../../lib/routes";
@@ -34,7 +37,7 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
                 const w = active && (payload?.[0]?.payload as Kpi["weeks"][number] | undefined);
                 if (!w) return null;
                 return (
-                  <div className="rounded-lg border border-line bg-surface px-2 py-1 text-xs shadow-[var(--hn-shadow-md)]">
+                  <div className="rounded-xl border border-line bg-surface px-2 py-1 text-xs shadow-[var(--hn-shadow-md)]">
                     Week of {fmtShortDay(w.week_start)}: <strong>{w.value}</strong>
                     {w.partial && " (so far)"}
                   </div>
@@ -56,7 +59,13 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
   );
 }
 
+function greeting() {
+  const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Kolkata" }).format(new Date()));
+  return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+}
+
 export function PhcDashboard() {
+  const { user } = useAuth();
   const { params, set } = useQueryState();
   const severity = oneOf(params.get("severity"), SEVERITIES, null);
   const dash = useResource((s) => getDashboard(s), "dashboard");
@@ -84,7 +93,38 @@ export function PhcDashboard() {
 
   return (
     <>
-      <PageHeader title={d.facility.name} lead={`${d.facility.district}${d.facility.block ? ` · ${d.facility.block}` : ""} · everyone registered to this centre`} />
+      <section className="relative isolate mb-4 overflow-clip rounded-3xl border border-line bg-surface p-6 md:p-8" aria-labelledby="phc-greeting">
+        <Doodle piece="radial" className="-right-10 -bottom-16 w-80 [--doodle-opacity:0.6]" />
+        <Doodle piece="tree" className="top-4 right-[18%] w-40 [--doodle-opacity:0.5]" />
+        <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
+          {d.facility.name} · {d.facility.district}
+          {d.facility.block ? ` · ${d.facility.block}` : ""}
+        </p>
+        <h1 id="phc-greeting" className="mt-2 text-3xl text-ink md:text-4xl">
+          {greeting()}, {user?.name.split(" ")[0] ?? "there"}
+        </h1>
+        <p className="mt-2 max-w-xl font-display text-xl leading-snug text-ink-soft md:text-2xl">
+          {d.citizens_flagged
+            ? `${plural(d.citizens_flagged, "person needs", "people need")} review today.`
+            : "Nobody needs review right now."}
+          {d.visits_today ? ` ${plural(d.visits_today, "visit")} later today.` : ""}
+        </p>
+      </section>
+
+      <nav aria-label="Quick actions" className="mb-6 flex flex-wrap gap-2">
+        <LinkBtn to={paths.phcAlerts}>
+          <Bell size={16} aria-hidden="true" /> Open the worklist
+        </LinkBtn>
+        <LinkBtn to={paths.phcSchedule}>
+          <CalendarDays size={16} aria-hidden="true" /> Today's schedule
+        </LinkBtn>
+        <LinkBtn to={paths.phcMap}>
+          <Map size={16} aria-hidden="true" /> Risk map
+        </LinkBtn>
+        <LinkBtn to={paths.assistant}>
+          <Bot size={16} aria-hidden="true" /> Ask the assistant
+        </LinkBtn>
+      </nav>
 
       {/* Ordered by what needs a decision today, not by what is easiest to count. */}
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -147,7 +187,7 @@ export function PhcDashboard() {
         )}
       </Card>
 
-      <h2 className="mb-3 text-base font-semibold text-ink">Last 8 weeks</h2>
+      <h2 className="mb-4 text-2xl text-ink">Last 8 weeks</h2>
       {overview.data ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {overview.data.kpis.map((k) => (

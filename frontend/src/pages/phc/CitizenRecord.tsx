@@ -70,7 +70,7 @@ export function CitizenRecord() {
         actions={
           <>
             {id.phone && (
-              <a href={`tel:${id.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-ink">
+              <a href={`tel:${id.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-line px-4 text-sm font-semibold text-ink">
                 <Phone size={16} aria-hidden="true" /> {id.phone}
               </a>
             )}
@@ -86,14 +86,14 @@ export function CitizenRecord() {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="text-sm text-ink-soft" htmlFor="window">Showing the last</label>
-        <select id="window" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-lg border border-line bg-surface px-2 text-sm">
+        <select id="window" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-xl border border-line bg-surface px-2 text-sm">
           {WINDOWS.map((w) => <option key={w} value={w}>{w} days</option>)}
         </select>
         <span className="text-xs text-ink-soft">{fmtDate(r.window.start)} – {fmtDate(r.window.end)}. Every figure below covers this period.</span>
       </div>
 
       {(before.open_flags > 0 || before.visits_without_outcome > 0) && (
-        <div role="note" className="mb-6 rounded-xl border border-warn/40 bg-warn/10 p-4 text-sm text-ink">
+        <div role="note" className="mb-6 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-ink">
           <strong>From before this period:</strong>{" "}
           {before.open_flags > 0 && `${plural(before.open_flags, "unresolved flag")} (oldest ${fmtDate(before.oldest_flag_at!)}). `}
           {before.visits_without_outcome > 0 && `${plural(before.visits_without_outcome, "visit")} with no outcome recorded.`}
@@ -165,7 +165,7 @@ export function CitizenRecord() {
           className="mb-6"
           title={`${metric.label} in this period`}
           aside={charted.length > 1 && (
-            <select aria-label="Measurement to chart" value={metric.key} onChange={(e) => setChosen(e.target.value)} className="min-h-11 rounded-lg border border-line bg-surface px-2 text-sm">
+            <select aria-label="Measurement to chart" value={metric.key} onChange={(e) => setChosen(e.target.value)} className="min-h-11 rounded-xl border border-line bg-surface px-2 text-sm">
               {charted.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
           )}

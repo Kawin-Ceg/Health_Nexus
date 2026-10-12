@@ -11,3 +11,4 @@ frontend/dist/
 .agents/
 backend/media/
 .env.bak*
+backend/SEED_ACCOUNTS.md

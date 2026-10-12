@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Megaphone } from "lucide-react";
 import { fmtDateTime } from "../../lib/format";
+import { play } from "../../lib/sound";
 import { markRead, type AlertItem } from "../../services/health";
 import { Card, Empty, cx } from "./ui";
 
@@ -20,7 +21,9 @@ export function AlertList({ alerts, advisories }: { alerts: AlertItem[]; advisor
     const unread = alerts.filter((a) => !a.is_read).map((a) => a.id);
     if (unread.length && !sent.current) {
       sent.current = true;
-      void markRead(unread).catch(() => undefined);
+      void markRead(unread)
+        .then(() => play("clear"))
+        .catch(() => undefined);
     }
   }, [alerts]);
 
@@ -32,7 +35,7 @@ export function AlertList({ alerts, advisories }: { alerts: AlertItem[]; advisor
         ) : (
           <ul className="flex flex-col gap-2">
             {alerts.map((a) => (
-              <li key={a.id} className={cx("rounded-lg border border-line border-l-4 bg-surface p-3 text-sm", TONE[a.severity])}>
+              <li key={a.id} className={cx("rounded-xl border border-line border-l-4 bg-surface p-3 text-sm", TONE[a.severity])}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-ink">{a.message}</p>
                   {!a.is_read && <span className="rounded-full bg-brand-soft px-2 text-xs font-semibold text-brand">New</span>}

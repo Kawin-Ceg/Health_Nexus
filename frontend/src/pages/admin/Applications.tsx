@@ -1,3 +1,4 @@
+import { useToast } from "../../components/app/Toaster";
 import { useState } from "react";
 import { Btn, Card, Empty, ErrorNote, Labelled, Loading, PageHeader, Tabs, cx, inputCls } from "../../components/app/ui";
 import { fmtAgo, fmtDateTime } from "../../lib/format";
@@ -113,6 +114,7 @@ function Review({ id, onChanged }: { id: string; onChanged: () => void }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | "revoke" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { notify } = useToast();
 
   if (res.error) return <ErrorNote message={res.error} onRetry={res.reload} />;
   if (!a) return <Loading />;
@@ -121,7 +123,9 @@ function Review({ id, onChanged }: { id: string; onChanged: () => void }) {
     setBusy(kind);
     setError(null);
     try {
-      setDecided(await call());
+      const next = await call();
+      setDecided(next);
+      notify({ tone: "success", title: { approve: "Application approved", reject: "Application rejected", revoke: "Access revoked" }[kind], body: next.applicant.name });
       setReason("");
       onChanged();
     } catch (e) {
@@ -224,7 +228,7 @@ function FacilityPicker({ value, onChange, district }: { value: FacilityOption |
       <Labelled label="Health centre" hint={term ? "Searching every district." : `Showing centres in ${district}. Type to search everywhere.`}>
         <input type="search" className={inputCls} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or facility code" />
       </Labelled>
-      <ul className="max-h-48 overflow-y-auto rounded-xl border border-line">
+      <ul className="max-h-48 overflow-y-auto rounded-2xl border border-line">
         {res.data?.length === 0 && <li className="px-3 py-2 text-sm text-ink-soft">No centres found.</li>}
         {res.data?.map((f) => (
           <li key={f.id}>

@@ -1,6 +1,10 @@
 .header {
+  position: sticky;
+  top: 0;
+  z-index: var(--hn-z-nav);
   border-bottom: 1px solid rgb(var(--hn-line));
-  background: rgb(var(--hn-surface));
+  background: rgb(var(--hn-paper) / 0.9);
+  backdrop-filter: blur(12px);
 }
 
 .inner {

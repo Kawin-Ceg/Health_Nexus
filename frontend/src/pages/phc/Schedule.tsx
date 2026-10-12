@@ -6,6 +6,9 @@ import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import type { Visit } from "../../services/health";
 import { getSchedule, updateVisit } from "../../services/phc";
+import { useToast } from "../../components/app/Toaster";
+
+const DONE = { complete: "Visit marked done", cancel: "Visit cancelled", miss: "Marked as nobody there", move: "Visit moved" } as const;
 
 function VisitRow({ visit, onChanged }: { visit: Visit; onChanged: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -14,11 +17,13 @@ function VisitRow({ visit, onChanged }: { visit: Visit; onChanged: () => void })
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [when, setWhen] = useState(() => toLocalInput(new Date(Math.max(Date.now() + 3600_000, new Date(visit.scheduled_for).getTime()))));
 
+  const { notify } = useToast();
   const act = async (action: "complete" | "cancel" | "miss" | "move") => {
     setBusy(action);
     setError(null);
     try {
       await updateVisit(visit.id, action === "move" ? { action, scheduled_for: new Date(fromLocalInput(when)).toISOString() } : { action });
+      notify({ tone: "success", title: DONE[action], body: visit.citizen ? (action === "cancel" || action === "move" ? `${visit.citizen.name}. They have been notified.` : visit.citizen.name) : undefined });
       onChanged();
     } catch (e) {
       setError(errorMessage(e));

@@ -18,14 +18,16 @@ import { integerInRange, numberInRange, phoneError } from "../lib/validation";
 import { ApiError } from "../services/api";
 import { createProfile, type Gender, type ProfilePayload } from "../services/onboarding";
 import styles from "../components/onboarding/Onboarding.module.css";
+import { Doodle } from "../components/landing/Doodle/Doodle";
+import { Check } from "lucide-react";
 
 const STEPS = [
-  { title: "About you", fields: ["age", "gender", "height_cm", "weight_kg", "blood_group"] },
-  { title: "Location", fields: ["state", "district", "phc_id", "pincode", "area"] },
-  { title: "Medical history", fields: ["existing_conditions", "current_medications"] },
-  { title: "Device and contact", fields: ["has_smartwatch", "smartwatch_brand", "emergency_contact_name", "emergency_contact_phone"] },
-  { title: "Consent", fields: ["health_tracking", "community_surveillance"] },
-] as const satisfies readonly { title: string; fields: readonly (keyof OnboardingValues)[] }[];
+  { title: "About you", why: "Your health worker sees this on your record.", fields: ["age", "gender", "height_cm", "weight_kg", "blood_group"] },
+  { title: "Location", why: "Links you to the health centre whose workers review your readings.", fields: ["state", "district", "phc_id", "pincode", "area"] },
+  { title: "Medical history", why: "Conditions and medicines help your health worker read a flag in context.", fields: ["existing_conditions", "current_medications"] },
+  { title: "Device and contact", why: "Your emergency contact is shown to your health worker.", fields: ["has_smartwatch", "smartwatch_brand", "emergency_contact_name", "emergency_contact_phone"] },
+  { title: "Consent", why: "You can change these at any time in Settings.", fields: ["health_tracking", "community_surveillance"] },
+] as const satisfies readonly { title: string; why: string; fields: readonly (keyof OnboardingValues)[] }[];
 
 type Problems = Partial<Record<keyof OnboardingValues, string>>;
 
@@ -159,6 +161,30 @@ function OnboardingFlow() {
     <>
       <AppHeader />
       <main className={styles.main}>
+        <aside className={styles.aside} aria-label="Setup steps">
+          <Doodle piece="beads" className={styles.beads} />
+          <Doodle piece="helix" className={styles.helix} delay={1} />
+          <p className={styles.asideTitle}>Set up your health profile</p>
+          <p className={styles.asideLead}>Five short steps. Your answers are kept if you reload this tab.</p>
+          <ol className={styles.steps}>
+            {STEPS.map((s, i) => {
+              const n = i + 1;
+              const state = n < step ? "done" : n === step ? "current" : "todo";
+              return (
+                <li key={s.title} className={styles[state]} aria-current={state === "current" ? "step" : undefined}>
+                  <span className={styles.dot} aria-hidden="true">
+                    {state === "done" ? <Check size={14} /> : n}
+                  </span>
+                  <span>
+                    <span className={styles.stepName}>{s.title}</span>
+                    {state === "current" && <span className={styles.why}>{s.why}</span>}
+                    <span className="visually-hidden">{state === "done" ? " (done)" : state === "todo" ? " (to do)" : ""}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </aside>
         <div className={styles.card}>
           <div
             className={styles.progress}

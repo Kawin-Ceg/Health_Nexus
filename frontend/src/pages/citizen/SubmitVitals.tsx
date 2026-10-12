@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleCheck, X } from "lucide-react";
 import { ScoreBreakdown } from "../../components/app/ModelInsights";
 import { Btn, Card, ErrorNote, Loading, PageHeader, SeverityBadge, cx, inputCls } from "../../components/app/ui";
 import { fmtDateTime, fromLocalInput, toLocalInput } from "../../lib/format";
@@ -8,6 +8,15 @@ import { paths } from "../../lib/routes";
 import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import { getMetrics, submitVitals, type Metric, type VitalsResult } from "../../services/health";
+import { play } from "../../lib/sound";
+import { Doodle } from "../../components/landing/Doodle/Doodle";
+
+const TIPS = [
+  "Sit quietly for five minutes before measuring blood pressure.",
+  "Measure at about the same time each day, so readings compare fairly.",
+  "Rest your arm at heart level, and do not talk during the reading.",
+  "Log only what you measured. Leave the rest blank.",
+];
 
 const GROUPS: { id: Metric["group"]; title: string }[] = [
   { id: "blood_pressure", title: "Blood pressure" },
@@ -49,6 +58,19 @@ export function SubmitVitals() {
   if (!info) return <Loading />;
   const byKey = new Map(info.metrics.map((m) => [m.key, m]));
 
+  const entered = Object.values(values).filter((v) => v.trim()).length;
+  const checkOne = (key: string) => {
+    const found = validate(info.metrics, values).errors;
+    setErrors((cur) => {
+      const next = { ...cur };
+      for (const k of [key, "diastolic"]) {
+        if (found[k]) next[k] = found[k];
+        else delete next[k];
+      }
+      return next;
+    });
+  };
+
   const toggle = (s: string) =>
     setSymptoms((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : cur.length < MAX_SYMPTOMS ? [...cur, s] : cur));
 
@@ -80,9 +102,9 @@ export function SubmitVitals() {
     }
     setBusy(true);
     try {
-      setResult(
-        await submitVitals({ vitals, symptoms, measured_at: earlier ? new Date(fromLocalInput(measuredAt)).toISOString() : undefined }),
-      );
+      const saved = await submitVitals({ vitals, symptoms, measured_at: earlier ? new Date(fromLocalInput(measuredAt)).toISOString() : undefined });
+      play(saved.flagged ? "alert" : "clear");
+      setResult(saved);
     } catch (err) {
       setFormError(errorMessage(err));
     } finally {
@@ -132,10 +154,10 @@ export function SubmitVitals() {
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
-            <Link to={paths.citizenHome} className="inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-on-brand">
+            <Link to={paths.citizenHome} className="inline-flex min-h-11 items-center rounded-full bg-ink px-5 font-display text-[15px] text-paper transition-shadow duration-300 hover:shadow-[0_0_48px_rgb(var(--hn-glow))]">
               Back to dashboard
             </Link>
-            <Link to={paths.history} className="inline-flex min-h-11 items-center rounded-xl border border-line px-4 text-sm font-semibold text-ink">
+            <Link to={paths.history} className="inline-flex min-h-11 items-center rounded-2xl border border-line px-4 text-sm font-semibold text-ink">
               See history
             </Link>
             <Btn tone="ghost" onClick={reset}>
@@ -159,7 +181,8 @@ export function SubmitVitals() {
   return (
     <>
       <PageHeader title="Log vitals" lead="Fill in whatever you measured. Every field is optional, but enter at least one." />
-      <form onSubmit={submit} noValidate className="flex max-w-3xl flex-col gap-6">
+      <form onSubmit={submit} noValidate className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-6">
         {GROUPS.map((group) => (
           <Card key={group.id} title={group.title}>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -175,11 +198,15 @@ export function SubmitVitals() {
                       inputMode="decimal"
                       value={values[m.key] ?? ""}
                       onChange={(e) => setValues((v) => ({ ...v, [m.key]: e.target.value }))}
+                      onBlur={() => checkOne(m.key)}
                       aria-invalid={errors[m.key] ? true : undefined}
                       aria-describedby={`${m.key}-hint`}
                       className={cx(inputCls, errors[m.key] && "border-danger")}
                     />
-                    <span id={`${m.key}-hint`} className={cx("text-xs", errors[m.key] ? "text-danger" : "text-ink-soft")}>
+                    <span id={`${m.key}-hint`} className={cx("flex items-center gap-1 text-xs", errors[m.key] ? "text-danger" : "text-ink-soft")}>
+                      {!errors[m.key] && values[m.key]?.trim() && Number.isFinite(Number(values[m.key])) && (
+                        <CircleCheck size={12} className="text-success" aria-hidden="true" />
+                      )}
                       {errors[m.key] ?? (m.normal ? `Normal: ${m.normal[0]}–${m.normal[1]} ${m.unit}` : "No normal range; tracked for your record")}
                     </span>
                   </label>
@@ -247,12 +274,34 @@ export function SubmitVitals() {
           )}
         </Card>
 
-        {formError && <ErrorNote message={formError} />}
-        <div>
-          <Btn tone="primary" type="submit" busy={busy}>
+        </div>
+
+        <aside className="relative isolate flex flex-col gap-4 overflow-clip rounded-3xl border border-line bg-surface p-6 lg:sticky lg:top-8">
+          <Doodle piece="capsules" className="-right-4 -bottom-6 w-28 rotate-[-12deg] [--doodle-opacity:0.8]" />
+          <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Your reading</p>
+          <p className="font-display text-3xl leading-tight text-ink">
+            {entered === 0 ? "Nothing entered yet" : `${entered} measurement${entered === 1 ? "" : "s"} entered`}
+          </p>
+          <p className="text-sm text-ink-soft">
+            {symptoms.length > 0 ? `With ${symptoms.length} symptom${symptoms.length === 1 ? "" : "s"}.` : "No symptoms added."}
+            {earlier ? " Measured earlier." : " Measured now."}
+          </p>
+          {formError && <ErrorNote message={formError} />}
+          <Btn tone="primary" type="submit" busy={busy} disabled={entered === 0} className="w-full">
             Save reading
           </Btn>
-        </div>
+          <div className="mt-2 border-t border-line pt-4">
+            <p className="text-sm font-semibold text-ink">For an accurate reading</p>
+            <ul className="mt-2 flex flex-col gap-2 text-sm text-ink-soft">
+              {TIPS.map((tip) => (
+                <li key={tip} className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-olive" aria-hidden="true" />
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
       </form>
     </>
   );

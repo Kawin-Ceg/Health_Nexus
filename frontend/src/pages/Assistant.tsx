@@ -1,6 +1,7 @@
+import { play } from "../lib/sound";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { Bot, Database, MessageSquarePlus, Send, Trash2, UserRound } from "lucide-react";
-import { Btn, ErrorNote, Loading, PageHeader, cx, inputCls } from "../components/app/ui";
+import { Bot, Check, Database, Loader2, MessageSquarePlus, PanelLeft, Pencil, Search, Send, Trash2, UserRound } from "lucide-react";
+import { Btn, ErrorNote, Loading, cx, inputCls } from "../components/app/ui";
 import { useAuth } from "../context/AuthContext";
 import { fmtAgo } from "../lib/format";
 import { useResource } from "../lib/useResource";
@@ -11,6 +12,7 @@ import {
   getAssistantInfo,
   getSession,
   getSessions,
+  renameSession,
   type ChatMessage,
   type ChatSession,
   type Retrieval,
@@ -45,6 +47,10 @@ export function Assistant() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [drawer, setDrawer] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
 
@@ -61,7 +67,18 @@ export function Assistant() {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, sending]);
 
+  useEffect(() => {
+    const el = input.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [draft]);
+
+  const active = sessions?.find((s) => s.id === activeId) ?? null;
+  const shown = (sessions ?? []).filter((s) => s.title.toLowerCase().includes(search.trim().toLowerCase()));
+
   const open = async (id: string) => {
+    setDrawer(false);
     if (id === activeId) return;
     setActiveId(id);
     setError(null);
@@ -79,6 +96,7 @@ export function Assistant() {
     setActiveId(null);
     setMessages([]);
     setError(null);
+    setDrawer(false);
     input.current?.focus();
   };
 
@@ -91,6 +109,7 @@ export function Assistant() {
     setMessages((m) => [...m, pending(content)]);
     try {
       const out = await askAssistant(content, activeId);
+      play("message");
       setMessages((m) => [...m.filter((x) => x.id !== "pending"), out.question, out.answer]);
       setActiveId(out.session.id);
       setSessions((list) => [out.session, ...(list ?? []).filter((s) => s.id !== out.session.id)]);
@@ -108,7 +127,21 @@ export function Assistant() {
     try {
       await deleteSession(id);
       setSessions((list) => (list ?? []).filter((s) => s.id !== id));
+      setConfirmDelete(null);
       if (id === activeId) startNew();
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
+  const rename = async (id: string, title: string) => {
+    setRenaming(null);
+    const clean = title.trim().slice(0, 120);
+    const current = sessions?.find((s) => s.id === id);
+    if (!clean || clean === current?.title) return;
+    try {
+      const saved = await renameSession(id, clean);
+      setSessions((list) => (list ?? []).map((s) => (s.id === id ? saved : s)));
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -127,62 +160,155 @@ export function Assistant() {
 
   const engine = info.data?.engine === "gemini" ? `Gemini (${info.data.model})` : "built-in rules";
 
-  return (
-    <>
-      <PageHeader
-        title="Health assistant"
-        lead={LEAD[user?.role ?? "user"]}
-        actions={
-          <Btn onClick={startNew}>
-            <MessageSquarePlus size={16} aria-hidden="true" /> New chat
-          </Btn>
-        }
-      />
-      <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <nav aria-label="Conversations" className="order-2 lg:order-1">
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">Conversations</h2>
-          {sessions === null ? (
-            <Loading />
-          ) : sessions.length === 0 ? (
-            <p className="text-sm text-ink-soft">Your conversations will appear here.</p>
-          ) : (
-            <ul className="flex max-h-[60dvh] flex-col gap-1 overflow-y-auto">
-              {sessions.map((s) => (
-                <li key={s.id} className="group flex items-center gap-1">
+  const chatList = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between gap-2 p-4 pb-3">
+        <h2 className="text-xl text-ink">Chats</h2>
+        <Btn tone="primary" onClick={startNew} className="min-h-10 px-4">
+          <MessageSquarePlus size={16} aria-hidden="true" /> New chat
+        </Btn>
+      </div>
+      <div className="px-4 pb-3">
+        <label className="relative block">
+          <span className="visually-hidden">Search chats</span>
+          <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search chats"
+            className={cx(inputCls, "min-h-10 pl-9")}
+          />
+        </label>
+      </div>
+      <nav aria-label="Chats" className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+        {sessions === null ? (
+          <Loading />
+        ) : shown.length === 0 ? (
+          <p className="px-2 py-6 text-center text-sm text-ink-soft">
+            {sessions.length === 0 ? "Your chats will be saved here, each with its own name." : "No chats match that search."}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {shown.map((s) => {
+              const isActive = s.id === activeId;
+              if (renaming === s.id) {
+                return (
+                  <li key={s.id} className="px-1">
+                    <RenameField initial={s.title} onSave={(title) => void rename(s.id, title)} onCancel={() => setRenaming(null)} />
+                  </li>
+                );
+              }
+              if (confirmDelete === s.id) {
+                return (
+                  <li key={s.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-danger-soft px-3 py-2 text-sm text-danger" role="group" aria-label={`Delete "${s.title}"?`}>
+                    <span className="min-w-0 flex-1 truncate">Delete "{s.title}"?</span>
+                    <Btn tone="danger" className="min-h-9 px-3" onClick={() => void remove(s.id)}>
+                      Delete
+                    </Btn>
+                    <Btn tone="ghost" className="min-h-9 px-3" onClick={() => setConfirmDelete(null)}>
+                      Keep
+                    </Btn>
+                  </li>
+                );
+              }
+              return (
+                <li key={s.id} className={cx("group flex items-center gap-1 rounded-2xl", isActive ? "bg-lime" : "hover:bg-surface")}>
                   <button
                     type="button"
                     onClick={() => void open(s.id)}
-                    aria-current={s.id === activeId || undefined}
-                    className={cx(
-                      "min-h-11 min-w-0 flex-1 rounded-xl px-3 py-2 text-left text-sm",
-                      s.id === activeId ? "bg-brand-soft text-brand" : "text-ink hover:bg-paper-raised",
-                    )}
+                    onDoubleClick={() => setRenaming(s.id)}
+                    aria-current={isActive || undefined}
+                    className="min-h-12 min-w-0 flex-1 px-3 py-2 text-left"
                   >
-                    <span className="block truncate font-medium">{s.title}</span>
-                    <span className="block text-xs text-ink-soft">{fmtAgo(s.updated_at)}</span>
+                    <span className={cx("block truncate text-sm font-medium", isActive ? "text-olive" : "text-ink")}>{s.title}</span>
+                    <span className={cx("block text-xs", isActive ? "text-olive/80" : "text-ink-muted")}>{fmtAgo(s.updated_at)}</span>
                   </button>
+                  <span className="flex opacity-100 transition-opacity lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => setRenaming(s.id)}
+                      className="grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-paper-raised hover:text-ink"
+                      aria-label={`Rename "${s.title}"`}
+                    >
+                      <Pencil size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(s.id)}
+                      className="mr-1 grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-paper-raised hover:text-danger"
+                      aria-label={`Delete "${s.title}"`}
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </nav>
+    </div>
+  );
+
+  return (
+    <div className="flex h-[calc(100dvh-57px)] min-h-0 lg:h-dvh">
+      <aside className="hidden w-80 shrink-0 border-r border-line bg-paper-raised lg:block">{chatList}</aside>
+
+      {drawer && (
+        <div className="fixed inset-0 z-50 bg-ink/40 lg:hidden" onClick={() => setDrawer(false)}>
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Chats"
+            className="absolute inset-y-0 left-0 w-[86%] max-w-sm bg-paper-raised shadow-[var(--hn-shadow-lg)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {chatList}
+          </aside>
+        </div>
+      )}
+
+      <section aria-label="Chat" className="flex min-w-0 flex-1 flex-col bg-paper">
+        <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 md:px-6">
+          <button
+            type="button"
+            onClick={() => setDrawer(true)}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-3 text-sm text-ink lg:hidden"
+            aria-label="Open chats"
+          >
+            <PanelLeft size={16} aria-hidden="true" /> Chats
+          </button>
+          <div className="min-w-0 flex-1">
+            {active && renaming === `header:${active.id}` ? (
+              <RenameField initial={active.title} onSave={(title) => void rename(active.id, title)} onCancel={() => setRenaming(null)} />
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-2xl text-ink">{active?.title ?? "New chat"}</h1>
+                {active && (
                   <button
                     type="button"
-                    onClick={() => void remove(s.id)}
-                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-ink-soft hover:bg-paper-raised hover:text-danger"
-                    aria-label={`Delete "${s.title}"`}
+                    onClick={() => setRenaming(`header:${active.id}`)}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-paper-raised hover:text-ink"
+                    aria-label="Rename this chat"
                   >
-                    <Trash2 size={16} aria-hidden="true" />
+                    <Pencil size={15} aria-hidden="true" />
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </nav>
+                )}
+              </div>
+            )}
+            <p className="truncate text-xs text-ink-muted">{LEAD[user?.role ?? "user"]}</p>
+          </div>
+        </header>
 
-        <section aria-label="Chat" className="order-1 flex min-h-[60dvh] flex-col rounded-2xl border border-line bg-surface lg:order-2">
-          <div className="flex-1 overflow-y-auto p-4" aria-live="polite">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-8" aria-live="polite">
+          <div className="mx-auto max-w-3xl">
             {loadingThread ? (
               <Loading label="Loading conversation" />
             ) : messages.length === 0 ? (
               <Welcome suggestions={info.data?.suggestions ?? []} onPick={(q) => void send(q)} disabled={sending} />
             ) : (
-              <ol className="flex flex-col gap-4">
+              <ol className="flex flex-col gap-5">
                 {messages.map((m) => (
                   <Bubble key={m.id} message={m} />
                 ))}
@@ -195,36 +321,91 @@ export function Assistant() {
             )}
             <div ref={bottom} />
           </div>
-          {error && (
-            <div className="px-4 pb-2">
-              <ErrorNote message={error} />
-            </div>
-          )}
-          <form onSubmit={onSubmit} className="flex items-end gap-2 border-t border-line p-3">
-            <label className="visually-hidden" htmlFor="assistant-input">
-              Your question
-            </label>
-            <textarea
-              id="assistant-input"
-              ref={input}
-              rows={1}
-              maxLength={1000}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder="Ask a question…"
-              className={cx(inputCls, "max-h-40 min-h-11 resize-y py-2.5")}
-            />
-            <Btn type="submit" tone="primary" busy={sending} disabled={!draft.trim()} aria-label="Send">
-              <Send size={16} aria-hidden="true" />
-            </Btn>
-          </form>
-          <p className="px-4 pb-3 text-xs text-ink-soft">
-            Answered by {engine} from HealthNexus records only. Not medical advice. In an emergency call 108.
-          </p>
-        </section>
-      </div>
-    </>
+        </div>
+
+        <div className="border-t border-line bg-surface px-4 py-3 md:px-8">
+          <div className="mx-auto max-w-3xl">
+            {error && (
+              <div className="mb-2">
+                <ErrorNote message={error} />
+              </div>
+            )}
+            <form onSubmit={onSubmit} className="flex items-end gap-2 rounded-3xl border border-line-strong/40 bg-surface p-2 focus-within:border-ink focus-within:ring-3 focus-within:ring-[rgb(var(--hn-focus))]">
+              <label className="visually-hidden" htmlFor="assistant-input">
+                Your question
+              </label>
+              <textarea
+                id="assistant-input"
+                ref={input}
+                rows={1}
+                maxLength={1000}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={onKeyDown}
+                placeholder="Ask about your readings…"
+                className="hn-bare-input max-h-40 min-h-10 flex-1 resize-none bg-transparent px-3 py-2 text-sm text-ink placeholder:text-ink-muted"
+              />
+              <button
+                type="submit"
+                disabled={!draft.trim() || sending}
+                aria-label={sending ? "Sending" : "Send"}
+                aria-busy={sending || undefined}
+                className={cx(
+                  "grid h-10 w-10 shrink-0 place-items-center rounded-full transition-[background-color,box-shadow] duration-300",
+                  draft.trim() && !sending
+                    ? "bg-ink text-paper hover:shadow-[0_0_32px_rgb(var(--hn-glow))]"
+                    : "cursor-not-allowed bg-paper-raised text-ink-muted",
+                )}
+              >
+                {sending ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
+              </button>
+            </form>
+            <p className="mt-2 text-center text-xs text-ink-muted">
+              Answered by {engine} from Health Nexus records only. Not medical advice. In an emergency call 108.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function RenameField({ initial, onSave, onCancel }: { initial: string; onSave: (title: string) => void; onCancel: () => void }) {
+  const [value, setValue] = useState(initial);
+  const finished = useRef(false);
+  const finish = (save: boolean) => {
+    if (finished.current) return;
+    finished.current = true;
+    if (save) onSave(value);
+    else onCancel();
+  };
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        finish(true);
+      }}
+      className="flex items-center gap-1"
+    >
+      <label className="visually-hidden" htmlFor="rename-chat">
+        Chat name
+      </label>
+      <input
+        id="rename-chat"
+        autoFocus
+        value={value}
+        maxLength={120}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") finish(false);
+        }}
+        onBlur={() => finish(true)}
+        className={cx(inputCls, "min-h-10")}
+      />
+      <button type="submit" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink hover:bg-paper-raised" aria-label="Save name">
+        <Check size={16} aria-hidden="true" />
+      </button>
+    </form>
   );
 }
 
@@ -294,7 +475,7 @@ function Sources({ message: m, retrieval: r }: { message: ChatMessage; retrieval
         From "{r.title}" · {r.row_count} row{r.row_count === 1 ? "" : "s"}
         {m.latency_ms != null && ` · ${(m.latency_ms / 1000).toFixed(1)} s`}
       </summary>
-      <div className="mt-2 flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-left">
+      <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3 text-left">
         {args && <p>Parameters: {args}</p>}
         <p>Answered by: {r.engine === "rules" ? "built-in rules" : r.engine}</p>
         {r.rows.length > 0 && (
@@ -326,7 +507,7 @@ function Sources({ message: m, retrieval: r }: { message: ChatMessage; retrieval
         {m.generated_sql && (
           <details>
             <summary className="cursor-pointer hover:text-ink">SQL that ran (read-only)</summary>
-            <pre className="mt-1 overflow-x-auto rounded-lg bg-paper-raised p-2 font-mono text-[11px] leading-snug text-ink">{m.generated_sql}</pre>
+            <pre className="mt-1 overflow-x-auto rounded-xl bg-paper-raised p-2 font-mono text-[11px] leading-snug text-ink">{m.generated_sql}</pre>
           </details>
         )}
       </div>

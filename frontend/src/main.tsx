@@ -2,6 +2,7 @@ import { StrictMode, Suspense, lazy, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/app/AppShell";
+import { ToastProvider } from "./components/app/Toaster";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RedirectIfAuthenticated } from "./components/RedirectIfAuthenticated";
@@ -68,6 +69,7 @@ createRoot(root).render(
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
+          <ToastProvider>
           <Suspense fallback={<RouteFallback />}>
           <Routes>
             {/* Signed-out visitors only */}
@@ -145,6 +147,7 @@ createRoot(root).render(
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ToastProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

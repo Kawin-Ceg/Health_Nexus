@@ -1,4 +1,4 @@
-import type { BaselineStatus, Metric, VitalCheck } from "../../services/health";
+import type { Metric, VitalCheck } from "../../services/health";
 import { cx } from "./ui";
 
 type Audience = "citizen" | "worker";
@@ -77,48 +77,3 @@ export function BasisTag({ basis }: { basis: string | null }) {
   );
 }
 
-const STAGE_TEXT = { learning: "Learning", blending: "Getting to know you", personal: "Personal" } as const;
-
-/**
- * Per vital: how far the model has come from published normal ranges to the
- * citizen's own baseline. The bar fills from 0 to `full_readings` readings.
- */
-export function BaselineProgress({ status, metrics }: { status: BaselineStatus; metrics: Map<string, Metric> }) {
-  return (
-    <ul className="flex flex-col gap-4">
-      {status.vitals.map((v) => {
-        const m = metrics.get(v.key);
-        if (!m) return null;
-        const filled = Math.min(100, Math.round((v.readings / status.full_readings) * 100));
-        const usual = v.baseline !== null && v.spread !== null ? `usual ${fmt(m, v.baseline)} ± ${fmt(m, v.spread)} ${m.unit}` : null;
-        let detail: string;
-        if (v.stage === "learning") {
-          detail = `${v.readings_to_start} more reading${v.readings_to_start === 1 ? "" : "s"} until we start learning your normal`;
-        } else if (v.stage === "blending") {
-          detail = `${usual} · ${Math.round(v.weight * 100)}% based on you · ${v.readings_to_full} more to be fully personal`;
-        } else {
-          detail = `${usual} · judged against your own readings`;
-        }
-        return (
-          <li key={v.key}>
-            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2 text-sm">
-              <span className="font-medium text-ink">{m.label}</span>
-              <span className={cx("text-xs font-semibold", v.stage === "personal" ? "text-success" : "text-ink-soft")}>{STAGE_TEXT[v.stage]}</span>
-            </div>
-            <div
-              className="h-2 overflow-hidden rounded-full bg-paper-raised"
-              role="progressbar"
-              aria-label={`${m.label}: ${v.readings} of ${status.full_readings} readings`}
-              aria-valuemin={0}
-              aria-valuemax={status.full_readings}
-              aria-valuenow={Math.min(v.readings, status.full_readings)}
-            >
-              <div className={cx("h-full rounded-full", v.stage === "personal" ? "bg-success" : "bg-brand")} style={{ width: `${filled}%` }} />
-            </div>
-            <p className="mt-1 text-xs text-ink-soft">{detail}</p>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}

@@ -127,3 +127,10 @@
   rotate: 8deg;
   --doodle-opacity: 0.8;
 }
+
+.flask {
+  bottom: 30px;
+  right: 3%;
+  width: 80px;
+  --doodle-opacity: 0.45;
+}
