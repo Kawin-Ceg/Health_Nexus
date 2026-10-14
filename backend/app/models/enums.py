@@ -75,6 +75,12 @@ class AlertType(str, enum.Enum):
     community = "community"
 
 
+class AdvisoryScope(str, enum.Enum):
+    centre = "centre"
+    district = "district"
+    state = "state"
+
+
 class AlertSeverity(str, enum.Enum):
     low = "low"
     medium = "medium"

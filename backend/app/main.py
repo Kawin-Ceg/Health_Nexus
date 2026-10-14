@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -8,7 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.router import api_router
 from app.api.routes.profile import MEDIA_URL, media_root
 from app.core.config import get_settings
-from app.db.session import engine
+from app.db.session import SessionLocal, engine
+from app.services import notify, outbreaks, reminders
 
 
 @asynccontextmanager
@@ -19,7 +22,18 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             "JWT_SECRET_KEY must be set (32+ characters) in backend/.env. "
             'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))"'
         )
+    settings = get_settings()
+    jobs = []
+    if settings.READING_REMINDERS:
+        jobs.append(asyncio.create_task(reminders.run_forever(SessionLocal)))
+    if settings.OUTBREAK_CLUSTERING:
+        jobs.append(asyncio.create_task(outbreaks.run_forever(SessionLocal)))
     yield
+    for job in jobs:
+        job.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await job
+    await notify.drain()
     await engine.dispose()
 
 

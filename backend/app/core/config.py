@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_FROM: str = "HealthNexus <no-reply@healthnexus.local>"
     SMTP_STARTTLS: bool = True
+    # Reading reminders run inside the API process (services/reminders.py). Turn
+    # off where several API processes run, and schedule one instead.
+    READING_REMINDERS: bool = True
+    # Outbreak clustering every 6 hours (services/outbreaks.py), same caveat.
+    OUTBREAK_CLUSTERING: bool = True
+
+    # The trained population model (model/artifacts/vitals_anomaly.joblib by default).
+    POPULATION_MODEL_PATH: str | None = None
 
     # AI assistant. With no key the assistant still works, using its rule-based
     # router and templated answers (services/assistant).
@@ -41,6 +49,10 @@ class Settings(BaseSettings):
 
     # Uploaded avatars and cover images, served at /api/v1/media.
     MEDIA_DIR: str = "media"
+    # PHC worker verification documents. Never served publicly.
+    PRIVATE_UPLOAD_DIR: str = "private_uploads"
+    # Full path to tesseract.exe when it is not on PATH.
+    TESSERACT_CMD: str | None = None
 
     # Seed scripts
     ADMIN_EMAIL: str | None = None

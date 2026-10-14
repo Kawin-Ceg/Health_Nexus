@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Alert, HealthRecord, ProcessedData, User
 from app.models.enums import AlertType
 
-from .catchment import workers_serving
+from .catchment import worker_access_allowed, workers_serving
 from .scoring import BASELINE_WINDOW, MIN_BASELINE_READINGS, ScoreResult, robust_baseline, score_reading
 from .triage import alert_severity, describe_signal, severity_of
 from .visit_state import format_local
@@ -60,13 +60,19 @@ async def earlier_vitals(session: AsyncSession, user_id: uuid.UUID, before: date
     return list(reversed(rows.all()))
 
 
-def _citizen_message(signal: str, measured_at: datetime, reviewed: bool) -> str:
-    follow_up = (
-        "Your health centre has been notified and may contact you."
-        if reviewed
-        else "No health worker is assigned to your centre yet, so nobody is reviewing this. "
-        "If you feel unwell, see a doctor."
-    )
+def _citizen_message(signal: str, measured_at: datetime, reviewed: bool, access: bool) -> str:
+    if reviewed:
+        follow_up = "Your health centre has been notified and may contact you."
+    elif not access:
+        follow_up = (
+            "You have turned off health worker access, so nobody at your centre will see this. "
+            "If you feel unwell, see a doctor."
+        )
+    else:
+        follow_up = (
+            "No health worker is assigned to your centre yet, so nobody is reviewing this. "
+            "If you feel unwell, see a doctor."
+        )
     return f"Your reading from {format_local(measured_at)} was flagged: {signal}. {follow_up}"
 
 
@@ -104,19 +110,21 @@ async def record_reading(
         basis=score.basis,
         model_version=score.model_version,
         details=score.details_json(),
+        population=score.population_json(),
     )
     if stored_at is not None:
         processed.processed_at = stored_at
     session.add(processed)
 
     signal = describe_signal(score.features, vitals) if score.is_anomaly else None
-    reviewed = await workers_serving(session, citizen.phc_id) > 0
+    access = await worker_access_allowed(session, citizen.id)
+    reviewed = access and await workers_serving(session, citizen.phc_id) > 0
     if score.is_anomaly:
         alert = Alert(
             user_id=citizen.id,
             alert_type=AlertType.personal,
             severity=alert_severity(severity_of(score.anomaly_score)),
-            message=_citizen_message(signal or "one of your values is outside its usual range", measured_at, reviewed),
+            message=_citizen_message(signal or "one of your values is outside its usual range", measured_at, reviewed, access),
         )
         if stored_at is not None:
             alert.created_at = stored_at

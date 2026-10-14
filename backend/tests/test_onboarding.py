@@ -31,7 +31,7 @@ def payload(phc_id: str, **overrides):
         "smartwatch_brand": "Noise",
         "emergency_contact_name": "Ravi",
         "emergency_contact_phone": "+91 98410 11223",
-        "consents": {"health_tracking": True, "community_surveillance": False},
+        "consents": {"health_tracking": True, "community_surveillance": False, "phc_worker_access": True},
     }
     return {**body, **overrides}
 
@@ -96,7 +96,7 @@ async def test_completing_onboarding_writes_everything_in_one_go(client, db, out
     r = await client.post(f"{BASE}/onboarding/profile", json=payload(phc), headers=headers)
     assert r.status_code == 201, r.text
     assert r.json()["facility"]["name"] == "Mylapore PHC"
-    assert r.json()["consents"] == {"health_tracking": True, "community_surveillance": False}
+    assert r.json()["consents"] == {"health_tracking": True, "community_surveillance": False, "phc_worker_access": True}
 
     user = await db.scalar(select(User))
     assert user.profile_completed and str(user.phc_id) == phc and user.district == DISTRICT and user.state == STATE
@@ -105,7 +105,11 @@ async def test_completing_onboarding_writes_everything_in_one_go(client, db, out
     assert profile.age == 34 and profile.blood_group.value == "B+" and profile.permission_health_tracking is True
     assert profile.existing_conditions == ["asthma"] and profile.smartwatch_brand == "Noise"
     records = {(c.consent_type.value, c.granted, c.source) for c in await db.scalars(select(ConsentRecord))}
-    assert records == {("health_tracking", True, "onboarding"), ("community_surveillance", False, "onboarding")}
+    assert records == {
+        ("health_tracking", True, "onboarding"),
+        ("community_surveillance", False, "onboarding"),
+        ("phc_worker_access", True, "onboarding"),
+    }
 
     me = await client.get(f"{BASE}/auth/me", headers=headers)
     assert me.json()["profile_completed"] is True

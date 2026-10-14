@@ -65,13 +65,16 @@ async def create_profile(
     user.profile_completed = True
     user.consent = data.consents.health_tracking
     db.add(profile)
+    choices = {
+        ConsentType.health_tracking: data.consents.health_tracking,
+        ConsentType.community_surveillance: data.consents.community_surveillance,
+    }
+    if data.consents.phc_worker_access is not None:
+        choices[ConsentType.phc_worker_access] = data.consents.phc_worker_access
     await record_consents(
         db,
         user.id,
-        {
-            ConsentType.health_tracking: data.consents.health_tracking,
-            ConsentType.community_surveillance: data.consents.community_surveillance,
-        },
+        choices,
         source="onboarding",
         ip_address=client_ip(request),
     )

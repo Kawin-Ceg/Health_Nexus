@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, CircleCheck, Clock, Trash2, UserCheck } from "lucide-react";
+import { PopulationNote } from "../../components/app/ModelInsights";
 import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, cx } from "../../components/app/ui";
 import { fmtAgo, fmtDateTime } from "../../lib/format";
 import { SEVERITY } from "../../lib/severity";
@@ -8,6 +9,7 @@ import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import { deleteReading, getHistory, getMetrics } from "../../services/health";
 import { useToast } from "../../components/app/Toaster";
+import { useLabel, useT } from "../../i18n";
 
 const WINDOWS = ["7", "30", "90", "365", "all"] as const;
 const PAGE_SIZE = 20;
@@ -38,12 +40,14 @@ export function History() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { notify } = useToast();
+  const t = useT();
+  const label = useLabel();
   const remove = async (id: string) => {
     setDeleting(true);
     setActionError(null);
     try {
       await deleteReading(id);
-      notify({ tone: "success", title: "Reading deleted" });
+      notify({ tone: "success", title: t("history.deleted") });
       setConfirming(null);
       reload();
     } catch (e) {
@@ -59,26 +63,26 @@ export function History() {
 
   return (
     <>
-      <PageHeader title="History" lead="Every reading, newest first. Open one to see its values and symptoms." />
+      <PageHeader title={t("history.title")} lead={t("history.lead")} />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select aria-label="Measurement" className={selectCls} value={metric ?? ""} onChange={(e) => set({ metric: e.target.value, page: null })}>
-          <option value="">All measurements</option>
+          <option value="">{t("history.all")}</option>
           {info?.metrics.map((m) => (
             <option key={m.key} value={m.key}>
-              {m.label}
+              {label("vital", m.key, m.label)}
             </option>
           ))}
         </select>
         <select aria-label="Time window" className={selectCls} value={window} onChange={(e) => set({ days: e.target.value, page: null })}>
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="365">Last year</option>
-          <option value="all">All time</option>
+          <option value="7">{t("history.days7")}</option>
+          <option value="30">{t("history.days30")}</option>
+          <option value="90">{t("history.days90")}</option>
+          <option value="365">{t("history.year")}</option>
+          <option value="all">{t("history.allTime")}</option>
         </select>
         <label className="flex items-center gap-2 text-sm text-ink">
           <input type="checkbox" checked={flaggedOnly} onChange={(e) => set({ flagged: e.target.checked ? "1" : null, page: null })} />
-          Flagged only
+          {t("history.flaggedOnly")}
         </label>
       </div>
 
@@ -88,13 +92,13 @@ export function History() {
       ) : !data ? (
         <Loading />
       ) : data.items.length === 0 ? (
-        <Empty title="No readings match these filters" />
+        <Empty title={t("history.none")} />
       ) : (
         <Card className={cx("p-0", loading && "opacity-60")}>
           <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_auto] gap-4 border-b border-line px-5 py-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted md:grid">
-            <span>When</span>
-            <span>Result</span>
-            <span>Health worker</span>
+            <span>{t("history.when")}</span>
+            <span>{t("history.result")}</span>
+            <span>{t("history.worker")}</span>
             <span className="w-28" />
           </div>
           <ul className="divide-y divide-line">
@@ -119,20 +123,20 @@ export function History() {
                         </>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success">
-                          <CircleCheck size={12} aria-hidden="true" /> Normal
+                          <CircleCheck size={12} aria-hidden="true" /> {t("history.normal")}
                         </span>
                       )}
                     </div>
                     <div className="text-sm">
                       {!r.flagged ? (
-                        <span className="text-ink-muted">Not needed</span>
+                        <span className="text-ink-muted">{t("history.notNeeded")}</span>
                       ) : r.reviewed ? (
                         <span className="inline-flex items-center gap-1.5 text-success">
-                          <UserCheck size={16} aria-hidden="true" /> Reviewed
+                          <UserCheck size={16} aria-hidden="true" /> {t("history.reviewed")}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-warn">
-                          <Clock size={16} aria-hidden="true" /> Awaiting review
+                          <Clock size={16} aria-hidden="true" /> {t("history.awaiting")}
                         </span>
                       )}
                     </div>
@@ -143,7 +147,7 @@ export function History() {
                       aria-controls={`reading-${r.id}`}
                       onClick={() => toggle(r.id)}
                     >
-                      {isOpen ? "Less" : "More info"}
+                      {isOpen ? t("history.less") : t("history.more")}
                       <ChevronDown size={16} className={cx("transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
                     </Btn>
                   </div>
@@ -156,13 +160,13 @@ export function History() {
                           const off = m?.normal ? v < m.normal[0] || v > m.normal[1] : false;
                           return (
                             <li key={k} className={cx("rounded-2xl border bg-surface p-3", off ? "border-warn/50" : "border-line", metric === k && "ring-2 ring-ink/20")}>
-                              <p className="text-xs text-ink-muted">{m?.label ?? k}</p>
+                              <p className="text-xs text-ink-muted">{label("vital", k, m?.label)}</p>
                               <p className="font-display text-2xl tabular-nums text-ink">
                                 {m ? v.toFixed(m.decimals) : v} <span className="font-sans text-xs text-ink-soft">{m?.unit}</span>
                               </p>
                               {m?.normal && (
                                 <p className={cx("text-xs", off ? "text-warn" : "text-ink-muted")}>
-                                  {off ? "Outside" : "Within"} {m.normal[0]}–{m.normal[1]}
+                                  {off ? t("history.outsideRange") : t("history.within")} {m.normal[0]}–{m.normal[1]}
                                 </p>
                               )}
                             </li>
@@ -170,12 +174,13 @@ export function History() {
                         })}
                       </ul>
                       {r.signal && <p className="mt-4 text-sm text-ink">{r.signal}</p>}
+                      <PopulationNote check={r.population} className="mt-4" />
                       {r.symptoms.length > 0 && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Symptoms</span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">{t("history.symptoms")}</span>
                           {r.symptoms.map((s) => (
                             <span key={s} className="rounded-full border border-line bg-surface px-3 py-1 text-xs capitalize text-ink">
-                              {s}
+                              {label("symptom", s, s)}
                             </span>
                           ))}
                         </div>
@@ -183,17 +188,17 @@ export function History() {
                       <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
                         {confirming === r.id ? (
                           <div className="flex items-center gap-2" role="group" aria-label="Confirm delete">
-                            <span className="text-sm text-ink">Delete this reading?</span>
+                            <span className="text-sm text-ink">{t("history.deleteAsk")}</span>
                             <Btn tone="danger" busy={deleting} onClick={() => void remove(r.id)}>
-                              Delete
+                              {t("history.delete")}
                             </Btn>
                             <Btn tone="ghost" onClick={() => setConfirming(null)}>
-                              Keep
+                              {t("history.keep")}
                             </Btn>
                           </div>
                         ) : (
                           <Btn tone="ghost" onClick={() => setConfirming(r.id)} aria-label={`Delete reading from ${fmtDateTime(r.measured_at)}`}>
-                            <Trash2 size={16} aria-hidden="true" /> Entered by mistake
+                            <Trash2 size={16} aria-hidden="true" /> {t("history.mistake")}
                           </Btn>
                         )}
                       </div>

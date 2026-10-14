@@ -1,7 +1,8 @@
 """Visit notifications: booking tells both sides, and a missed visit tells both sides once.
 
 Messages are worded for the person reading them. A citizen reads about "your
-visit"; the worker reads the citizen's name.
+visit"; the worker reads the citizen's name. Each in-app alert is also emailed
+to people who asked for visit emails (services/notify.py).
 """
 
 import uuid
@@ -12,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Alert, ScheduledVisit, User
 from app.models.enums import AlertSeverity, AlertType, VisitStatus
 
+from . import notify
 from .visit_state import format_local, now_utc, overdue_before
 
 
@@ -32,6 +34,7 @@ def notify_booked(session: AsyncSession, visit: ScheduledVisit, citizen: User, w
             _alert(worker.id, f"Visit booked for {citizen.name} on {when}."),
         ]
     )
+    notify.visit_booked(session, citizen, worker, visit.scheduled_for)
 
 
 def notify_changed(session: AsyncSession, visit: ScheduledVisit, citizen: User, worker: User, change: str) -> None:
@@ -44,6 +47,7 @@ def notify_changed(session: AsyncSession, visit: ScheduledVisit, citizen: User, 
         to_citizen = f"Your health centre visit has been moved to {when}."
         to_worker = f"Visit for {citizen.name} moved to {when}."
     session.add_all([_alert(citizen.id, to_citizen, AlertSeverity.medium), _alert(worker.id, to_worker)])
+    notify.visit_changed(session, citizen, worker, visit.scheduled_for, change)
 
 
 async def notify_missed(session: AsyncSession, *, worker_id: uuid.UUID | None = None, citizen_id: uuid.UUID | None = None) -> int:
@@ -92,5 +96,22 @@ async def notify_missed(session: AsyncSession, *, worker_id: uuid.UUID | None = 
                 ),
             ]
         )
+    await notify.visits_missed(session, [(row.worker_id, row.citizen_id, row.scheduled_for) for row in claimed])
     await session.commit()
     return len(claimed)
+
+
+async def cancel_open_visits(session: AsyncSession, citizen: User, *, unless_phc: uuid.UUID | None = None) -> int:
+    """Cancel the citizen's booked visits and tell both sides. Visits by workers at `unless_phc` stay."""
+    query = (
+        select(ScheduledVisit, User)
+        .join(User, User.id == ScheduledVisit.worker_id)
+        .where(ScheduledVisit.citizen_id == citizen.id, ScheduledVisit.status == VisitStatus.scheduled)
+    )
+    if unless_phc is not None:
+        query = query.where(User.phc_id != unless_phc)
+    rows = (await session.execute(query)).all()
+    for visit, worker in rows:
+        visit.status = VisitStatus.cancelled
+        notify_changed(session, visit, citizen, worker, "cancelled")
+    return len(rows)

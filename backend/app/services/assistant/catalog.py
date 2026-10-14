@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.models.enums import UserRole
+from app.services.consent import COMMUNITY_SQL, WORKER_ACCESS_SQL
 from app.services.localities import suppress
 from app.services.triage import BANDS, citizen_ref, describe_signal, severity_of
 
@@ -28,7 +29,9 @@ WORKER = frozenset({UserRole.phc_worker})
 ADMIN = frozenset({UserRole.admin})
 
 # A worker's catchment, as everywhere else in the app (services/catchment.py).
-_CATCHMENT = "u.phc_id = :phc_id AND u.role = 'user'"
+_CATCHMENT = f"u.phc_id = :phc_id AND u.role = 'user' AND {WORKER_ACCESS_SQL}"
+# Area-level figures count only citizens who allowed community health monitoring.
+_COMMUNITY = COMMUNITY_SQL
 _OPEN = "pd.is_anomaly AND pd.resolution IS NULL"
 _SINCE = "now() - make_interval(days => :days)"
 
@@ -420,7 +423,7 @@ LIMIT :limit""",
         name="locality_breakdown",
         roles=WORKER,
         title="Flags by locality",
-        description="For each locality in the catchment: citizens and citizens with an open flag. Localities under 3 citizens are merged.",
+        description="For each locality in the catchment: citizens who allow community monitoring, and how many of them have an open flag. Localities under 3 citizens are merged.",
         needs_facility=True,
         sql=f"""
 SELECT coalesce(nullif(trim(u.area), ''), 'Unspecified') AS locality,
@@ -429,7 +432,7 @@ SELECT coalesce(nullif(trim(u.area), ''), 'Unspecified') AS locality,
          SELECT 1 FROM processed_data pd WHERE pd.user_id = u.id AND {_OPEN}
        )) AS flagged
 FROM users u
-WHERE {_CATCHMENT}
+WHERE {_CATCHMENT} AND {_COMMUNITY}
 GROUP BY 1""",
         post=_suppressed,
         patterns=(
@@ -468,7 +471,7 @@ SELECT s.symptom, count(*) AS reports, count(DISTINCT hr.user_id) AS citizens
 FROM health_records hr
 JOIN users u ON u.id = hr.user_id
 CROSS JOIN LATERAL json_array_elements_text(hr.symptoms) AS s(symptom)
-WHERE {_CATCHMENT} AND hr.timestamp >= {_SINCE}
+WHERE {_CATCHMENT} AND {_COMMUNITY} AND hr.timestamp >= {_SINCE}
 GROUP BY s.symptom
 ORDER BY reports DESC
 LIMIT 10""",
@@ -585,7 +588,7 @@ ORDER BY accounts DESC""",
         name="district_activity",
         roles=ADMIN,
         title="Activity by district",
-        description="Per district: citizens, readings in a window and flags in that window. Districts under 3 citizens are not shown.",
+        description="Per district, counting only citizens who allow community monitoring: citizens, readings in a window and flags in that window. Districts under 3 citizens are not shown.",
         sql=f"""
 SELECT coalesce(u.district, 'Unspecified') AS district,
        count(DISTINCT u.id) AS citizens,
@@ -594,7 +597,7 @@ SELECT coalesce(u.district, 'Unspecified') AS district,
 FROM users u
 LEFT JOIN health_records hr ON hr.user_id = u.id AND hr.timestamp >= {_SINCE}
 LEFT JOIN processed_data pd ON pd.health_record_id = hr.id
-WHERE u.role = 'user'
+WHERE u.role = 'user' AND {_COMMUNITY}
 GROUP BY 1
 HAVING count(DISTINCT u.id) >= 3
 ORDER BY readings DESC

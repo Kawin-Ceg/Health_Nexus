@@ -6,6 +6,7 @@ import { TrendChart } from "../../components/app/TrendChart";
 import { Doodle } from "../../components/landing/Doodle/Doodle";
 import { useAuth } from "../../context/AuthContext";
 import { fmtAgo, fmtDateTime, fmtVisit, plural } from "../../lib/format";
+import { useLabel, useT } from "../../i18n";
 import { paths } from "../../lib/routes";
 import { useResource } from "../../lib/useResource";
 import { getBaselineStatus, getMetrics, getSummary, type Metric, type Summary } from "../../services/health";
@@ -289,6 +290,8 @@ function Gist({ to, icon: Icon, title, children }: { to: string; icon: typeof Be
 
 export function CitizenDashboard() {
   const { user } = useAuth();
+  const t = useT();
+  const label = useLabel();
   const { data, error, loading, reload } = useResource(
     (signal) => Promise.all([getSummary(signal), getMetrics(), getBaselineStatus(signal)]),
     "summary",
@@ -322,11 +325,11 @@ export function CitizenDashboard() {
   return (
     <>
       <PageHeader
-        title={`Hello, ${user?.name.split(" ")[0] ?? "there"}`}
-        lead={summary.facility ? `Your health centre: ${summary.facility.name}` : undefined}
+        title={t("dash.hello", { name: user?.name.split(" ")[0] ?? "" })}
+        lead={summary.facility ? t("dash.centre", { name: summary.facility.name }) : undefined}
         actions={
           <LinkBtn to={paths.submitVitals} tone="primary">
-            <PlusCircle size={18} aria-hidden="true" /> Log vitals
+            <PlusCircle size={18} aria-hidden="true" /> {t("dash.log")}
           </LinkBtn>
         }
       />
@@ -335,12 +338,11 @@ export function CitizenDashboard() {
         <div role="alert" className="mb-6 flex gap-3 rounded-3xl border border-danger/30 bg-danger-soft p-5 text-sm text-danger">
           <ShieldAlert size={20} aria-hidden="true" className="shrink-0" />
           <p>
-            <strong>Nobody is reviewing your readings.</strong>{" "}
-            {summary.facility ? "No health worker is assigned to your centre yet." : "Your account is not linked to a health centre."}{" "}
+            <strong>{t("dash.nobodyTitle")}</strong> {summary.facility ? t("dash.noWorker") : t("dash.noCentre")}{" "}
             <Link to={`${paths.settings}?tab=centre`} className="font-semibold underline">
-              Choose a staffed centre
+              {t("dash.chooseCentre")}
             </Link>
-            . If you feel unwell, see a doctor.
+            {t("dash.seeDoctor")}
           </p>
         </div>
       )}
@@ -354,22 +356,20 @@ export function CitizenDashboard() {
           <div className="min-w-64 flex-1">
             <p className={cx("flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]", offNormal.length ? "text-warn" : "text-success")}>
               {offNormal.length ? <ArrowUp size={16} aria-hidden="true" /> : <Minus size={16} aria-hidden="true" />}
-              {offNormal.length ? "Worth a look" : summary.latest.length ? "All steady" : "Getting started"}
+              {offNormal.length ? t("dash.worth") : summary.latest.length ? t("dash.steady") : t("dash.starting")}
             </p>
             <p className="mt-2 max-w-xl font-display text-2xl leading-snug text-ink md:text-3xl">
               {offNormal.length
-                ? `${plural(offNormal.length, "recent reading")} outside your usual range`
+                ? t("dash.outside", { n: offNormal.length })
                 : summary.latest.length
-                  ? "Your latest readings are all in your usual range"
-                  : "No readings yet. Log your first one to start tracking."}
+                  ? t("dash.allUsual")
+                  : t("dash.noReadings")}
             </p>
             <p className="mt-2 max-w-xl text-sm text-ink-soft">
               {offNormal.length > 0
-                ? offNormal.map((v) => metrics.get(v.key)?.label ?? v.key).join(", ")
-                : `${plural(summary.readings_last_7_days, "reading")} logged in the last 7 days.`}
-              {summary.open_flags > 0 && summary.facility
-                ? ` · ${summary.facility.name} has been sent ${plural(summary.open_flags, "flagged reading")} and may contact you.`
-                : ""}
+                ? offNormal.map((v) => label("vital", v.key, metrics.get(v.key)?.label)).join(", ")
+                : t("dash.week", { n: summary.readings_last_7_days })}
+              {summary.open_flags > 0 && summary.facility ? t("dash.flaggedSent", { centre: summary.facility.name, n: summary.open_flags }) : ""}
             </p>
           </div>
           {summary.next_visit && (
@@ -378,7 +378,7 @@ export function CitizenDashboard() {
                 <CalendarClock size={16} aria-hidden="true" />
                 {fmtVisit(summary.next_visit.scheduled_for)}
               </p>
-              <p className="text-ink-soft">{summary.next_visit.worker_name ? `with ${summary.next_visit.worker_name}` : "Home visit"}</p>
+              <p className="text-ink-soft">{summary.next_visit.worker_name ? t("dash.with", { name: summary.next_visit.worker_name }) : t("dash.homeVisit")}</p>
               <div className="mt-2">
                 <VisitBadge state={summary.next_visit.state} />
               </div>
@@ -389,23 +389,23 @@ export function CitizenDashboard() {
 
       <nav aria-label="Quick actions" className="mb-8 flex flex-wrap gap-2">
         <LinkBtn to={paths.submitVitals}>
-          <PlusCircle size={16} aria-hidden="true" /> Log a reading
+          <PlusCircle size={16} aria-hidden="true" /> {t("dash.quick.log")}
         </LinkBtn>
         <LinkBtn to={paths.assistant}>
-          <Bot size={16} aria-hidden="true" /> Ask about my readings
+          <Bot size={16} aria-hidden="true" /> {t("dash.quick.ask")}
         </LinkBtn>
         <LinkBtn to={paths.history}>
-          <History size={16} aria-hidden="true" /> My history
+          <History size={16} aria-hidden="true" /> {t("dash.quick.history")}
         </LinkBtn>
         <LinkBtn to={paths.citizenAlerts}>
-          <Bell size={16} aria-hidden="true" /> Alerts and visits
+          <Bell size={16} aria-hidden="true" /> {t("dash.quick.alerts")}
         </LinkBtn>
       </nav>
 
       <section aria-labelledby="vitals-heading" className="mb-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <h2 id="vitals-heading" className="text-2xl text-ink">
-            Your vitals
+            {t("dash.vitals")}
           </h2>
           {baselines && (
             <p className="text-sm text-ink-soft">
@@ -414,9 +414,9 @@ export function CitizenDashboard() {
           )}
         </div>
         {tiles.length === 0 ? (
-          <Empty title="No readings yet">
+          <Empty title={t("dash.noReadingsTitle")}>
             <Link to={paths.submitVitals} className="font-semibold text-ink underline">
-              Log your first reading
+              {t("dash.firstReading")}
             </Link>{" "}
             to see each vital here.
           </Empty>
@@ -563,26 +563,24 @@ export function CitizenDashboard() {
 
       <section aria-labelledby="around-heading">
         <h2 id="around-heading" className="mb-4 text-2xl text-ink">
-          Around Health Nexus
+          {t("dash.around")}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Gist to={paths.history} icon={History} title="History">
-            {summary.readings_total
-              ? `${plural(summary.readings_total, "reading")} so far. The latest was ${fmtAgo(newest)}.`
-              : "Every reading you log, with filters. Nothing logged yet."}
+          <Gist to={paths.history} icon={History} title={t("nav.history")}>
+            {summary.readings_total ? t("dash.history", { n: summary.readings_total, ago: fmtAgo(newest) }) : t("dash.historyNone")}
           </Gist>
-          <Gist to={paths.citizenAlerts} icon={Bell} title="Alerts & visits">
+          <Gist to={paths.citizenAlerts} icon={Bell} title={t("nav.alerts")}>
             {summary.next_visit
-              ? `Next visit ${fmtVisit(summary.next_visit.scheduled_for)}. ${plural(summary.unread_alerts, "unread alert")}.`
-              : `No visit booked. ${plural(summary.unread_alerts, "unread alert")}.`}
+              ? t("dash.alertsVisit", { when: fmtVisit(summary.next_visit.scheduled_for), n: summary.unread_alerts })
+              : t("dash.alertsNone", { n: summary.unread_alerts })}
           </Gist>
-          <Gist to={paths.assistant} icon={Bot} title="Ask the assistant">
-            Ask in plain words, like "Is my blood pressure normal?". It explains; it doesn't diagnose.
+          <Gist to={paths.assistant} icon={Bot} title={t("dash.askTitle")}>
+            {t("dash.askBody")}
           </Gist>
-          <Gist to={`${paths.settings}?tab=centre`} icon={Building2} title="Your health centre">
+          <Gist to={`${paths.settings}?tab=centre`} icon={Building2} title={t("dash.centreTitle")}>
             {summary.facility
-              ? `${summary.facility.name}, ${summary.facility.district}. ${plural(summary.facility.workers_assigned, "health worker")} reviewing readings.`
-              : "Not linked yet. Choose the centre that covers your area."}
+              ? t("dash.centreBody", { name: summary.facility.name, district: summary.facility.district, n: summary.facility.workers_assigned })
+              : t("dash.centreNone")}
           </Gist>
         </div>
       </section>

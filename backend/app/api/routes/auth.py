@@ -15,8 +15,8 @@ from app.core.security import (
     create_access_token,
 )
 from app.db.session import get_session
-from app.models import PhcApplication, RefreshToken, User, UserProfile
-from app.models.enums import ConsentType, UserRole
+from app.models import PhcApplication, RefreshToken, User
+from app.models.enums import UserRole
 from app.schemas.auth import (
     ApplicationOut,
     CitizenRegister,
@@ -33,7 +33,7 @@ from app.schemas.auth import (
     UserOut,
 )
 from app.services import accounts, sessions
-from app.services.consent import current_consents, record_consents
+from app.services.consent import change_consents, current_consents
 from app.services.mailer import send_password_reset_email, send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -278,12 +278,6 @@ async def update_consent(
     db: AsyncSession = Depends(get_session),
 ) -> ConsentState:
     choices = {c.consent_type: c.granted for c in data.consents}
-    await record_consents(db, user.id, choices, source="settings", ip_address=sessions.client_ip(request))
-    if ConsentType.health_tracking in choices:
-        granted = choices[ConsentType.health_tracking]
-        user.consent = granted
-        profile = await db.scalar(select(UserProfile).where(UserProfile.user_id == user.id))
-        if profile is not None:
-            profile.permission_health_tracking = granted
+    await change_consents(db, user, choices, source="settings", ip_address=sessions.client_ip(request))
     await db.commit()
     return ConsentState(consents=await current_consents(db, user.id))

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import ProcessedData, User
 
 from .catchment import catchment_citizens
+from .consent import counts_in_community
 
 MIN_CELL = 3
 OTHER = "Other localities"
@@ -48,14 +49,17 @@ def suppress(rows: dict[str, dict[str, float]], size_key: str = "citizens") -> d
 
 
 async def locality_risk(session: AsyncSession, worker: User) -> list[dict]:
-    """Localities ranked by the share of their citizens with at least one open flag."""
+    """Localities ranked by the share of their citizens with at least one open flag.
+
+    Counts only citizens who allowed community health monitoring.
+    """
     flagged_ids = (
         select(ProcessedData.user_id)
         .where(ProcessedData.is_anomaly.is_(True), ProcessedData.resolution.is_(None))
         .distinct()
         .scalar_subquery()
     )
-    citizens = catchment_citizens(worker).subquery()
+    citizens = catchment_citizens(worker).where(counts_in_community(User.id)).subquery()
     rows = await session.execute(
         select(
             citizens.c.area,

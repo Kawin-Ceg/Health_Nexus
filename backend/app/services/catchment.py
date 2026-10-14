@@ -1,7 +1,9 @@
 """The catchment rule. Every "which citizens can this worker see" question goes through here.
 
 A worker serves every account with `role = 'user'` whose `phc_id` equals the
-worker's `phc_id`. A worker with no phc_id serves nobody, never everybody.
+worker's `phc_id`, except citizens who turned off health worker access
+(services/consent.allows_worker_access). A worker with no phc_id serves nobody,
+never everybody.
 """
 
 import uuid
@@ -12,7 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import require_phc_worker
 from app.models import User, ValidPhcFacility
-from app.models.enums import UserRole
+from app.models.enums import ConsentType, UserRole
+
+from .consent import allows_worker_access, current_consents
 
 # One body for "no such citizen" and "not yours": a different answer would let ids be probed.
 CITIZEN_NOT_FOUND = "Citizen not found."
@@ -26,18 +30,27 @@ def catchment_citizens(worker: User) -> Select[tuple[User]]:
     """Query for the citizens in `worker`'s catchment. Callers add ordering and a LIMIT."""
     if worker.phc_id is None:
         return select(User).where(false())
-    return select(User).where(User.phc_id == worker.phc_id, User.role == UserRole.user)
+    return select(User).where(User.phc_id == worker.phc_id, User.role == UserRole.user, allows_worker_access(User.id))
 
 
 def catchment_ids(worker: User) -> Select[tuple[uuid.UUID]]:
     """Ids of the catchment, for `.in_()` filters on other tables."""
     if worker.phc_id is None:
         return select(User.id).where(false())
-    return select(User.id).where(User.phc_id == worker.phc_id, User.role == UserRole.user)
+    return select(User.id).where(User.phc_id == worker.phc_id, User.role == UserRole.user, allows_worker_access(User.id))
 
 
-def in_catchment(worker: User, citizen: User) -> bool:
-    return worker.phc_id is not None and citizen.role == UserRole.user and citizen.phc_id == worker.phc_id
+async def worker_access_allowed(session: AsyncSession, citizen_id: uuid.UUID) -> bool:
+    return (await current_consents(session, citizen_id)).get(ConsentType.phc_worker_access) is not False
+
+
+async def in_catchment(session: AsyncSession, worker: User, citizen: User) -> bool:
+    return (
+        worker.phc_id is not None
+        and citizen.role == UserRole.user
+        and citizen.phc_id == worker.phc_id
+        and await worker_access_allowed(session, citizen.id)
+    )
 
 
 def citizen_not_found() -> HTTPException:
@@ -47,7 +60,7 @@ def citizen_not_found() -> HTTPException:
 async def get_catchment_citizen(session: AsyncSession, worker: User, user_id: uuid.UUID) -> User:
     """The citizen, or 404 with the same body whether they do not exist or are not this worker's."""
     citizen = await session.get(User, user_id)
-    if citizen is None or not in_catchment(worker, citizen):
+    if citizen is None or not await in_catchment(session, worker, citizen):
         raise citizen_not_found()
     return citizen
 

@@ -75,6 +75,11 @@ class ConsentChoice(BaseModel):
     granted: bool
 
 
+# Still a valid value for old consent_records rows, but no longer asked:
+# HealthNexus sends no product or marketing news.
+RETIRED_CONSENTS = frozenset({ConsentType.marketing_updates})
+
+
 class ConsentUpdate(BaseModel):
     consents: Annotated[list[ConsentChoice], Field(min_length=1, max_length=len(ConsentType))]
 
@@ -83,6 +88,8 @@ class ConsentUpdate(BaseModel):
         types = [c.consent_type for c in self.consents]
         if len(set(types)) != len(types):
             raise ValueError("Each consent type may appear once")
+        if RETIRED_CONSENTS & set(types):
+            raise ValueError("HealthNexus no longer asks for this consent")
         return self
 
 

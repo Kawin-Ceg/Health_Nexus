@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from app.models.enums import FlagDismissReason, FlagResolution, Gender
-from app.schemas.health import AlertOut, BaselineOut, VitalCheck, VisitOut, VisitPerson
+from app.schemas.health import AlertOut, BaselineOut, PopulationOut, VitalCheck, VisitOut, VisitPerson
 
 Severity = Literal["critical", "high", "moderate", "low"]
 Engagement = Literal["attention", "never_logged", "silent", "ok"]
@@ -75,6 +75,7 @@ class CaseOut(BaseModel):
     symptoms: list[str]
     measured_at: datetime
     basis: str | None  # NULL: scored before score details were stored
+    population: PopulationOut | None = None
 
 
 class QueueOut(BaseModel):
@@ -199,6 +200,7 @@ class TimelineEntry(BaseModel):
     reviewed_at: datetime | None
     basis: str | None
     checks: list[VitalCheck]  # empty for readings scored before score details were stored
+    population: PopulationOut | None = None
 
 
 class Unresolved(BaseModel):

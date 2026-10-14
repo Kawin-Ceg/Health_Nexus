@@ -138,6 +138,7 @@ async def build_profile_out(db: AsyncSession, user: User, profile: UserProfile) 
         consents=ConsentAnswers(
             health_tracking=consents[ConsentType.health_tracking],
             community_surveillance=consents[ConsentType.community_surveillance],
+            phc_worker_access=consents.get(ConsentType.phc_worker_access),
         )
         if answered
         else None,

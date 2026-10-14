@@ -1,7 +1,5 @@
 """Alerts: a person's own notifications plus community advisories, and the PHC badge."""
 
-from datetime import timedelta
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,16 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.views import alert_out
 from app.core.dependencies import require_any_verified
 from app.db.session import get_session
-from app.models import Alert, ProcessedData, User
-from app.models.enums import AlertType
+from app.models import Advisory, Alert, ProcessedData, User
 from app.schemas.health import AlertsOut, MarkRead, UnreadCount, Updated
 from app.services.catchment import catchment_ids, require_catchment_worker
 from app.services.visit_state import now_utc
 
+from .advisories import advisory_out, is_active, targeting
+
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 phc_router = APIRouter(prefix="/phc-alerts", tags=["phc"])
 
-ADVISORY_WINDOW = timedelta(days=30)
 ADVISORY_LIMIT = 20
 
 
@@ -37,22 +35,17 @@ async def list_alerts(
     if unread_only:
         own = own.where(Alert.is_read.is_(False))
     alerts = (await db.scalars(own.order_by(Alert.created_at.desc()).limit(limit))).all()
-    # Advisories have no owner, so they have no per-person read state and never count toward the badge.
     advisories = (
         await db.scalars(
-            select(Alert)
-            .where(
-                Alert.alert_type == AlertType.community,
-                Alert.user_id.is_(None),
-                Alert.created_at >= now_utc() - ADVISORY_WINDOW,
-            )
-            .order_by(Alert.created_at.desc())
+            select(Advisory)
+            .where(targeting(user), is_active(now_utc()))
+            .order_by(Advisory.created_at.desc())
             .limit(ADVISORY_LIMIT)
         )
     ).all()
     return AlertsOut(
         alerts=[alert_out(a) for a in alerts],
-        advisories=[alert_out(a) for a in advisories],
+        advisories=[await advisory_out(db, a) for a in advisories],
         unread=await _unread(db, user),
     )
 

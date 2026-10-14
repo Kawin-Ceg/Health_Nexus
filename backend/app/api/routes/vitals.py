@@ -16,6 +16,7 @@ from app.schemas.health import (
     BaselineOut,
     BaselineStatusOut,
     VitalBaseline,
+    PopulationOut,
     VitalCheck,
     FacilitySummary,
     HistoryOut,
@@ -28,6 +29,7 @@ from app.schemas.health import (
     VitalsIn,
     VitalsResult,
 )
+from app.services import notify
 from app.services.catchment import workers_serving
 from app.services.metrics import COMMON_SYMPTOMS, VITALS, position
 from app.services.readings import SCORING_HISTORY, baseline_of, earlier_vitals, record_reading
@@ -83,9 +85,13 @@ async def submit_vitals(
         raise HTTPException(status.HTTP_403_FORBIDDEN, TRACKING_OFF)
     measured_at = data.measured_at or now_utc()
     recorded = await record_reading(db, user, data.vitals, data.symptoms, measured_at)
+    score = recorded.score
+    if score.is_anomaly:
+        await notify.reading_flagged(
+            db, user, severity_of(score.anomaly_score), recorded.signal, recorded.reviewed_by_someone
+        )
     await db.commit()
 
-    score = recorded.score
     return VitalsResult(
         id=recorded.record.id,
         measured_at=measured_at,
@@ -102,6 +108,7 @@ async def submit_vitals(
         model_version=score.model_version,
         checks=_checks(score),
         watch=score.watch,
+        population=PopulationOut.of(score.population_json()),
     )
 
 
@@ -138,6 +145,7 @@ def _reading_out(record: HealthRecord, processed: ProcessedData | None) -> Readi
         severity=severity_of(processed.anomaly_score) if flagged and processed else None,
         signal=describe_signal(processed.features, record.vitals) if flagged and processed else None,
         reviewed=bool(processed and processed.resolution is not None),
+        population=PopulationOut.of(processed.population) if processed else None,
     )
 
 

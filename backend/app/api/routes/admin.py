@@ -1,15 +1,19 @@
-"""The admin console: PHC worker approvals, accounts, support concerns and the audit trail.
+"""The admin console: PHC worker approvals, accounts, support concerns, the audit trail and the research export.
 
 Every route needs an admin. Decisions on PHC applications are written to
 phc_verification_audit_log; account changes go to audit_logs. An admin can never
 act on their own account or on another admin from here.
 """
 
+import csv
+import hashlib
+import io
+import secrets
 import uuid
 from datetime import datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, StringConstraints
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +33,7 @@ from app.models import (
     ProcessedData,
     ScheduledVisit,
     User,
+    UserProfile,
     ValidPhcFacility,
 )
 from app.models.base import utcnow
@@ -45,6 +50,11 @@ from app.models.enums import (
     VisitStatus,
 )
 from app.services import sessions
+
+from .applications import DocumentOut, documents_of
+from app.services.consent import in_research
+from app.services.localities import MIN_CELL
+from app.services.metrics import VITALS
 from app.services.phc_registry import match_facility, normalise_facility_name
 from app.services.visits import notify_changed
 
@@ -198,6 +208,7 @@ class ApplicationDetail(ApplicationItem):
     # The registry's single exact match for what the applicant claimed, if any.
     suggested_facility: FacilityOut | None
     history: list[HistoryItem]
+    documents: list[DocumentOut]
 
 
 def _applicant(user: User) -> Applicant:
@@ -306,6 +317,7 @@ async def _detail(db: AsyncSession, application_id: uuid.UUID) -> ApplicationDet
                         actor=actor, created_at=h.created_at)
             for h, actor in history
         ],
+        documents=await documents_of(db, app_.id),
     )
 
 
@@ -723,3 +735,96 @@ async def audit(
         ]
     items.sort(key=lambda i: i.created_at, reverse=True)
     return items[:limit]
+
+
+# --- Research export ----------------------------------------------------------------
+
+RESEARCH_EXPORT_CAP = 50_000
+
+
+def _age_band(age: int | None) -> str:
+    if age is None:
+        return ""
+    low = age // 10 * 10
+    return f"{low}-{low + 9}"
+
+
+@router.get("/research-export")
+async def research_export(
+    request: Request,
+    days: int = Query(365, ge=7, le=1825),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> Response:
+    """De-identified readings, as CSV, from citizens who allowed research use only.
+
+    No names, contact details, exact ages, areas or record ids. Each person gets a
+    pseudonym that is random per export, so two exports cannot be joined. Readings
+    carry their date, not the time. Districts with fewer than MIN_CELL consenting
+    people are reported as "Other".
+    """
+    since = utcnow() - timedelta(days=days)
+    consenting = select(User.id).where(User.role == UserRole.user, in_research(User.id))
+    rows = (
+        await db.execute(
+            select(
+                HealthRecord.user_id,
+                HealthRecord.timestamp,
+                HealthRecord.vitals,
+                HealthRecord.symptoms,
+                ProcessedData.anomaly_score,
+                ProcessedData.is_anomaly,
+                ProcessedData.model_version,
+                User.district,
+                UserProfile.age,
+                UserProfile.gender,
+            )
+            .join(User, User.id == HealthRecord.user_id)
+            .outerjoin(ProcessedData, ProcessedData.health_record_id == HealthRecord.id)
+            .outerjoin(UserProfile, UserProfile.user_id == HealthRecord.user_id)
+            .where(HealthRecord.user_id.in_(consenting), HealthRecord.timestamp >= since)
+            .order_by(HealthRecord.timestamp)
+            .limit(RESEARCH_EXPORT_CAP)
+        )
+    ).all()
+
+    people_by_district: dict[str, set[uuid.UUID]] = {}
+    for r in rows:
+        people_by_district.setdefault(r.district or "", set()).add(r.user_id)
+    small = {d for d, people in people_by_district.items() if len(people) < MIN_CELL}
+
+    salt = secrets.token_bytes(16)
+    vital_keys = list(VITALS)
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(
+        ["person", "date", "age_band", "gender", "district", *vital_keys, "symptoms", "anomaly_score", "flagged", "model_version"]
+    )
+    for r in rows:
+        person = hashlib.sha256(salt + r.user_id.bytes).hexdigest()[:12]
+        district = "Other" if (r.district or "") in small else r.district
+        writer.writerow([
+            person,
+            r.timestamp.date().isoformat(),
+            _age_band(r.age),
+            r.gender.value if r.gender else "",
+            district,
+            *[r.vitals.get(k, "") for k in vital_keys],
+            ";".join(r.symptoms or []),
+            "" if r.anomaly_score is None else round(r.anomaly_score, 3),
+            "" if r.is_anomaly is None else int(r.is_anomaly),
+            r.model_version or "",
+        ])
+
+    db.add(AuditLog(user_id=admin.id, action="research_export", entity="health_records", entity_id=None, ip_address=_ip(request)))
+    await db.commit()
+    stamp = utcnow().strftime("%Y%m%d")
+    return Response(
+        out.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="healthnexus-research-{stamp}.csv"',
+            "X-Export-People": str(sum(len(p) for p in people_by_district.values())),
+            "X-Export-Rows": str(len(rows)),
+        },
+    )

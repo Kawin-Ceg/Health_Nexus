@@ -3,6 +3,7 @@ import { AlertList } from "../../components/app/AlertList";
 import { Card, ErrorNote, Loading, PageHeader, VisitBadge } from "../../components/app/ui";
 import { fmtVisit } from "../../lib/format";
 import { useResource } from "../../lib/useResource";
+import { useT } from "../../i18n";
 import { getAlerts, getMySchedule, type Visit, type VisitState } from "../../services/health";
 
 // Sections by derived state. A visit whose time has passed is never "upcoming":
@@ -12,18 +13,19 @@ const UPCOMING: VisitState[] = ["today", "upcoming"];
 const RECENT_MISSED_DAYS = 30;
 
 function VisitRow({ visit }: { visit: Visit }) {
+  const t = useT();
   return (
     <li className="flex flex-wrap items-start gap-3 rounded-xl border border-line p-3 text-sm">
       <CalendarClock size={18} className="mt-0.5 shrink-0 text-brand" aria-hidden="true" />
       <div className="flex-1">
         <p className="font-semibold text-ink">{fmtVisit(visit.scheduled_for)}</p>
         <p className="text-ink-soft">
-          {visit.worker_name ? `with ${visit.worker_name}` : "Health centre visit"}
+          {visit.worker_name ? t("alerts.with", { name: visit.worker_name }) : t("alerts.centreVisit")}
           {visit.location ? ` · ${visit.location}` : ""}
         </p>
         {visit.reason && <p className="text-ink-soft">{visit.reason}</p>}
-        {visit.state === "overdue" && <p className="mt-1 text-danger">No outcome recorded yet. If nobody came, your centre will rebook.</p>}
-        {visit.state === "due_now" && <p className="mt-1 text-warn">Your health worker should be with you around now.</p>}
+        {visit.state === "overdue" && <p className="mt-1 text-danger">{t("alerts.overdue")}</p>}
+        {visit.state === "due_now" && <p className="mt-1 text-warn">{t("alerts.dueNow")}</p>}
       </div>
       <VisitBadge state={visit.state} />
     </li>
@@ -47,6 +49,7 @@ function Section({ title, visits, empty }: { title: string; visits: Visit[]; emp
 }
 
 export function CitizenAlerts() {
+  const t = useT();
   const { data, error, reload } = useResource((signal) => Promise.all([getMySchedule(signal), getAlerts(signal)]), "alerts");
   if (error) return <ErrorNote message={error} onRetry={reload} />;
   if (!data) return <Loading />;
@@ -61,12 +64,12 @@ export function CitizenAlerts() {
 
   return (
     <>
-      <PageHeader title="Alerts & visits" lead="Visits your health worker has booked, and every alert about your readings, newest first." />
+      <PageHeader title={t("alerts.title")} lead={t("alerts.lead")} />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
-          {attention.length > 0 && <Section title="Needs your attention" visits={attention} empty="" />}
-          <Section title="Your upcoming visits" visits={upcoming} empty="No visits booked. Your health worker books one when a reading needs a follow-up." />
-          {past.length > 0 && <Section title="Past visits" visits={past} empty="" />}
+          {attention.length > 0 && <Section title={t("alerts.attention")} visits={attention} empty="" />}
+          <Section title={t("alerts.upcoming")} visits={upcoming} empty={t("alerts.noVisits")} />
+          {past.length > 0 && <Section title={t("alerts.past")} visits={past} empty="" />}
         </div>
         <AlertList alerts={alerts.alerts} advisories={alerts.advisories} />
       </div>
