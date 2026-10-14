@@ -6,6 +6,7 @@ import { Button } from "../../ui/Button/Button";
 import { Container } from "../../ui/Container/Container";
 import { Logo } from "../../ui/Logo/Logo";
 import { SoundToggle } from "../SoundToggle/SoundToggle";
+import { ThemeToggle } from "../../ui/ThemeToggle/ThemeToggle";
 import styles from "./LandingNavbar.module.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -86,6 +87,7 @@ export function LandingNavbar() {
         </nav>
 
         <div className={styles.actions}>
+          <ThemeToggle className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-line bg-surface/70 text-ink-soft transition-colors hover:border-ink/30 hover:text-ink" />
           <SoundToggle />
           <Button to={routes.login} variant="ghost">
             {nav.login}
@@ -94,6 +96,7 @@ export function LandingNavbar() {
         </div>
 
         <div className={styles.mobileBar}>
+          <ThemeToggle className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-line bg-surface/70 text-ink-soft transition-colors hover:border-ink/30 hover:text-ink" />
           <SoundToggle />
           <Button to={routes.signup} className={styles.mobileCta}>
             {nav.getStarted}

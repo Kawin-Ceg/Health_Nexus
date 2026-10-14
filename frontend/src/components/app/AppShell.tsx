@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
+  Activity,
   BadgeCheck,
   BarChart3,
+  Building2,
   Bell,
   Bot,
   CalendarDays,
@@ -12,6 +14,7 @@ import {
   LifeBuoy,
   LogOut,
   Map,
+  Megaphone,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -27,6 +30,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { paths } from "../../lib/routes";
 import { setSoundEnabled, soundEnabled } from "../../lib/sound";
+import { setLanguage, useT } from "../../i18n";
 import { setTheme } from "../../lib/theme";
 import { getPreferences } from "../../services/account";
 import { getOverview } from "../../services/admin";
@@ -35,6 +39,8 @@ import { getUnreadCount } from "../../services/health";
 import { getPhcBadge } from "../../services/phc";
 import { Doodle } from "../landing/Doodle/Doodle";
 import { Logo } from "../ui/Logo/Logo";
+import { LanguageSwitch } from "../ui/LanguageSwitch";
+import { ThemeToggle } from "../ui/ThemeToggle/ThemeToggle";
 import { useToast } from "./Toaster";
 import { cx } from "./ui";
 
@@ -158,12 +164,16 @@ export function AppShell() {
       return !c;
     });
   };
+  const t = useT();
   const location = useLocation();
   const badges = useBadges(user?.role);
 
   useEffect(() => {
     getPreferences()
-      .then((p) => setTheme(p.theme))
+      .then((p) => {
+        setTheme(p.theme);
+        setLanguage(user?.role === "user" ? p.language : "en");
+      })
       .catch(() => undefined);
   }, []);
   useEffect(() => setOpen(false), [location.pathname]);
@@ -179,7 +189,10 @@ export function AppShell() {
           { to: paths.adminHome, label: "Overview", icon: LayoutDashboard, end: true },
           { to: paths.adminApplications, label: "Applications", icon: BadgeCheck, badge: badges.pendingApplications },
           { to: paths.adminAccounts, label: "Accounts", icon: Users },
+          { to: paths.adminCentres, label: "Health centres", icon: Building2 },
           { to: paths.adminConcerns, label: "Concerns", icon: LifeBuoy, badge: badges.openConcerns },
+          { to: paths.outbreaks, label: "Outbreaks", icon: Activity },
+          { to: paths.advisories, label: "Advisories", icon: Megaphone },
           { to: paths.adminAudit, label: "Audit trail", icon: ScrollText },
           { to: paths.assistant, label: "Assistant", icon: Bot },
         ]
@@ -192,22 +205,24 @@ export function AppShell() {
             { to: paths.phcReports, label: "Reports", icon: BarChart3 },
             { to: paths.phcMap, label: "Risk map", icon: Map },
             { to: paths.assistant, label: "Assistant", icon: Bot },
+            { to: paths.outbreaks, label: "Outbreaks", icon: Activity },
+            { to: paths.advisories, label: "Advisories", icon: Megaphone },
             { to: paths.notifications, label: "Notifications", icon: ClipboardList, badge: badges.phcUnread },
           ]
         : [
-            { to: paths.citizenHome, label: "Dashboard", icon: LayoutDashboard, end: true },
-            { to: paths.submitVitals, label: "Log vitals", icon: PlusCircle },
-            { to: paths.history, label: "History", icon: History },
-            { to: paths.citizenAlerts, label: "Alerts & visits", icon: Bell, badge: badges.citizenUnread },
-            { to: paths.assistant, label: "Assistant", icon: Bot },
+            { to: paths.citizenHome, label: t("nav.dashboard"), icon: LayoutDashboard, end: true },
+            { to: paths.submitVitals, label: t("nav.log"), icon: PlusCircle },
+            { to: paths.history, label: t("nav.history"), icon: History },
+            { to: paths.citizenAlerts, label: t("nav.alerts"), icon: Bell, badge: badges.citizenUnread },
+            { to: paths.assistant, label: t("nav.assistant"), icon: Bot },
           ];
   // Profile and settings are citizen and worker pages; an admin has neither.
   const account: Item[] =
     user?.role === "admin"
       ? []
       : [
-          { to: paths.profile, label: "Profile", icon: UserRound },
-          { to: paths.settings, label: "Settings", icon: Settings },
+          { to: paths.profile, label: t("nav.profile"), icon: UserRound },
+          { to: paths.settings, label: t("nav.settings"), icon: Settings },
         ];
 
   const link = (item: Item) => (
@@ -290,6 +305,29 @@ export function AppShell() {
           {!collapsed && <Doodle piece="beads" className="static! -mb-2! ml-auto w-20 lg:block!" />}
           <nav aria-label="Account" className="flex flex-col gap-1 border-t border-line pt-3">
             {account.map(link)}
+            {user?.role === "user" &&
+              (collapsed ? (
+                <LanguageSwitch
+                  compact
+                  className="hidden min-h-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-ink lg:flex"
+                />
+              ) : null)}
+            {user?.role === "user" && (
+              <LanguageSwitch
+                className={cx(
+                  "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
+                  collapsed && "lg:hidden",
+                )}
+              />
+            )}
+            <ThemeToggle
+              withLabel
+              labelClassName={hide}
+              className={cx(
+                "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
+                collapsed && "lg:justify-center lg:px-0",
+              )}
+            />
             <button
               type="button"
               onClick={toggleSound}
@@ -301,8 +339,8 @@ export function AppShell() {
               )}
             >
               {sound ? <Volume2 size={18} aria-hidden="true" /> : <VolumeX size={18} aria-hidden="true" />}
-              <span className={cx("flex-1 text-left", hide)}>Sounds</span>
-              <span className={cx("text-xs text-ink-muted", hide)}>{sound ? "On" : "Off"}</span>
+              <span className={cx("flex-1 text-left", hide)}>{t("shell.sounds")}</span>
+              <span className={cx("text-xs text-ink-muted", hide)}>{sound ? t("shell.on") : t("shell.off")}</span>
             </button>
             <button
               type="button"
@@ -314,7 +352,7 @@ export function AppShell() {
               )}
             >
               <LogOut size={18} aria-hidden="true" />
-              <span className={hide}>Sign out</span>
+              <span className={hide}>{t("shell.signOut")}</span>
             </button>
           </nav>
           {user && (

@@ -173,10 +173,12 @@ HealthNexus/
 │   ├── schemas/
 │   └── models/
 │
-├── ml/
-│   ├── models/
-│   ├── training/
-│   └── inference/
+├── model/                  # anomaly model: code, training, evaluation, trained artifacts
+│   ├── healthnexus_ml/     # preprocessing.py, anomaly.py, vitals.py, train.py, evaluate.py
+│   ├── artifacts/          # vitals_anomaly.joblib (loaded by the API) + model card
+│   ├── notebooks/          # the research write-up (01-04)
+│   ├── reports/            # evaluation metrics and figures
+│   └── tests/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md

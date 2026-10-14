@@ -5,7 +5,7 @@ import { CitizenWorkCard, workerState } from "../../components/app/phc";
 import { Card, Empty, LinkBtn, Loading, Stat, Tabs, cx } from "../../components/app/ui";
 import { Doodle } from "../../components/landing/Doodle/Doodle";
 import { useAuth } from "../../context/AuthContext";
-import { Bell, Bot, CalendarDays, Map } from "lucide-react";
+import { Activity, Bell, Bot, CalendarDays, Map } from "lucide-react";
 import { fmtShortDay, plural } from "../../lib/format";
 import { oneOf, useQueryState } from "../../lib/params";
 import { paths } from "../../lib/routes";
@@ -120,6 +120,9 @@ export function PhcDashboard() {
         </LinkBtn>
         <LinkBtn to={paths.phcMap}>
           <Map size={16} aria-hidden="true" /> Risk map
+        </LinkBtn>
+        <LinkBtn to={paths.outbreaks}>
+          <Activity size={16} aria-hidden="true" /> Outbreak signals
         </LinkBtn>
         <LinkBtn to={paths.assistant}>
           <Bot size={16} aria-hidden="true" /> Ask the assistant

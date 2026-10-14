@@ -1,4 +1,5 @@
 import type { Severity } from "../lib/severity";
+import type { Advisory } from "./advisories";
 import { api } from "./api";
 
 export interface Metric {
@@ -34,6 +35,18 @@ export interface VitalsResult {
   checks: VitalCheck[];
   /** Unusual for this person, but waiting for a second reading before it flags. */
   watch: string[];
+  population: PopulationCheck | null;
+}
+
+/** The trained population model's view of a reading (backend services/population.py). It never flags. */
+export interface PopulationCheck {
+  /** 0..1; 0.5 = more unusual than 97% of the training days. */
+  score: number;
+  percentile: number;
+  features: string[];
+  version: string;
+  unusual: boolean;
+  note: string;
 }
 
 export type BaselineStage = "learning" | "blending" | "personal";
@@ -88,6 +101,7 @@ export interface Reading {
   severity: Severity | null;
   signal: string | null;
   reviewed: boolean;
+  population: PopulationCheck | null;
 }
 
 export interface Page<T> {
@@ -191,7 +205,7 @@ export const getBaselineStatus = (signal?: AbortSignal) =>
 export const deleteReading = (id: string) => api.delete(`/health/readings/${id}`);
 
 export const getAlerts = (signal?: AbortSignal) =>
-  api.get<{ alerts: AlertItem[]; advisories: AlertItem[]; unread: number }>("/alerts", { signal }).then((r) => r.data);
+  api.get<{ alerts: AlertItem[]; advisories: Advisory[]; unread: number }>("/alerts", { signal }).then((r) => r.data);
 
 export const getUnreadCount = (signal?: AbortSignal) =>
   api.get<{ unread: number }>("/alerts/unread-count", { signal }).then((r) => r.data.unread);

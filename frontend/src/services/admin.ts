@@ -1,4 +1,5 @@
 import { api } from "./api";
+import type { VerificationDocument } from "./documents";
 import type { Designation, Role } from "./auth";
 
 export type ApplicationStatus = "pending" | "approved" | "rejected";
@@ -49,6 +50,7 @@ export interface ApplicationItem {
 export interface ApplicationDetail extends ApplicationItem {
   suggested_facility: FacilityOption | null;
   history: { action: string; from_status: string | null; to_status: string; reason: string | null; actor: string | null; created_at: string }[];
+  documents: VerificationDocument[];
 }
 
 export interface Account {
@@ -125,3 +127,43 @@ export const updateConcern = (id: string, body: { status: ConcernStatus; admin_n
 
 export const getAudit = (source: "" | "account" | "verification", signal?: AbortSignal) =>
   get<AuditItem[]>("/admin/audit", clean({ source }), signal);
+
+/** De-identified readings of citizens who allowed research use, saved as a CSV file. */
+export async function downloadResearchExport(days: number): Promise<void> {
+  const response = await api.get<Blob>("/admin/research-export", { params: { days }, responseType: "blob" });
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `healthnexus-research-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export interface CentreInput {
+  facility_code: string;
+  name: string;
+  district: string;
+  state: string;
+  block: string | null;
+  official_email_domain: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface Centre extends CentreInput {
+  id: string;
+  is_active: boolean;
+  is_placeholder: boolean;
+  workers: number;
+  citizens: number;
+}
+
+export const getCentres = (
+  p: { q?: string; district?: string; state?: "all" | "active" | "inactive"; limit?: number; offset?: number },
+  signal?: AbortSignal,
+) => get<{ items: Centre[]; total: number; districts: string[] }>("/admin/registry", clean(p), signal);
+export const createCentre = (input: CentreInput) => post<Centre>("/admin/registry", input);
+export const editCentre = (id: string, input: Partial<CentreInput>) =>
+  api.patch<Centre>(`/admin/registry/${id}`, input).then((r) => r.data);
+export const setCentreActive = (id: string, active: boolean) =>
+  post<Centre>(`/admin/registry/${id}/${active ? "reactivate" : "deactivate"}`);

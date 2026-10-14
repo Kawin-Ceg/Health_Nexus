@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { paths } from "../../lib/routes";
 import { Doodle } from "../landing/Doodle/Doodle";
 import { SoundToggle } from "../landing/SoundToggle/SoundToggle";
+import { ThemeToggle } from "../ui/ThemeToggle/ThemeToggle";
 import { Logo } from "../ui/Logo/Logo";
 import styles from "./AuthLayout.module.css";
 
@@ -38,6 +39,7 @@ export function AuthLayout({ title, subtitle, children, footer, wide = false }: 
       <header className={styles.topBar}>
         <Logo />
         <span className={styles.topActions}>
+          <ThemeToggle className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-line bg-surface/70 text-ink-soft transition-colors hover:border-ink/30 hover:text-ink" />
           <SoundToggle />
           <Link to={paths.home} className={styles.back}>
             <ArrowLeft size={16} aria-hidden="true" />

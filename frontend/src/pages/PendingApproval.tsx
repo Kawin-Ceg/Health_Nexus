@@ -7,7 +7,10 @@ import { Button } from "../components/ui/Button/Button";
 import { useAuth } from "../context/AuthContext";
 import { fmtDate } from "../lib/format";
 import { destinationFor, paths } from "../lib/routes";
+import { ApplicantDocuments } from "../components/app/VerificationDocuments";
+import { useResource } from "../lib/useResource";
 import { DESIGNATIONS } from "../services/auth";
+import { myDocuments } from "../services/documents";
 import styles from "./PendingApproval.module.css";
 
 type StepState = "done" | "current" | "failed" | "todo";
@@ -16,6 +19,7 @@ export function PendingApproval() {
   const { user, refreshUser } = useAuth();
   const [checking, setChecking] = useState(false);
   const [stillPending, setStillPending] = useState(false);
+  const docs = useResource((s) => myDocuments(s), "my-documents");
 
   if (!user) return <Navigate to={paths.login} replace />;
   // Approved since the page loaded: this screen no longer applies.
@@ -109,6 +113,17 @@ export function PendingApproval() {
             </dl>
           )}
         </div>
+
+        {!rejected && application && (
+          <section className={styles.documents} aria-labelledby="documents-title">
+            <h2 id="documents-title" className={styles.documentsTitle}>Proof of employment</h2>
+            <p className={styles.documentsLead}>
+              Upload your employee ID card or appointment order. Only administrators can see them, and they make the review
+              faster.
+            </p>
+            <ApplicantDocuments docs={docs.data ?? []} onChanged={docs.reload} />
+          </section>
+        )}
 
         {!rejected && (
           <div className={styles.actions}>

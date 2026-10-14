@@ -26,7 +26,7 @@ const STEPS = [
   { title: "Location", why: "Links you to the health centre whose workers review your readings.", fields: ["state", "district", "phc_id", "pincode", "area"] },
   { title: "Medical history", why: "Conditions and medicines help your health worker read a flag in context.", fields: ["existing_conditions", "current_medications"] },
   { title: "Device and contact", why: "Your emergency contact is shown to your health worker.", fields: ["has_smartwatch", "smartwatch_brand", "emergency_contact_name", "emergency_contact_phone"] },
-  { title: "Consent", why: "You can change these at any time in Settings.", fields: ["health_tracking", "community_surveillance"] },
+  { title: "Consent", why: "You can change these at any time in Settings.", fields: ["health_tracking", "phc_worker_access", "community_surveillance"] },
 ] as const satisfies readonly { title: string; why: string; fields: readonly (keyof OnboardingValues)[] }[];
 
 type Problems = Partial<Record<keyof OnboardingValues, string>>;
@@ -74,7 +74,11 @@ function toPayload(v: OnboardingValues): ProfilePayload {
     smartwatch_brand: v.has_smartwatch ? orNull(v.smartwatch_brand) : null,
     emergency_contact_name: orNull(v.emergency_contact_name),
     emergency_contact_phone: orNull(v.emergency_contact_phone),
-    consents: { health_tracking: v.health_tracking, community_surveillance: v.community_surveillance },
+    consents: {
+      health_tracking: v.health_tracking,
+      community_surveillance: v.community_surveillance,
+      phc_worker_access: v.phc_worker_access,
+    },
   };
 }
 

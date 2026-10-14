@@ -93,3 +93,19 @@ def test_new_user_uses_global_model(model):
     scored = an.score_days(new, model)
     assert scored["personal_weight"].eq(0).all()
     assert np.allclose(scored["score"], scored["global_score"])
+
+
+def test_bundle_round_trip_scores_the_same(model, population):
+    again = an.GlobalModel.from_bundle(model.to_bundle(version="t"))
+    assert np.allclose(again.score(population), model.score(population))
+    assert set(model.to_bundle()) >= {"features", "median", "scale", "forest", "train_scores", "contamination"}
+
+
+def test_vitals_model_uses_the_two_shared_signals(population):
+    from healthnexus_ml import vitals
+
+    m = vitals.fit(population)
+    assert m.features == ["heart_rate", "respiratory_rate"]
+    usual = pd.DataFrame({"heart_rate": [66.0], "respiratory_rate": [15.0]})
+    odd = pd.DataFrame({"heart_rate": [115.0], "respiratory_rate": [26.0]})
+    assert m.score(usual)[0] < 0.5 <= m.score(odd)[0]

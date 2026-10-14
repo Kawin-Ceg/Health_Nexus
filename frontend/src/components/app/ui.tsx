@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { AlertCircle, Inbox, Loader2 } from "lucide-react";
@@ -84,10 +85,11 @@ export function LinkBtn({ to, tone = "secondary", className, children }: { to: s
 export function SeverityBadge({ severity, className }: { severity: Severity; className?: string }) {
   const s = SEVERITY[severity];
   const Icon = s.icon;
+  const t = useT();
   return (
     <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", s.badge, className)}>
       <Icon size={12} aria-hidden="true" />
-      {s.label}
+      {t(`severity.${severity}`)}
     </span>
   );
 }

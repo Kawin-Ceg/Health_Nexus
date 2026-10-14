@@ -17,6 +17,8 @@ const page = <T extends string>(loader: () => Promise<Record<string, unknown>>, 
 const Assistant = page(() => import("./pages/Assistant"), "Assistant");
 const ConfirmEmail = page(() => import("./pages/ConfirmEmail"), "ConfirmEmail");
 const Notifications = page(() => import("./pages/Notifications"), "Notifications");
+const Advisories = page(() => import("./pages/Advisories"), "Advisories");
+const Outbreaks = page(() => import("./pages/Outbreaks"), "Outbreaks");
 const Profile = page(() => import("./pages/Profile"), "Profile");
 const Settings = page(() => import("./pages/Settings"), "Settings");
 const CitizenAlerts = page(() => import("./pages/citizen/Alerts"), "CitizenAlerts");
@@ -35,6 +37,7 @@ const Applications = page(() => import("./pages/admin/Applications"), "Applicati
 const Accounts = page(() => import("./pages/admin/Accounts"), "Accounts");
 const Concerns = page(() => import("./pages/admin/Concerns"), "Concerns");
 const AuditLog = page(() => import("./pages/admin/AuditLog"), "AuditLog");
+const Centres = page(() => import("./pages/admin/Centres"), "Centres");
 const PrivacyPolicy = page(() => import("./pages/legal/PrivacyPolicy"), "PrivacyPolicy");
 const Terms = page(() => import("./pages/legal/Terms"), "Terms");
 const ForgotPassword = page(() => import("./pages/ForgotPassword"), "ForgotPassword");
@@ -133,10 +136,17 @@ createRoot(root).render(
                 <Route path={paths.assistant} element={<Assistant />} />
               </Route>
             </Route>
+            <Route element={<ProtectedRoute allowedRoles={["phc_worker", "admin"]} />}>
+              <Route element={<AppShell />}>
+                <Route path={paths.advisories} element={<Advisories />} />
+                <Route path={paths.outbreaks} element={<Outbreaks />} />
+              </Route>
+            </Route>
             <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
               <Route element={<AppShell />}>
                 <Route path={paths.adminHome} element={<AdminDashboard />} />
                 <Route path={paths.adminApplications} element={<Applications />} />
+                <Route path={paths.adminCentres} element={<Centres />} />
                 <Route path={paths.adminAccounts} element={<Accounts />} />
                 <Route path={paths.adminConcerns} element={<Concerns />} />
                 <Route path={paths.adminAudit} element={<AuditLog />} />

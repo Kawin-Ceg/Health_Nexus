@@ -1,4 +1,5 @@
-import type { Metric, VitalCheck } from "../../services/health";
+import { Users } from "lucide-react";
+import type { Metric, PopulationCheck, VitalCheck } from "../../services/health";
 import { cx } from "./ui";
 
 type Audience = "citizen" | "worker";
@@ -77,3 +78,23 @@ export function BasisTag({ basis }: { basis: string | null }) {
   );
 }
 
+/**
+ * The trained population model's check: how this heart rate and breathing rate compare with 71 people's data.
+ * Shown next to the flag decision, never instead of it.
+ */
+export function PopulationNote({ check, className }: { check: PopulationCheck | null; className?: string }) {
+  if (!check) return null;
+  return (
+    <div className={cx("flex gap-3 rounded-2xl border p-3 text-sm", check.unusual ? "border-warn/50" : "border-line", className)}>
+      <Users size={18} className={cx("mt-0.5 shrink-0", check.unusual ? "text-warn" : "text-ink-muted")} aria-hidden="true" />
+      <div>
+        <p className="font-semibold text-ink">Population check</p>
+        <p className="text-ink">{check.note}</p>
+        <p className="mt-1 text-xs text-ink-muted">
+          An Isolation Forest trained on 4,400 days from the LifeSnaps study. It adds context and never flags a reading by
+          itself. ({check.version})
+        </p>
+      </div>
+    </div>
+  );
+}

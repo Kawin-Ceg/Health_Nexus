@@ -193,3 +193,23 @@
     animation: none;
   }
 }
+
+.documents {
+  display: grid;
+  gap: var(--hn-space-3);
+  width: 100%;
+  padding: var(--hn-space-6);
+  border: 1px solid rgb(var(--hn-line));
+  border-radius: 28px;
+  background: rgb(var(--hn-surface));
+  text-align: left;
+}
+
+.documentsTitle {
+  font-size: var(--hn-text-xl);
+}
+
+.documentsLead {
+  color: rgb(var(--hn-ink-soft));
+  font-size: var(--hn-text-sm);
+}

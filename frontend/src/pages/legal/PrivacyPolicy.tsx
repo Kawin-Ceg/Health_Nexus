@@ -47,9 +47,17 @@ const sections: LegalSection[] = [
       <ul>
         <li>To compare each reading with your own usual values and flag readings that look unusual for you.</li>
         <li>To let the health workers at your chosen health centre review flagged readings and book visits with you.</li>
-        <li>To show health workers grouped, locality-level counts so they can notice unusual local patterns.</li>
+        <li>
+          If you turn on community health monitoring, to count you in grouped, locality-level figures so health workers
+          can notice unusual local patterns.
+        </li>
+        <li>If you turn on research use, to include a de-identified copy of your readings in research exports.</li>
         <li>To answer your questions in the assistant, using only your own records.</li>
         <li>To send account emails: confirming your address, resetting your password, and confirming an email change.</li>
+        <li>
+          To email you about flagged readings, visits and reading reminders, if you leave those on in Settings, under
+          Preferences. These emails never include your readings.
+        </li>
         <li>To keep the service secure and to investigate concerns you raise.</li>
       </ul>
     ),
@@ -64,16 +72,19 @@ const sections: LegalSection[] = [
         </li>
         <li>
           <strong>Health workers</strong> can see your details, readings and flags only if you are registered at their
-          health centre and they have been approved by an administrator. Each time a health worker opens your record,
-          it is logged.
+          health centre, you have not turned off health worker access, and they have been approved by an
+          administrator. Each time a health worker opens your record, it is logged.
         </li>
         <li>
           <strong>Administrators</strong> manage accounts, worker approvals and support concerns. The admin console
-          shows account details and totals, not your readings.
+          shows account details and totals, not your readings. If you turned on research use, an administrator can
+          download a de-identified copy of your readings for public-health research: no name, contact details, exact
+          age, area or time of day, and a code for you that changes with every download.
         </li>
         <li>
-          <strong>Community views</strong> show counts per locality. Localities with fewer than three people are
-          merged into a larger group so nobody can be picked out.
+          <strong>Community views</strong> show counts per locality, and count only people who turned on community
+          health monitoring. Localities with fewer than three such people are merged into a larger group so nobody can
+          be picked out.
         </li>
         <li>
           <strong>The AI assistant</strong> may use Google's Gemini service, if it is enabled. When it is, your question
@@ -89,9 +100,10 @@ const sections: LegalSection[] = [
     body: (
       <ul>
         <li>
-          <strong>Consent:</strong> turn health tracking, health worker access, community surveillance, research and
-          marketing updates on or off in Settings, under Privacy. Every change is kept in a history you can view.
-          With health tracking off, no new readings are accepted.
+          <strong>Consent:</strong> turn health tracking, health worker access, community health monitoring and
+          research use on or off in Settings, under Privacy. Every change is kept in a history you can view. With
+          health tracking off, no new readings are accepted. With health worker access off, your centre's health
+          workers cannot see you and any booked visits are cancelled.
         </li>
         <li>
           <strong>Download your data:</strong> Settings, under Privacy, gives you all your data as one file.

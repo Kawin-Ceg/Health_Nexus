@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Phone } from "lucide-react";
-import { BasisTag, ScoreBreakdown } from "../../components/app/ModelInsights";
+import { BasisTag, PopulationNote, ScoreBreakdown } from "../../components/app/ModelInsights";
 import { BookVisitForm, NoFacility, ResolveControls } from "../../components/app/phc";
 import { TrendChart } from "../../components/app/TrendChart";
 import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, Stat, VisitBadge, cx } from "../../components/app/ui";
@@ -190,11 +190,13 @@ export function CitizenRecord() {
                   {t.flagged && t.checks.length > 0 && (
                     <details className="mt-1">
                       <summary className="cursor-pointer text-xs font-semibold text-brand">Why it was flagged</summary>
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-col gap-2">
                         <ScoreBreakdown checks={t.checks} metrics={metrics} who="worker" />
+                        <PopulationNote check={t.population} />
                       </div>
                     </details>
                   )}
+                  {!t.flagged && t.population?.unusual && <PopulationNote check={t.population} className="mt-1" />}
                   <p className="text-xs text-ink-soft">
                     {Object.entries(t.vitals).map(([k, v]) => `${metrics.get(k)?.label ?? k} ${v.toFixed(metrics.get(k)?.decimals ?? 0)}`).join(" · ")}
                     {t.symptoms.length > 0 && ` · ${t.symptoms.join(", ")}`}

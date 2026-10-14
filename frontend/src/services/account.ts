@@ -1,26 +1,18 @@
 import type { ThemeChoice } from "../lib/theme";
 import { api } from "./api";
 
-export type ConsentType =
-  | "community_surveillance"
-  | "health_tracking"
-  | "phc_worker_access"
-  | "research_analytics"
-  | "marketing_updates";
+export type ConsentType = "community_surveillance" | "health_tracking" | "phc_worker_access" | "research_analytics";
 
-export interface Channels {
-  email: boolean;
-  sms: boolean;
-  in_app: boolean;
-}
+export type FlagSeverity = "critical" | "high" | "moderate" | "low";
 
+/** Everything is always shown in the app; these choose what is also emailed. */
 export interface Preferences {
   theme: ThemeChoice;
   language: "en" | "ta" | "hi";
-  notifications: { alerts: Channels; surveillance: Channels; announcements: Channels };
-  alert_threshold: number;
+  notifications: { alerts: { email: boolean }; visits: { email: boolean } };
+  alert_email_min_severity: FlagSeverity;
   working_hours: { start: string; end: string };
-  resubmission_reminders: boolean;
+  reading_reminders: boolean;
 }
 
 export interface Concern {

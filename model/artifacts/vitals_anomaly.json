@@ -1,0 +1,22 @@
+{
+  "version": "population-iforest-v1",
+  "trained_at": "2026-10-12T19:57:42+00:00",
+  "trained_on_days": 4432,
+  "trained_on_people": 71,
+  "sklearn_version": "1.9.1",
+  "data": "LifeSnaps (Yfantidou et al., 2022), CC BY 4.0",
+  "features": [
+    "heart_rate",
+    "respiratory_rate"
+  ],
+  "median": {
+    "heart_rate": 66.504,
+    "respiratory_rate": 15.2
+  },
+  "robust_sd": {
+    "heart_rate": 7.274,
+    "respiratory_rate": 2.669
+  },
+  "contamination": 0.03,
+  "score": "0.5 = more unusual than 97% of training days, 1.0 = more unusual than 99.5%"
+}

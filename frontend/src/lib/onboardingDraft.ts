@@ -22,6 +22,7 @@ export type OnboardingValues = {
   emergency_contact_phone: string;
   health_tracking: boolean;
   community_surveillance: boolean;
+  phc_worker_access: boolean;
 };
 
 export const EMPTY_ONBOARDING: OnboardingValues = {
@@ -43,6 +44,7 @@ export const EMPTY_ONBOARDING: OnboardingValues = {
   emergency_contact_phone: "",
   health_tracking: false,
   community_surveillance: false,
+  phc_worker_access: false,
 };
 
 const PREFIX = "hn.onboarding.";

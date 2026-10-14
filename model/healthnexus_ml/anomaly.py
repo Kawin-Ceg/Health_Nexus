@@ -35,14 +35,19 @@ def z_to_score(z):
 
 
 class GlobalModel:
-    """Isolation Forest trained on population-standardised features."""
+    """Isolation Forest trained on population-standardised features.
 
-    def __init__(self, contamination=0.03, random_state=42):
+    `features` defaults to the ten wearable signals. The app's model uses the two
+    signals its spot readings share with LifeSnaps (see vitals.py).
+    """
+
+    def __init__(self, contamination=0.03, random_state=42, features=None):
         self.contamination = contamination
         self.random_state = random_state
+        self.features = list(features or FEATS)
 
     def fit(self, df):
-        X = df[FEATS]
+        X = df[self.features]
         self.median_ = X.median()
         self.mad_ = X.apply(lambda s: _mad(s.to_numpy())) * MAD_SCALE
         Xs = self._standardise(X)
@@ -58,14 +63,38 @@ class GlobalModel:
         return ((X - self.median_) / self.mad_).fillna(0).to_numpy()
 
     def population_z(self, df):
-        return (df[FEATS] - self.median_) / self.mad_
+        return (df[self.features] - self.median_) / self.mad_
+
+    def percentile(self, df):
+        """Share of training days less unusual than each row (0..1)."""
+        raw = -self.forest_.score_samples(self._standardise(df[self.features]))
+        return np.searchsorted(self.train_scores_, raw) / len(self.train_scores_)
 
     def score(self, df):
-        raw = -self.forest_.score_samples(self._standardise(df[FEATS]))
-        pct = np.searchsorted(self.train_scores_, raw) / len(self.train_scores_)
         # top 3% of training days -> 0.5, top 0.5% -> 1
         lo, hi = 1 - 2 * self.contamination, 1 - self.contamination / 6
-        return np.clip((pct - lo) / (hi - lo), 0, 1)
+        return np.clip((self.percentile(df) - lo) / (hi - lo), 0, 1)
+
+    def to_bundle(self, **meta):
+        """Plain numpy/sklearn objects only, so the backend can load it without this package."""
+        return {
+            "features": self.features,
+            "median": self.median_.to_numpy(dtype=float),
+            "scale": self.mad_.to_numpy(dtype=float),
+            "forest": self.forest_,
+            "train_scores": self.train_scores_,
+            "contamination": self.contamination,
+            **meta,
+        }
+
+    @classmethod
+    def from_bundle(cls, bundle):
+        model = cls(contamination=bundle["contamination"], features=bundle["features"])
+        model.median_ = pd.Series(bundle["median"], index=model.features)
+        model.mad_ = pd.Series(bundle["scale"], index=model.features)
+        model.forest_ = bundle["forest"]
+        model.train_scores_ = bundle["train_scores"]
+        return model
 
 
 def personal_baselines(df, pop_mad):

@@ -5,6 +5,7 @@ import { fmtAgo, fmtDateTime } from "../../lib/format";
 import { useDebounced } from "../../lib/useDebounced";
 import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
+import { ReviewDocuments } from "../../components/app/VerificationDocuments";
 import { DESIGNATIONS } from "../../services/auth";
 import {
   approveApplication,
@@ -154,6 +155,11 @@ function Review({ id, onChanged }: { id: string; onChanged: () => void }) {
         {a.reviewed_at && <Row label="Last decision" value={`${a.reviewed_by ?? "Unknown"}, ${fmtDateTime(a.reviewed_at)}`} />}
       </dl>
 
+      <div className="mt-5 border-t border-line pt-4">
+        <h3 className="mb-2 text-sm font-semibold text-ink">Documents</h3>
+        <ReviewDocuments key={a.id} applicationId={a.id} docs={a.documents} />
+      </div>
+
       {a.status !== "approved" && (
         <div className="mt-5 flex flex-col gap-3 border-t border-line pt-4">
           <h3 className="text-sm font-semibold text-ink">Approve</h3>
@@ -198,7 +204,7 @@ function Review({ id, onChanged }: { id: string; onChanged: () => void }) {
           <ol className="flex flex-col gap-2 text-sm">
             {a.history.map((h, i) => (
               <li key={i} className="text-ink-soft">
-                <span className="text-ink">{h.action.replace("application_", "").replace("_", " ")}</span> by {h.actor ?? "system"}, {fmtDateTime(h.created_at)}
+                <span className="text-ink">{h.action.replace("application_", "").replaceAll("_", " ")}</span> by {h.actor ?? "system"}, {fmtDateTime(h.created_at)}
                 {h.reason && <span className="block text-xs">"{h.reason}"</span>}
               </li>
             ))}

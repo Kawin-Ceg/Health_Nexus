@@ -1,11 +1,55 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { BadgeCheck, LifeBuoy, ScrollText, Users } from "lucide-react";
-import { Card, ErrorNote, LinkBtn, Loading, Stat } from "../../components/app/ui";
+import { BadgeCheck, Download, LifeBuoy, ScrollText, Users } from "lucide-react";
+import { Btn, Card, ErrorNote, LinkBtn, Loading, Stat, inputCls } from "../../components/app/ui";
 import { Doodle } from "../../components/landing/Doodle/Doodle";
 import { useAuth } from "../../context/AuthContext";
 import { paths } from "../../lib/routes";
 import { useResource } from "../../lib/useResource";
-import { getOverview } from "../../services/admin";
+import { errorMessage } from "../../services/api";
+import { downloadResearchExport, getOverview } from "../../services/admin";
+
+function ResearchExport() {
+  const [days, setDays] = useState(365);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const download = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await downloadResearchExport(days);
+    } catch (e) {
+      setErr(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card title="Research data">
+      <p className="text-sm text-ink-soft">
+        A CSV of readings from citizens who turned on research use, and nobody else. It has no names, contact details,
+        exact ages, areas or times, and each person gets a code that changes with every download. Each download is
+        written to the audit trail.
+      </p>
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1 text-sm text-ink">
+          Readings from the last
+          <select value={days} onChange={(e) => setDays(Number(e.target.value))} className={inputCls}>
+            <option value={90}>90 days</option>
+            <option value={365}>year</option>
+            <option value={1825}>5 years</option>
+          </select>
+        </label>
+        <Btn busy={busy} onClick={() => void download()}>
+          <Download size={16} aria-hidden="true" /> Download CSV
+        </Btn>
+      </div>
+      {err && <p className="mt-2 text-sm text-danger">{err}</p>}
+    </Card>
+  );
+}
 
 export function AdminDashboard() {
   const { user } = useAuth();
@@ -73,6 +117,7 @@ export function AdminDashboard() {
               <Stat label="Active health centres" value={o.facilities_active} />
             </div>
           </Card>
+          <ResearchExport />
         </div>
       )}
     </>
