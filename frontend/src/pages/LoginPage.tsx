@@ -17,12 +17,11 @@ export function LoginPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle="Sign in to your HealthNexus account."
+      subtitle="Sign in to continue."
       footer={
         <>
-          New here? <Link to={paths.signup}>Create an account</Link>
-          <br />
-          Health worker? <Link to={paths.phcSignup}>Apply as a PHC worker</Link>
+          <Link to={paths.signup}>Create an account</Link>
+          <Link to={paths.phcSignup}>Apply as a PHC worker</Link>
         </>
       }
     >

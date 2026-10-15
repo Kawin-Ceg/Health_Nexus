@@ -1,0 +1,91 @@
+.art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.beads {
+  top: -10px;
+  left: 3%;
+  width: 150px;
+  --doodle-opacity: 0.9;
+}
+
+.tissue {
+  top: 140px;
+  left: -10px;
+  width: 140px;
+  rotate: -3deg;
+}
+
+.tree {
+  bottom: 40px;
+  left: 1%;
+  width: 260px;
+}
+
+.ecg {
+  top: 24px;
+  right: 2%;
+  width: 150px;
+  rotate: 5deg;
+}
+
+.honeycomb {
+  right: -40px;
+  bottom: -30px;
+  width: 260px;
+  --doodle-opacity: 0.55;
+}
+
+.radial {
+  bottom: -40px;
+  left: 50%;
+  width: 360px;
+  margin-left: -180px;
+  --doodle-opacity: 0.5;
+}
+
+@media (min-width: 640px) {
+  .art .tablet {
+    display: block;
+  }
+}
+
+@media (min-width: 1100px) {
+  .ecg {
+    width: 210px;
+  }
+
+  .art .radial {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .art .radial {
+    display: block;
+  }
+}
+
+.network {
+  top: 12%;
+  right: 6%;
+  width: 460px;
+  --doodle-opacity: 0.22;
+}
+
+.botanical {
+  top: 46%;
+  left: 12%;
+  width: 170px;
+  --doodle-opacity: 0.45;
+}
+
+.speckle {
+  right: 24%;
+  bottom: 12%;
+  width: 120px;
+  --doodle-opacity: 0.6;
+}

@@ -1,5 +1,6 @@
 """Every model is imported here so Base.metadata (and Alembic) sees all tables."""
 
+from .advisory import Advisory
 from .alert import Alert
 from .audit_log import AuditLog
 from .base import Base
@@ -20,6 +21,7 @@ from .user_profile import UserProfile
 from .valid_phc_facility import ValidPhcFacility
 
 __all__ = [
+    "Advisory",
     "Alert",
     "AuditLog",
     "Base",

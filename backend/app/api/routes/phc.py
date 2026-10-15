@@ -29,7 +29,7 @@ from app.models import (
 )
 from app.models.base import utcnow
 from app.models.enums import FlagResolution, VisitStatus
-from app.schemas.health import BaselineOut, VisitOut
+from app.schemas.health import BaselineOut, PopulationOut, VisitOut
 from app.schemas.phc import (
     CaseOut,
     Cleared,
@@ -73,6 +73,7 @@ from app.services.catchment import (
     get_catchment_citizen,
     require_catchment_worker,
 )
+from app.services.consent import counts_in_community
 from app.services.localities import MIN_CELL, locality_of, locality_risk, suppress
 from app.services.metrics import VITALS, position
 from app.services.readings import baseline_of
@@ -292,6 +293,7 @@ def _case_out(processed: ProcessedData, record: HealthRecord, citizen: User) -> 
         symptoms=record.symptoms,
         measured_at=record.timestamp,
         basis=processed.basis,
+        population=PopulationOut.of(processed.population),
     )
 
 
@@ -560,6 +562,7 @@ def _entry(record: HealthRecord, processed: ProcessedData | None) -> TimelineEnt
         reviewed_at=processed.reviewed_at if processed else None,
         basis=processed.basis if processed else None,
         checks=checks_of(processed),
+        population=PopulationOut.of(processed.population) if processed else None,
     )
 
 
@@ -788,11 +791,16 @@ async def reports(
     ).one()
 
     by_area: dict[str, dict[str, float]] = {}
-    for area, n in (await db.execute(select(User.area, func.count()).where(User.id.in_(members)).group_by(User.area))).all():
+    # The locality breakdown is area-level, so only citizens who allowed community monitoring count in it.
+    community = counts_in_community(User.id)
+    for area, n in (
+        await db.execute(select(User.area, func.count()).where(User.id.in_(members), community).group_by(User.area))
+    ).all():
         bucket = by_area.setdefault(locality_of(area), {"citizens": 0, "submitting": 0, "readings": 0, "flags": 0})
         bucket["citizens"] += n
     area_rows = await db.execute(
         window_readings.join(User, User.id == HealthRecord.user_id)
+        .where(community)
         .with_only_columns(User.area, func.count(func.distinct(HealthRecord.user_id)), func.count(), flagged)
         .group_by(User.area)
     )

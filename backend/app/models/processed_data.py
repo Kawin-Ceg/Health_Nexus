@@ -30,6 +30,8 @@ class ProcessedData(UUIDPk, Base):
     basis: Mapped[str | None] = mapped_column(String(32))
     model_version: Mapped[str | None] = mapped_column(String(64))
     details: Mapped[dict[str, dict] | None] = mapped_column(JSON)
+    # The trained population model's check (services/population.py). NULL before 0012 or without HR/RR.
+    population: Mapped[dict | None] = mapped_column(JSON)
     processed_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     reviewed_at: Mapped[datetime | None]

@@ -237,6 +237,11 @@ export function ConsentStep({ form }: { form: OnboardingForm }) {
         {...form.checkbox("health_tracking")}
       />
       <Checkbox
+        label="Health worker access"
+        description="Let health workers at the centre you chose see your readings and contact details, so they can follow up on a flag and book a home visit."
+        {...form.checkbox("phc_worker_access")}
+      />
+      <Checkbox
         label="Community health surveillance"
         description="Allow your readings, combined with others in your area, to help your health centre spot outbreaks early."
         {...form.checkbox("community_surveillance")}

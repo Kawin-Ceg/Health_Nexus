@@ -13,15 +13,17 @@ dependencies = [
     "alembic>=1.13",
     "google-genai>=1.0",
     "tzdata>=2024.1",
-    "healthnexus-ml",
+    "healthnexus-ml",  # brings scikit-learn and joblib for the population model (services/population.py)
     "python-jose[cryptography]==3.3.0",
     "passlib[bcrypt]==1.7.4",
     "bcrypt==4.0.1",
     "python-multipart>=0.0.9",
+    "Pillow>=10.3",
+    "pytesseract>=0.3.13",
 ]
 
 [tool.uv.sources]
-healthnexus-ml = { path = "../ml", editable = true }
+healthnexus-ml = { path = "../model", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8", "pytest-asyncio>=0.24", "httpx>=0.27"]

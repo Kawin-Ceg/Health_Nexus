@@ -21,12 +21,22 @@ export const paths = {
   phcReports: "/phc/reports",
   phcMap: "/phc/map",
   notifications: "/notifications",
+  advisories: "/advisories",
+  outbreaks: "/outbreaks",
   settings: "/settings",
   profile: "/profile",
   confirmEmail: "/confirm-email",
   adminHome: "/admin",
+  adminApplications: "/admin/applications",
+  adminAccounts: "/admin/accounts",
+  adminConcerns: "/admin/concerns",
+  adminAudit: "/admin/audit",
+  adminCentres: "/admin/centres",
+  assistant: "/assistant",
   sessions: "/account/sessions",
   unauthorized: "/unauthorized",
+  privacy: "/privacy-policy",
+  terms: "/terms",
 } as const;
 
 export const citizenRecordPath = (userId: string) => `/phc/citizens/${userId}`;

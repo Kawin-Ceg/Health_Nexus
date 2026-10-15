@@ -27,6 +27,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
     <div className={className ? `${fieldStyles.field} ${className}` : fieldStyles.field}>
       <label htmlFor={id} className={fieldStyles.label}>
         {label}
+        {select.required && (
+          <span className={fieldStyles.required}>
+            <span aria-hidden="true"> *</span>
+            <span className="visually-hidden"> (required)</span>
+          </span>
+        )}
       </label>
       <div className={styles.wrap}>
         <select
@@ -35,6 +41,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           id={id}
           className={styles.select}
           aria-invalid={error ? true : undefined}
+          aria-required={select.required || undefined}
           aria-describedby={describedBy}
         >
           <option value="">{placeholder}</option>

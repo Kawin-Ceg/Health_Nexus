@@ -1,6 +1,6 @@
 import type { Severity } from "../lib/severity";
 import { api } from "./api";
-import type { AlertItem, Baseline, Visit, VisitPerson, VitalCheck } from "./health";
+import type { AlertItem, Baseline, PopulationCheck, Visit, VisitPerson, VitalCheck } from "./health";
 
 export type Engagement = "attention" | "never_logged" | "silent" | "ok";
 export type Resolution = "reviewed" | "dismissed";
@@ -44,6 +44,7 @@ export interface Case {
   symptoms: string[];
   measured_at: string;
   basis: string | null;
+  population: PopulationCheck | null;
 }
 
 export interface WorkItem {
@@ -124,6 +125,7 @@ export interface CitizenRecord {
     basis: string | null;
     /** Empty for readings scored before the model stored its working. */
     checks: VitalCheck[];
+    population: PopulationCheck | null;
   }[];
   timeline_truncated: boolean;
   timeline_limit: number;

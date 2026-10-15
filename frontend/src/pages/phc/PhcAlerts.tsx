@@ -3,18 +3,9 @@ import { CitizenWorkCard, PersonLine, workerState } from "../../components/app/p
 import { Card, Empty, Loading, PageHeader, SeverityBadge, Tabs, cx, inputCls } from "../../components/app/ui";
 import { fmtDateTime } from "../../lib/format";
 import { oneOf, textParam, useQueryState } from "../../lib/params";
+import { useDebounced } from "../../lib/useDebounced";
 import { useResource } from "../../lib/useResource";
 import { getFeed, getWorklist } from "../../services/phc";
-
-/** A search box that only updates the URL after typing pauses. */
-function useDebounced(value: string, ms = 300) {
-  const [out, setOut] = useState(value);
-  useEffect(() => {
-    const t = window.setTimeout(() => setOut(value), ms);
-    return () => window.clearTimeout(t);
-  }, [value, ms]);
-  return out;
-}
 
 export function PhcAlerts() {
   const { params, set } = useQueryState();

@@ -30,9 +30,29 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_FROM: str = "HealthNexus <no-reply@healthnexus.local>"
     SMTP_STARTTLS: bool = True
+    # Reading reminders run inside the API process (services/reminders.py). Turn
+    # off where several API processes run, and schedule one instead.
+    READING_REMINDERS: bool = True
+    # Outbreak clustering every 6 hours (services/outbreaks.py), same caveat.
+    OUTBREAK_CLUSTERING: bool = True
+
+    # The trained population model (model/artifacts/vitals_anomaly.joblib by default).
+    POPULATION_MODEL_PATH: str | None = None
+
+    # AI assistant. With no key the assistant still works, using its rule-based
+    # router and templated answers (services/assistant).
+    # GEMINI_API_KEYS takes a comma-separated list; a key that fails hands over to the next.
+    GEMINI_API_KEY: str | None = None
+    GEMINI_API_KEYS: str | None = None
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    ASSISTANT_QUESTIONS_PER_MINUTE: int = 20
 
     # Uploaded avatars and cover images, served at /api/v1/media.
     MEDIA_DIR: str = "media"
+    # PHC worker verification documents. Never served publicly.
+    PRIVATE_UPLOAD_DIR: str = "private_uploads"
+    # Full path to tesseract.exe when it is not on PATH.
+    TESSERACT_CMD: str | None = None
 
     # Seed scripts
     ADMIN_EMAIL: str | None = None
@@ -41,6 +61,12 @@ class Settings(BaseSettings):
     PHC_WORKER_EMAIL: str = "phc.worker@example.com"
     PHC_WORKER_PASSWORD: str | None = None
     DEMO_CITIZEN_PASSWORD: str | None = None
+
+    @property
+    def gemini_keys(self) -> list[str]:
+        raw = ",".join(k for k in (self.GEMINI_API_KEY, self.GEMINI_API_KEYS) if k)
+        # "key1,key2" is the placeholder in .env.example, not a real key.
+        return [k.strip() for k in raw.split(",") if k.strip() and k.strip() not in ("key1", "key2")]
 
     @property
     def cors_origins(self) -> list[str]:

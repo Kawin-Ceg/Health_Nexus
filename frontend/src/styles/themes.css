@@ -1,37 +1,48 @@
 /* Light values live in tokens.css. Dark mode redefines the colour tokens. */
 
 .dark {
-  --hn-ink: 236 232 224;
-  --hn-ink-soft: 178 190 186;
-  --hn-paper: 12 20 19;
-  --hn-paper-raised: 18 29 28;
-  --hn-surface: 23 36 34;
-  --hn-line: 43 59 56;
+  --hn-ink: 240 239 232;
+  --hn-ink-soft: 196 195 186;
+  --hn-ink-muted: 160 159 150;
+  --hn-paper: 20 20 18;
+  --hn-paper-raised: 14 14 13;
+  --hn-surface: 30 30 27;
+  --hn-line: 48 48 44;
+  --hn-line-strong: 120 119 110;
 
-  --hn-brand: 104 196 180; /* lifted teal so it reads on dark */
-  --hn-brand-soft: 24 52 48;
-  --hn-on-brand: 10 26 24;
-  --hn-accent: 226 138 98;
-  --hn-accent-ink: 236 158 122;
-  --hn-warn: 226 178 84;
-  --hn-danger: 246 138 126;
-  --hn-on-danger: 12 20 19; /* the dark-mode danger is light, so its text is dark */
+  --hn-brand: 240 239 232;
+  --hn-brand-strong: 255 255 255;
+  --hn-brand-soft: 64 66 20;
+  --hn-on-brand: 20 20 18;
+  --hn-lime: 64 66 20;
+  --hn-olive: 233 237 76;
+  --hn-glow: 80 74 40;
+  --hn-accent: 227 163 59;
+  --hn-accent-ink: 242 193 78;
+  --hn-warn: 242 193 78;
+  --hn-warn-soft: 52 40 14;
+  --hn-danger: 255 138 128;
+  --hn-on-danger: 20 20 18;
   --hn-danger-soft: 62 27 25;
-  --hn-success: 120 210 160;
+  --hn-success: 123 201 138;
   --hn-success-soft: 21 50 38;
+  --hn-info: 138 160 240;
+  --hn-info-soft: 22 30 56;
+  --hn-chart-normal: 160 159 150;
 
   /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
-  --hn-sev-critical: 246 138 126;
+  --hn-sev-critical: 240 138 110;
   --hn-sev-high: 236 150 96;
-  --hn-sev-moderate: 226 178 84;
-  --hn-sev-low: 160 180 176;
+  --hn-sev-moderate: 227 163 59;
+  --hn-sev-low: 200 204 120;
 
-  --hn-panel: 7 15 14;
-  --hn-panel-raised: 18 34 32;
-  --hn-on-panel: 236 232 224;
-  --hn-on-panel-soft: 170 186 181;
+  --hn-panel: 8 8 7;
+  --hn-panel-raised: 24 24 22;
+  --hn-on-panel: 240 239 232;
+  --hn-on-panel-soft: 170 169 160;
 
-  --hn-focus: 104 196 180;
+  --hn-button-outline: 240 239 232;
+  --hn-focus: 255 209 102;
 
   color-scheme: dark;
 }

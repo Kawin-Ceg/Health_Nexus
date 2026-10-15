@@ -1,7 +1,7 @@
 """The ML seam. `score_reading` is the only thing the rest of the app calls.
 
 Model: personal baselines on top of published normal ranges (MODEL_VERSION).
-The method comes from the research in ml/ (notebooks 02 and 03, LifeSnaps data):
+The method comes from the research in model/ (notebooks 02 and 03, LifeSnaps data):
 
 - A new person is compared with published normal ranges, the "global model".
 - Each vital gets its own baseline from the person's earlier readings: a median
@@ -16,8 +16,16 @@ The method comes from the research in ml/ (notebooks 02 and 03, LifeSnaps data):
   Until then it is reported in `watch` and contributes nothing. One odd home
   reading is usually noise; illness keeps a value off for days.
 
+The trained population model (services/population.py, built in model/) runs
+on every reading too. Its answer, how unusual the heart rate and breathing rate
+are next to 71 people's data, is returned in `population` and stored, but it
+never flags by itself: on held-out people it caught nothing these rules missed,
+and most readings it calls unusual are ordinary for that person
+(model/reports/population_model_metrics.json).
+
 Keep the signature and the ScoreResult fields: triage, alerts and the record
-page depend on them. ml/notebooks/04_app_scorer.ipynb evaluates this module.
+page depend on them. model/healthnexus_ml/evaluate.py and
+model/notebooks/04_app_scorer.ipynb evaluate this module.
 """
 
 import statistics
@@ -25,7 +33,9 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Literal
 
+from . import population
 from .metrics import VITALS
+from .population import PopulationCheck
 
 MODEL_VERSION = "personal-baseline-v1"
 
@@ -41,7 +51,7 @@ BASELINE_WINDOW = 30
 # The personal contribution starts this many robust SDs from their own median,
 # and each further PERSONAL_UNIT_Z adds 1. With FLAG_THRESHOLD 0.5 a vital
 # counts from 2.25 SD, and an in-range one needs that twice in a row. Tuned in
-# ml/notebooks/04_app_scorer.ipynb: 2.5 caught only 16 % of moderate episodes;
+# model/notebooks/04_app_scorer.ipynb: 2.5 caught only 16 % of moderate episodes;
 # 1.5 catches 68 % for 1.5 % false flags.
 PERSONAL_OK_Z = 1.5
 PERSONAL_UNIT_Z = 1.5
@@ -64,7 +74,7 @@ SAFETY_LIMITS: dict[str, tuple[float | None, float | None]] = {
 # always count). Without it, a systolic of 121 still flags while the baseline is
 # blending in, because 1 mmHg over the published band is "outside" it. 0.5 is
 # about half a half-band: systolic 128, heart rate 110, temperature 37.5 °C, or
-# 2.25 SD from the person's own usual. Chosen in ml/notebooks/04_app_scorer.ipynb.
+# 2.25 SD from the person's own usual. Chosen in model/notebooks/04_app_scorer.ipynb.
 FLAG_THRESHOLD = 0.5
 
 # A contribution of this size maps to anomaly_score 1.0.
@@ -120,9 +130,15 @@ class ScoreResult:
     details: dict[str, VitalDetail] = field(default_factory=dict)
     # Vitals unusual for this person but not yet confirmed by a second reading.
     watch: list[str] = field(default_factory=list)
+    # The trained population model's view of this reading; None without heart rate
+    # or breathing rate, or without the model. Informs, never flags.
+    population: PopulationCheck | None = None
 
     def details_json(self) -> dict[str, dict]:
         return {key: asdict(detail) for key, detail in self.details.items()}
+
+    def population_json(self) -> dict | None:
+        return asdict(self.population) if self.population else None
 
 
 def published_contribution(key: str, value: float) -> float:
@@ -247,4 +263,5 @@ def score_reading(user_id: uuid.UUID, vitals: dict[str, float], history: list[di
         basis="personal_baseline" if any(d.weight > 0 for d in details.values()) else "published_ranges",
         details=details,
         watch=[key for key, d in details.items() if not d.confirmed],
+        population=population.check(vitals),
     )

@@ -30,7 +30,7 @@ export interface ProfilePayload {
   smartwatch_brand: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
-  consents: { health_tracking: boolean; community_surveillance: boolean };
+  consents: { health_tracking: boolean; community_surveillance: boolean; phc_worker_access?: boolean | null };
 }
 
 export const getStates = () => api.get<string[]>("/onboarding/states").then((r) => r.data);

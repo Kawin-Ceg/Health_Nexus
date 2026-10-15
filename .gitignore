@@ -2,12 +2,15 @@
 __pycache__/
 *.pyc
 .env
-ml/data/*
-!ml/data/.gitkeep
-ml/models/*.joblib
-ml/models/**/*.joblib
+model/data/*
+!model/data/.gitkeep
+# Trained models are rebuilt by `python -m healthnexus_ml.train`; only the one the app loads is kept.
+model/artifacts/*.joblib
+!model/artifacts/vitals_anomaly.joblib
 node_modules/
 frontend/dist/
 .agents/
 backend/media/
+backend/private_uploads/
 .env.bak*
+backend/SEED_ACCOUNTS.md

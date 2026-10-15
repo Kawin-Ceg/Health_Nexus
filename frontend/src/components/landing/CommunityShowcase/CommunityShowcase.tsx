@@ -1,29 +1,30 @@
 import { community } from "../../../content/landing";
-import { Reveal } from "../../animations/Reveal/Reveal";
-import { Badge } from "../../ui/Badge/Badge";
 import { Container } from "../../ui/Container/Container";
 import { Eyebrow } from "../Eyebrow/Eyebrow";
+import { BlurIn } from "../BlurIn/BlurIn";
+import { Doodle } from "../Doodle/Doodle";
 import styles from "./CommunityShowcase.module.css";
 
 export function CommunityShowcase() {
-  const { heading } = community;
+  const { exampleColumns: col } = community;
   return (
     <section id={community.id} className={styles.section} aria-labelledby={community.headingId}>
+      <Doodle piece="radial" className={styles.radial} />
+      <Doodle piece="tissue" className={styles.tissue} delay={2} />
+      <Doodle piece="flask" className={styles.flask} delay={3} />
       <Container className={styles.layout}>
         <div>
-          <Reveal>
+          <BlurIn>
             <Eyebrow>{community.eyebrow}</Eyebrow>
             <h2 id={community.headingId} className={styles.title}>
-              {heading.lead}
-              <em>{heading.emphasis}</em>
-              {heading.tail}
+              {community.heading}
             </h2>
             <p className={styles.body}>{community.body}</p>
-          </Reveal>
+          </BlurIn>
 
           <ul className={styles.points}>
-            {community.points.map(({ icon: Icon, title, body }, i) => (
-              <Reveal as="li" key={title} delay={(i + 1) as 1 | 2 | 3} className={styles.point}>
+            {community.points.map(({ icon: Icon, title, body }) => (
+              <li key={title} className={styles.point}>
                 <span className={styles.pointIcon}>
                   <Icon size={20} strokeWidth={1.75} aria-hidden />
                 </span>
@@ -31,30 +32,34 @@ export function CommunityShowcase() {
                   <h3 className={styles.pointTitle}>{title}</h3>
                   <p className={styles.pointBody}>{body}</p>
                 </div>
-              </Reveal>
+              </li>
             ))}
           </ul>
         </div>
 
-        <Reveal delay={2} className={styles.map}>
-          <div className={styles.mapTop}>
-            <p className={styles.mapCaption}>{community.mapCaption}</p>
-            <span className={styles.live} title={community.liveLabel}>
-              <Badge tone="accent">
-                <span className={styles.liveDot} aria-hidden="true" />
-                {community.live}
-              </Badge>
-            </span>
-          </div>
-          <div className={styles.field} aria-hidden="true">
-            {community.localities.map((name) => (
-              <span key={name} className={styles.area}>
-                <span className={styles.ring} />
-                <span className={styles.areaName}>{name}</span>
-              </span>
-            ))}
-          </div>
-        </Reveal>
+        <BlurIn delay={2} className={styles.example}>
+          <table className={styles.table}>
+            <caption className={styles.caption}>{community.exampleCaption}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{col.area}</th>
+                <th scope="col">{col.citizens}</th>
+                <th scope="col">{col.flagged}</th>
+                <th scope="col">{col.status}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {community.exampleRows.map((row) => (
+                <tr key={row.area}>
+                  <th scope="row">{row.area}</th>
+                  <td>{row.citizens}</td>
+                  <td>{row.flagged}</td>
+                  <td className={row.status === "Typical" ? undefined : styles.attention}>{row.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </BlurIn>
       </Container>
     </section>
   );

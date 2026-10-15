@@ -1,37 +1,36 @@
 .section {
-  padding-block: var(--hn-space-8);
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  padding-block: var(--hn-space-12);
+  border-top: 1px solid rgb(var(--hn-line));
 }
 
 .banner {
   display: grid;
-  gap: var(--hn-space-6);
-  padding: var(--hn-space-8) var(--hn-space-6);
-  border-radius: var(--hn-radius-xl);
-  background:
-    radial-gradient(70% 120% at 100% 0%, rgb(var(--hn-brand) / 0.5), transparent 65%),
-    rgb(var(--hn-panel));
-  color: rgb(var(--hn-on-panel));
+  gap: var(--hn-space-5);
 }
 
 .icon {
   display: inline-grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--hn-radius-lg);
-  background: rgb(var(--hn-on-panel) / 0.08);
-  color: rgb(var(--hn-on-panel));
+  width: 48px;
+  height: 48px;
+  color: rgb(var(--hn-brand));
 }
 
 .title {
   font-size: var(--hn-text-3xl);
 }
 
-.body {
+.points {
+  display: grid;
+  gap: var(--hn-space-3);
+  max-width: 65ch;
   margin-top: var(--hn-space-4);
-  max-width: 60ch;
-  color: rgb(var(--hn-on-panel-soft));
-  font-size: var(--hn-text-lg);
+  padding-left: 1.25rem;
+  color: rgb(var(--hn-ink-soft));
+  list-style: disc;
 }
 
 .link {
@@ -40,38 +39,22 @@
   gap: var(--hn-space-2);
   min-height: var(--hn-tap);
   margin-top: var(--hn-space-4);
-  color: rgb(var(--hn-on-panel));
+  color: rgb(var(--hn-brand));
   font-weight: 600;
   text-decoration: underline;
-  text-decoration-color: rgb(var(--hn-on-panel) / 0.35);
   text-underline-offset: 4px;
-  transition: text-decoration-color var(--hn-duration-hover) var(--hn-ease-out);
-}
-
-.link:hover {
-  text-decoration-color: rgb(var(--hn-on-panel));
-}
-
-.link svg {
-  transition: transform var(--hn-duration-hover) var(--hn-ease-out);
-}
-
-.link:hover svg {
-  transform: translateX(2px);
-}
-
-.link:focus-visible {
-  outline-color: rgb(var(--hn-on-panel));
 }
 
 @media (min-width: 768px) {
-  .section {
-    padding-block: var(--hn-space-12);
-  }
-
   .banner {
     grid-template-columns: auto 1fr;
     gap: var(--hn-space-8);
-    padding: var(--hn-space-12);
   }
+}
+
+.beads {
+  top: 30px;
+  right: 4%;
+  width: 140px;
+  --doodle-opacity: 0.85;
 }

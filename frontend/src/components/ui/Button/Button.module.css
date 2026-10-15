@@ -5,9 +5,10 @@
   gap: var(--hn-space-2);
   min-height: var(--hn-tap);
   padding: 0 var(--hn-space-5);
-  border: 1px solid transparent;
-  border-radius: var(--hn-radius-md);
-  font-weight: 600;
+  border: var(--hn-button-border, 1px) solid transparent;
+  border-radius: var(--hn-button-radius, var(--hn-radius-md));
+  font-family: var(--hn-button-font, inherit);
+  font-weight: var(--hn-button-weight, 600);
   font-size: var(--hn-text-sm);
   line-height: 1;
   white-space: nowrap;
@@ -15,7 +16,12 @@
     background-color var(--hn-duration-hover) var(--hn-ease-out),
     border-color var(--hn-duration-hover) var(--hn-ease-out),
     color var(--hn-duration-hover) var(--hn-ease-out),
+    box-shadow 300ms var(--hn-ease-out),
     transform var(--hn-duration-hover) var(--hn-ease-out);
+}
+
+.button:hover {
+  box-shadow: var(--hn-button-glow, none);
 }
 
 .button:active {
@@ -34,7 +40,7 @@
 .lg {
   min-height: 52px;
   padding: 0 var(--hn-space-6);
-  font-size: var(--hn-text-base);
+  font-size: var(--hn-button-lg-size, var(--hn-text-base));
 }
 
 .primary {
@@ -48,7 +54,7 @@
 
 .secondary {
   background: rgb(var(--hn-surface));
-  border-color: rgb(var(--hn-line));
+  border-color: rgb(var(--hn-button-outline, var(--hn-line)));
   color: rgb(var(--hn-ink));
 }
 

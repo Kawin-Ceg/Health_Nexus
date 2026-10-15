@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { fmtDate, fmtDateTime } from "../lib/format";
 import { oneOf, useQueryState } from "../lib/params";
 import { paths } from "../lib/routes";
+import { LANGUAGES, setLanguage, useT, type Lang } from "../i18n";
 import { setTheme } from "../lib/theme";
 import { useResource } from "../lib/useResource";
 import { errorMessage } from "../services/api";
@@ -102,7 +103,17 @@ function AccountTab() {
 
 // --- Preferences ------------------------------------------------------------
 
+const MIN_SEVERITY: { value: account.FlagSeverity; label: string }[] = [
+  { value: "low", label: "Every flag" },
+  { value: "moderate", label: "Moderate and above" },
+  { value: "high", label: "High and above" },
+  { value: "critical", label: "Critical only" },
+];
+
 function PreferencesTab() {
+  const { user } = useAuth();
+  const citizen = user?.role === "user";
+  const t = useT();
   const prefs = useResource(() => account.getPreferences(), "prefs");
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -115,6 +126,7 @@ function PreferencesTab() {
       const saved = await account.updatePreferences(patch);
       setLocal(saved);
       setTheme(saved.theme);
+      if (citizen) setLanguage(saved.language);
       setMsg("Saved.");
     } catch (e) {
       setErr(errorMessage(e));
@@ -123,11 +135,6 @@ function PreferencesTab() {
 
   if (prefs.error) return <ErrorNote message={prefs.error} onRetry={prefs.reload} />;
   if (!local) return <Loading />;
-  const channels = [
-    { key: "alerts", label: "Health alerts" },
-    { key: "surveillance", label: "Community health notices" },
-    { key: "announcements", label: "Announcements" },
-  ] as const;
 
   return (
     <div className="flex max-w-xl flex-col gap-6">
@@ -135,29 +142,67 @@ function PreferencesTab() {
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Theme">
           {(["system", "light", "dark"] as const).map((t) => (
             <button key={t} type="button" role="radio" aria-checked={local.theme === t} onClick={() => void save({ theme: t })}
-              className={cx("min-h-11 rounded-xl border px-4 text-sm capitalize", local.theme === t ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
+              className={cx("min-h-11 rounded-2xl border px-4 text-sm capitalize", local.theme === t ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
               {t === "system" ? "Match device" : t}
             </button>
           ))}
         </div>
       </Card>
-      <Card title="Notifications">
-        <table className="w-full text-sm">
-          <thead className="text-xs text-ink-soft"><tr><th className="py-1 text-left font-medium">About</th><th className="font-medium">In app</th><th className="font-medium">Email</th><th className="font-medium">SMS</th></tr></thead>
-          <tbody>
-            {channels.map((c) => (
-              <tr key={c.key}>
-                <td className="py-2 text-ink">{c.label}</td>
-                {(["in_app", "email", "sms"] as const).map((ch) => (
-                  <td key={ch} className="text-center">
-                    <input type="checkbox" aria-label={`${c.label} by ${ch.replace("_", " ")}`} checked={local.notifications[c.key][ch]}
-                      onChange={(e) => void save({ notifications: { [c.key]: { [ch]: e.target.checked } } })} />
-                  </td>
-                ))}
-              </tr>
+      {citizen && (
+        <Card title={t("settings.language")}>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("settings.language")}>
+            {LANGUAGES.map((l) => (
+              <button key={l.value} type="button" role="radio" aria-checked={local.language === l.value} onClick={() => void save({ language: l.value as Lang })}
+                className={cx("min-h-11 rounded-2xl border px-4 text-sm", local.language === l.value ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
+                {l.label}
+              </button>
             ))}
-          </tbody>
-        </table>
+          </div>
+          <p className="mt-3 text-xs text-ink-muted">{t("settings.languageHint")}</p>
+        </Card>
+      )}
+      <Card title="Email">
+        <p className="text-sm text-ink-soft">
+          Everything always shows in the app, under {citizen ? "Alerts & visits" : "Notifications"}. Choose what is also
+          emailed to {user?.email}. Emails never include your readings{citizen ? "" : " or citizens' names"}.
+        </p>
+        <div className="mt-2 flex flex-col">
+          <Toggle
+            checked={local.notifications.alerts.email}
+            onChange={(v) => void save({ notifications: { alerts: { email: v } } })}
+            label="Flagged readings"
+            hint={citizen ? "When a reading you log is flagged." : "When a reading from a citizen at your centre is flagged."}
+          />
+          {local.notifications.alerts.email && (
+            <label className="mb-2 ml-7 flex flex-wrap items-center gap-2 text-sm text-ink">
+              Email me about
+              <select
+                value={local.alert_email_min_severity}
+                onChange={(e) => void save({ alert_email_min_severity: e.target.value as account.FlagSeverity })}
+                className={cx(inputCls, "w-auto!")}
+              >
+                {MIN_SEVERITY.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          <Toggle
+            checked={local.notifications.visits.email}
+            onChange={(v) => void save({ notifications: { visits: { email: v } } })}
+            label="Visits"
+            hint="When a visit is booked, moved or cancelled, or is waiting for an outcome."
+          />
+          {citizen && (
+            <Toggle
+              checked={local.reading_reminders}
+              onChange={(v) => void save({ reading_reminders: v })}
+              label="Reading reminders"
+              hint="If you have not logged a reading for 3 days, one reminder in the app and by email. Not again until you log one."
+            />
+          )}
+        </div>
+        <p className="mt-3 text-xs text-ink-muted">Text messages (SMS) are not available.</p>
       </Card>
       {err && <p className="text-sm text-danger">{err}</p>}
       <Saved message={msg} />
@@ -169,11 +214,21 @@ function PreferencesTab() {
 
 const CONSENT_TEXT: Record<ConsentType, { label: string; hint: string }> = {
   health_tracking: { label: "Health tracking", hint: "Store and score the readings you log. Turning this off stops new readings being saved." },
-  phc_worker_access: { label: "Health worker access", hint: "Health workers at your centre can see your readings to follow up." },
-  community_surveillance: { label: "Community health monitoring", hint: "Your readings count, without your name, towards area-level outbreak signals." },
-  research_analytics: { label: "Research", hint: "Anonymised data may be used for public-health research." },
-  marketing_updates: { label: "Product updates", hint: "Occasional news about HealthNexus." },
+  phc_worker_access: {
+    label: "Health worker access",
+    hint: "Health workers at your centre can see your readings, profile and contact details to follow up and book visits. Turning this off hides you from them and cancels any booked visits.",
+  },
+  community_surveillance: {
+    label: "Community health monitoring",
+    hint: "Your readings count, without your name, in the area-level figures your centre uses to spot outbreaks. An area with fewer than 3 people is never shown.",
+  },
+  research_analytics: {
+    label: "Research",
+    hint: "A de-identified copy of your readings (no name, contact details, exact age or area) may be shared for public-health research.",
+  },
 };
+
+const consentLabel = (type: string) => CONSENT_TEXT[type as ConsentType]?.label ?? "Product updates (no longer asked)";
 
 function PrivacyTab() {
   const { user, refreshUser } = useAuth();
@@ -220,7 +275,7 @@ function PrivacyTab() {
           <ul className="flex flex-col gap-1 text-sm">
             {history.map((h) => (
               <li key={h.id} className="flex flex-wrap justify-between gap-2">
-                <span className="text-ink">{CONSENT_TEXT[h.consent_type].label}: {h.granted ? "allowed" : "not allowed"}</span>
+                <span className="text-ink">{consentLabel(h.consent_type)}: {h.granted ? "allowed" : "not allowed"}</span>
                 <span className="text-ink-soft">{fmtDateTime(h.created_at)} · {h.source}</span>
               </li>
             ))}
@@ -293,7 +348,7 @@ function SupportTab() {
                   <span className="capitalize text-ink-soft">{c.status.replace("_", " ")} · {fmtDate(c.created_at)}</span>
                 </div>
                 <p className="text-ink">{c.description}</p>
-                {c.admin_note && <p className="mt-1 rounded-lg bg-paper-raised p-2 text-ink">Reply: {c.admin_note}</p>}
+                {c.admin_note && <p className="mt-1 rounded-xl bg-paper-raised p-2 text-ink">Reply: {c.admin_note}</p>}
               </li>
             ))}
           </ul>
@@ -349,7 +404,7 @@ function CentreTab() {
           <p className="text-sm text-ink-soft">Not linked to a health centre.</p>
         )}
         {(!c.current || c.current.workers_assigned === 0) && (
-          <p role="alert" className="mt-3 flex gap-2 rounded-xl bg-danger-soft p-3 text-sm text-danger">
+          <p role="alert" className="mt-3 flex gap-2 rounded-2xl bg-danger-soft p-3 text-sm text-danger">
             <ShieldAlert size={18} className="shrink-0" aria-hidden="true" />
             <span><strong>Nobody is reviewing your readings.</strong> No health worker is assigned to {c.current ? "this centre" : "you"}. Choose a staffed centre below, and see a doctor if you feel unwell.</span>
           </p>
