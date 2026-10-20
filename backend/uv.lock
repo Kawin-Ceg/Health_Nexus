@@ -417,6 +417,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "jupyterlab", specifier = ">=4" },
+    { name = "matplotlib", specifier = ">=3.9" },
     { name = "pytest", specifier = ">=8" },
 ]
 
