@@ -15,6 +15,7 @@ export interface VerificationDocument {
   tamper_score: number | null;
   uploaded_at: string;
   checked_at: string | null;
+  opened: boolean;
 }
 
 export const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [

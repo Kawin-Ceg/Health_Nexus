@@ -16,6 +16,8 @@ from app.models.enums import UserRole
 from app.services import sessions
 from app.services.phc_registry import normalise_facility_name
 
+from .admin import area_of, in_area
+
 router = APIRouter(prefix="/admin/registry", tags=["admin"], dependencies=[Depends(require_admin)])
 
 NOT_FOUND = "Health centre not found."
@@ -123,9 +125,10 @@ async def list_centres(
     state: Literal["active", "inactive", "all"] = "all",
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_session),
 ) -> CentresOut:
-    filters = []
+    filters = [in_area(ValidPhcFacility.district, area_of(admin))]
     if q:
         like = f"%{q.strip()}%"
         filters.append(or_(
@@ -149,7 +152,11 @@ async def list_centres(
         .offset(offset)
     )
     total = await db.scalar(select(func.count()).select_from(ValidPhcFacility).where(*filters)) or 0
-    districts = (await db.scalars(select(ValidPhcFacility.district).distinct().order_by(ValidPhcFacility.district))).all()
+    districts = (
+        await db.scalars(
+            select(ValidPhcFacility.district).where(in_area(ValidPhcFacility.district, area_of(admin))).distinct().order_by(ValidPhcFacility.district)
+        )
+    ).all()
     return CentresOut(items=[_centre(*r) for r in rows.all()], total=total, districts=list(districts))
 
 

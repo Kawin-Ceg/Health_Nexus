@@ -111,7 +111,7 @@ def visit_email(session: AsyncSession, person: User, subject: str, line: str, pa
 
 def visit_booked(session: AsyncSession, citizen: User, worker: User, when_utc) -> None:
     when = format_local(when_utc)
-    visit_email(session, citizen, "A health centre visit is booked", f"{worker.name} from your health centre will visit you on {when}.", "/app/alerts")
+    visit_email(session, citizen, "A health centre visit is booked", f"{worker.name} from your health centre will visit you on {when}.", "/app/visits")
     visit_email(session, worker, "Visit booked", f"You booked a visit for {citizen_ref(citizen.id)} on {when}.", "/phc/schedule")
 
 
@@ -129,7 +129,7 @@ def visit_changed(session: AsyncSession, citizen: User, worker: User, when_utc, 
             f"The visit for {citizen_ref(citizen.id)} was moved to {when}.",
             "A health centre visit was moved",
         )
-    visit_email(session, citizen, subject, to_citizen, "/app/alerts")
+    visit_email(session, citizen, subject, to_citizen, "/app/visits")
     visit_email(session, worker, subject, to_worker, "/phc/schedule")
 
 
@@ -143,7 +143,7 @@ async def visits_missed(session: AsyncSession, rows: list[tuple[uuid.UUID, uuid.
             visit_email(
                 session, citizen, "Your health centre visit has no outcome yet",
                 f"Your visit on {when} has no outcome recorded. If nobody came, your health centre will rebook it.",
-                "/app/alerts",
+                "/app/visits",
             )
         if worker := people.get(worker_id):
             visit_email(

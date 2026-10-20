@@ -46,7 +46,6 @@ class MessageOut(BaseModel):
     created_at: datetime
     was_refused: bool
     refusal_reason: ChatRefusalReason | None
-    generated_sql: str | None
     retrieval: dict[str, Any] | None
     latency_ms: int | None
 

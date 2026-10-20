@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, cx, inputCls } from "../../components/app/ui";
+import { Ban } from "lucide-react";
+import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SearchInput, cx, inputCls } from "../../components/app/ui";
 import { fmtAgo } from "../../lib/format";
 import { useDebounced } from "../../lib/useDebounced";
 import { useResource } from "../../lib/useResource";
@@ -13,32 +14,43 @@ const ROLE_LABEL: Record<Role, string> = { user: "Citizen", pending_phc: "Awaiti
 
 export function Accounts() {
   const [role, setRole] = useState<Role | "">("");
-  const [status, setStatus] = useState<AccountStatus | "">("");
+  const [status, setStatus] = useState<AccountStatus | "">(
+    () => (new URLSearchParams(window.location.search).get("status") as AccountStatus | null) ?? "",
+  );
   const [search, setSearch] = useState("");
   const q = useDebounced(search);
   const [offset, setOffset] = useState(0);
+  const [sort, setSort] = useState("newest");
 
-  const query = { role, status, q, limit: PAGE, offset };
+  const query = { role, status, q, sort, limit: PAGE, offset };
   const res = useResource((s) => getAccounts(query, s), JSON.stringify(query));
   const d = res.data;
 
   return (
     <>
       <PageHeader title="Accounts" lead="Every account. Deactivating one signs it out everywhere at once; administrators cannot be changed here." />
-      <div className="mb-4 flex flex-wrap gap-3">
-        <input type="search" value={search} onChange={(e) => { setSearch(e.target.value); setOffset(0); }} placeholder="Search name or email" aria-label="Search" className={cx(inputCls, "max-w-xs")} />
-        <select aria-label="Role" value={role} onChange={(e) => { setRole(e.target.value as Role | ""); setOffset(0); }} className={cx(inputCls, "w-auto")}>
+      <div className="mb-4 grid gap-3 md:grid-cols-[3fr_2fr]">
+        <SearchInput value={search} onChange={(e) => { setSearch(e.target.value); setOffset(0); }} placeholder="Search name or email" aria-label="Search accounts" />
+        <div className="grid grid-cols-3 gap-3">
+        <select aria-label="Role" value={role} onChange={(e) => { setRole(e.target.value as Role | ""); setOffset(0); }} className={cx(inputCls, "px-3")}>
           <option value="">All roles</option>
           {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
             <option key={r} value={r}>{ROLE_LABEL[r]}</option>
           ))}
         </select>
-        <select aria-label="Status" value={status} onChange={(e) => { setStatus(e.target.value as AccountStatus | ""); setOffset(0); }} className={cx(inputCls, "w-auto")}>
+        <select aria-label="Status" value={status} onChange={(e) => { setStatus(e.target.value as AccountStatus | ""); setOffset(0); }} className={cx(inputCls, "px-3")}>
           <option value="">Any status</option>
           <option value="active">Active</option>
           <option value="inactive">Deactivated</option>
           <option value="unverified">Email not confirmed</option>
         </select>
+        <select aria-label="Sort" value={sort} onChange={(e) => { setSort(e.target.value); setOffset(0); }} className={cx(inputCls, "px-3")}>
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name">Name A–Z</option>
+          <option value="approved">Recently approved</option>
+        </select>
+        </div>
       </div>
       {res.error && <ErrorNote message={res.error} onRetry={res.reload} />}
       {!d ? (
@@ -50,6 +62,7 @@ export function Accounts() {
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
               <tr>
+                <th className="w-12 px-4 py-3 font-medium">#</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">Health centre</th>
@@ -59,8 +72,8 @@ export function Accounts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {d.items.map((a) => (
-                <AccountRow key={a.id} account={a} onChanged={res.reload} />
+              {d.items.map((a, i) => (
+                <AccountRow key={a.id} n={offset + i + 1} account={a} onChanged={res.reload} />
               ))}
             </tbody>
           </table>
@@ -79,7 +92,7 @@ export function Accounts() {
   );
 }
 
-function AccountRow({ account: a, onChanged }: { account: Account; onChanged: () => void }) {
+function AccountRow({ n, account: a, onChanged }: { n: number; account: Account; onChanged: () => void }) {
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -103,7 +116,8 @@ function AccountRow({ account: a, onChanged }: { account: Account; onChanged: ()
   };
 
   return (
-    <tr className="align-top">
+    <tr className="align-top hover:bg-paper">
+      <td className="px-4 py-3 tabular-nums text-ink-muted">{n}</td>
       <td className="px-4 py-3">
         <span className="block font-medium text-ink">{a.name}</span>
         <span className="block text-xs text-ink-soft">{a.email}</span>
@@ -112,8 +126,20 @@ function AccountRow({ account: a, onChanged }: { account: Account; onChanged: ()
       <td className="px-4 py-3 text-ink-soft">{a.facility ?? (a.role === "phc_worker" ? <span className="text-danger">Not linked</span> : "—")}</td>
       <td className="px-4 py-3 text-ink-soft">{fmtAgo(a.created_at)}</td>
       <td className="px-4 py-3">
-        {a.is_active ? <span className="text-success">Active</span> : <span className="text-danger">Deactivated</span>}
-        {!a.is_verified && <span className="block text-xs text-warn">Email not confirmed</span>}
+        {a.is_active ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+            Active
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-800">
+            Deactivated
+          </span>
+        )}
+        {!a.is_verified && (
+          <span className="mt-1 flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+            Email not confirmed
+          </span>
+        )}
       </td>
       <td className="px-4 py-3 text-right">
         {a.role === "admin" ? null : a.is_active ? (
@@ -126,7 +152,15 @@ function AccountRow({ account: a, onChanged }: { account: Account; onChanged: ()
               </div>
             </div>
           ) : (
-            <Btn tone="ghost" onClick={() => setAsking(true)}>Deactivate</Btn>
+            <button
+              type="button"
+              onClick={() => setAsking(true)}
+              title="Deactivate"
+              aria-label={`Deactivate ${a.name}`}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700"
+            >
+              <Ban size={16} aria-hidden="true" /> Deactivate
+            </button>
           )
         ) : (
           <Btn busy={busy} onClick={() => run(() => reactivateAccount(a.id))}>Reactivate</Btn>

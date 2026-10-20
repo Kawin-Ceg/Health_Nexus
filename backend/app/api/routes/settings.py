@@ -344,6 +344,7 @@ async def deactivate(
 class ConcernCreate(BaseModel):
     category: ConcernCategory
     description: Annotated[str, StringConstraints(strip_whitespace=True, min_length=10, max_length=2000)]
+    subject_id: uuid.UUID | None = None
 
 
 class ConcernOut(BaseModel):
@@ -357,13 +358,17 @@ class ConcernOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     resolved_at: datetime | None
+    evidence: dict[str, Any] | None = None
 
 
 @router.post("/concerns", response_model=ConcernOut, status_code=status.HTTP_201_CREATED)
 async def raise_concern(
     data: ConcernCreate, user: User = Depends(require_any_verified), db: AsyncSession = Depends(get_session)
 ) -> Concern:
-    concern = Concern(user_id=user.id, category=data.category, description=data.description)
+    from app.services.complaints import prepare
+
+    subject, evidence = await prepare(db, user, data.category, data.subject_id)
+    concern = Concern(user_id=user.id, category=data.category, description=data.description, subject_id=subject, evidence=evidence)
     db.add(concern)
     await db.commit()
     await db.refresh(concern)

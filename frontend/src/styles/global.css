@@ -21,6 +21,8 @@
   --color-brand-strong: rgb(var(--hn-brand-strong));
   --color-brand-soft: rgb(var(--hn-brand-soft));
   --color-lime: rgb(var(--hn-lime));
+  --color-matcha: rgb(var(--hn-matcha));
+  --color-forest: rgb(var(--hn-forest));
   --color-olive: rgb(var(--hn-olive));
   --color-glow: rgb(var(--hn-glow));
   --color-on-brand: rgb(var(--hn-on-brand));

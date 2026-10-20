@@ -29,13 +29,22 @@ export function DocumentStatusChip({ status }: { status: DocumentStatus }) {
   return <span className={cx("rounded-full px-2 py-0.5 text-xs font-semibold", STATUS[status].cls)}>{STATUS[status].label}</span>;
 }
 
-function Item({ doc, children, showNotes }: { doc: VerificationDocument; children?: ReactNode; showNotes: boolean }) {
+function ReviewChip({ doc }: { doc: VerificationDocument }) {
+  if (doc.status === "accepted" || doc.status === "rejected") return <DocumentStatusChip status={doc.status} />;
+  return doc.opened ? (
+    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">Opened</span>
+  ) : (
+    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">Not opened</span>
+  );
+}
+
+function Item({ doc, children, showNotes, chip }: { doc: VerificationDocument; children?: ReactNode; showNotes: boolean; chip?: ReactNode }) {
   return (
     <li className="rounded-2xl border border-line bg-surface p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <FileText size={16} className="shrink-0 text-ink-muted" aria-hidden="true" />
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-50 text-red-700"><FileText size={18} aria-hidden="true" /></span>
         <span className="font-medium text-ink">{typeLabel(doc.document_type)}</span>
-        <DocumentStatusChip status={doc.status} />
+        {chip ?? <DocumentStatusChip status={doc.status} />}
         <span className="ml-auto text-xs text-ink-muted">
           {doc.original_filename ?? "file"} · {Math.ceil(doc.size_bytes / 1024)} KB · {fmtDateTime(doc.uploaded_at)}
         </span>
@@ -146,20 +155,34 @@ function ReviewItem({ applicationId, doc, onDecided }: { applicationId: string; 
     }
   };
 
+  const [opened, setOpened] = useState(doc.opened);
+  const view = () =>
+    void openDocument(applicationId, doc.id)
+      .then(() => setOpened(true))
+      .catch((e) => notify({ tone: "alert", title: "Could not open", body: errorMessage(e) }));
+
   return (
-    <Item doc={doc} showNotes>
+    <Item doc={doc} showNotes chip={<ReviewChip doc={{ ...doc, opened }} />}>
       {doc.extracted_registration_no && <p className="mt-1 text-xs text-success">Employee ID found in the document: {doc.extracted_registration_no}</p>}
       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
-        <Btn tone="ghost" onClick={() => void openDocument(applicationId, doc.id).catch((e) => notify({ tone: "alert", title: "Could not open", body: errorMessage(e) }))}>
-          View
-        </Btn>
-        {doc.status !== "accepted" && <Btn busy={busy && !rejecting} onClick={() => void decide(true)}>Accept</Btn>}
-        {doc.status !== "rejected" && !rejecting && <Btn tone="ghost" onClick={() => setRejecting(true)}>Reject</Btn>}
+        <Btn tone="ghost" onClick={view}>View</Btn>
+        {doc.status !== "accepted" && (
+          <button type="button" disabled={busy} onClick={() => void decide(true)} className="inline-flex min-h-10 items-center rounded-full bg-green-200 px-4 text-sm font-semibold text-green-950 hover:bg-green-300 disabled:opacity-50">
+            Accept
+          </button>
+        )}
+        {doc.status !== "rejected" && !rejecting && (
+          <button type="button" onClick={() => setRejecting(true)} className="inline-flex min-h-10 items-center rounded-full border border-red-300 bg-red-50 px-4 text-sm font-semibold text-red-800 hover:bg-red-100">
+            Reject
+          </button>
+        )}
       </div>
       {rejecting && (
         <div className="mt-2 flex flex-wrap gap-2">
           <input className={cx(inputCls, "flex-1")} autoFocus placeholder="Why?" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
-          <Btn tone="danger" busy={busy} disabled={reason.trim().length < 3} onClick={() => void decide(false)}>Reject</Btn>
+          <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => void decide(false)} className="inline-flex min-h-10 items-center rounded-full bg-red-200 px-4 text-sm font-semibold text-red-950 hover:bg-red-300 disabled:opacity-50">
+            Confirm reject
+          </button>
           <Btn tone="ghost" onClick={() => setRejecting(false)}>Cancel</Btn>
         </div>
       )}

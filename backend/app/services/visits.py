@@ -40,14 +40,17 @@ def notify_booked(session: AsyncSession, visit: ScheduledVisit, citizen: User, w
 def notify_changed(session: AsyncSession, visit: ScheduledVisit, citizen: User, worker: User, change: str) -> None:
     """change: 'cancelled' or 'moved'."""
     when = format_local(visit.scheduled_for)
-    if change == "cancelled":
-        to_citizen = f"Your health centre visit on {when} has been cancelled."
+    if change == "cancelled_by_citizen":
+        to_citizen = f"You cancelled your visit on {when}."
+        to_worker = f"{citizen.name} cancelled the visit on {when}: {visit.cancel_reason}"
+    elif change == "cancelled":
+        to_citizen = f"Your health centre visit on {when} has been cancelled" + (f": {visit.cancel_reason}" if visit.cancel_reason else ".")
         to_worker = f"Visit for {citizen.name} on {when} cancelled."
     else:
         to_citizen = f"Your health centre visit has been moved to {when}."
         to_worker = f"Visit for {citizen.name} moved to {when}."
     session.add_all([_alert(citizen.id, to_citizen, AlertSeverity.medium), _alert(worker.id, to_worker)])
-    notify.visit_changed(session, citizen, worker, visit.scheduled_for, change)
+    notify.visit_changed(session, citizen, worker, visit.scheduled_for, "cancelled" if change.startswith("cancelled") else change)
 
 
 async def notify_missed(session: AsyncSession, *, worker_id: uuid.UUID | None = None, citizen_id: uuid.UUID | None = None) -> int:

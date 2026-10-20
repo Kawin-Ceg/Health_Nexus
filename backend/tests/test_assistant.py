@@ -55,7 +55,7 @@ async def test_citizen_answers_come_from_their_own_readings(client, world):
     assert not answer["was_refused"]
     assert "167/103" in answer["content"] and "above normal" in answer["content"]
     assert answer["retrieval"]["tool"] == "my_latest_reading"
-    assert ":me" in answer["generated_sql"]
+    assert "generated_sql" not in answer
     assert out["session"]["title"].startswith("Is my latest blood pressure")
 
     flags = await ask(client, ph, "Were any of my readings flagged this month?")
@@ -143,12 +143,12 @@ async def test_the_model_cannot_widen_its_scope(client, world, monkeypatch):
     picks = iter([("flagged_citizens", {}), ("my_vital_stats", {"days": 99999, "me": "someone-else"})])
 
     async def choose(role, question, tools, history, usage):
-        return next(picks)
+        return [next(picks)]
 
     async def write(*args, **kwargs):
         raise RuntimeError("quota")
 
-    monkeypatch.setattr(llm, "choose_tool", choose)
+    monkeypatch.setattr(llm, "choose_tools", choose)
     monkeypatch.setattr(llm, "write_answer", write)
     _, ph = world["priya"]
     await submit(client, ph, NORMAL)

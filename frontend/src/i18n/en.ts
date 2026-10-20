@@ -2,10 +2,12 @@ export const en = {
   "lang.label": "Language",
 
   "nav.dashboard": "Dashboard",
+  "nav.watch": "Smartwatch",
   "nav.log": "Log vitals",
   "nav.history": "History",
   "nav.alerts": "Alerts & visits",
-  "nav.assistant": "Assistant",
+  "nav.visits": "Visits",
+  "nav.assistant": "Nira",
   "nav.profile": "Profile",
   "nav.settings": "Settings",
   "shell.sounds": "Sounds",
@@ -111,7 +113,7 @@ export const en = {
   "history.reviewed": "Reviewed",
   "history.awaiting": "Awaiting review",
 
-  "alerts.title": "Alerts & visits",
+  "alerts.title": "Alerts",
   "alerts.lead": "Visits your health worker has booked, and every alert about your readings, newest first.",
   "alerts.attention": "Needs your attention",
   "alerts.upcoming": "Your upcoming visits",

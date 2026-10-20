@@ -77,6 +77,7 @@ class AlertType(str, enum.Enum):
 
 class AdvisoryScope(str, enum.Enum):
     centre = "centre"
+    area = "area"
     district = "district"
     state = "state"
 
@@ -114,6 +115,12 @@ class ConcernCategory(str, enum.Enum):
     harassment = "harassment"
     access_request = "access_request"
     other = "other"
+    device_issue = "device_issue"
+    app_problem = "app_problem"
+    worker_conduct = "worker_conduct"
+    worker_no_show = "worker_no_show"
+    citizen_missed_visits = "citizen_missed_visits"
+    citizen_conduct = "citizen_conduct"
 
 
 class ConcernStatus(str, enum.Enum):

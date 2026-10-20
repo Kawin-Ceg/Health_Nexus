@@ -11,7 +11,7 @@ export function Notifications() {
   return (
     <>
       <PageHeader title="Notifications" lead="Visits you booked, changes to them, and visits waiting for an outcome." />
-      <AlertList alerts={data.alerts} advisories={data.advisories} />
+      <AlertList alerts={data.alerts} advisories={data.advisories.filter((a) => a.active)} />
     </>
   );
 }

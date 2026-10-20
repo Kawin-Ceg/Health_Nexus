@@ -30,3 +30,12 @@ class ScheduledVisit(UUIDPk, CreatedAt, Base):
     location: Mapped[str | None] = mapped_column(String(160))
     # Set when the one-time "missed" alert goes out, so it is sent exactly once.
     missed_notified_at: Mapped[datetime | None]
+    # The citizen's explanation for a missed visit; an explained miss does not count toward a complaint.
+    missed_reason: Mapped[str | None] = mapped_column(Text)
+    missed_reason_at: Mapped[datetime | None]
+    visit_type: Mapped[str] = mapped_column(String(24), default="home", server_default="home")
+    duration_minutes: Mapped[int] = mapped_column(default=30, server_default="30")
+    notes: Mapped[str | None] = mapped_column(Text)  # for the worker only
+    cancelled_by: Mapped[str | None] = mapped_column(String(16))  # "citizen" or "worker"
+    cancel_reason: Mapped[str | None] = mapped_column(Text)
+    cancelled_at: Mapped[datetime | None]

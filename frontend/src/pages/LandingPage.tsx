@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { chartFallbackLabel, insights } from "../content/landing";
 import {
   CommunityInsights,
-  CommunityShowcase,
   FeatureShowcase,
   FinalCta,
   Footer,
@@ -34,7 +33,6 @@ export function LandingPage() {
         <Hero />
         <Roles />
         <FeatureShowcase />
-        <CommunityShowcase />
         <LazySection placeholder={<ChartSectionFallback />}>
           <Suspense fallback={<ChartSectionFallback />}>
             <CommunityInsights />

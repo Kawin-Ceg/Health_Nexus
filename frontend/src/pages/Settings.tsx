@@ -289,17 +289,29 @@ function PrivacyTab() {
 
 // --- Support ----------------------------------------------------------------
 
-const CATEGORIES: { value: account.Concern["category"]; label: string }[] = [
-  { value: "incorrect_diagnosis_flag", label: "A flag on my reading looks wrong" },
-  { value: "data_misuse", label: "Misuse of my data" },
-  { value: "access_request", label: "Request access to my data" },
-  { value: "harassment", label: "Harassment" },
-  { value: "other", label: "Something else" },
-];
+const CATEGORIES: Record<string, { value: account.Concern["category"]; label: string }[]> = {
+  user: [
+    { value: "device_issue", label: "My smartwatch is not syncing" },
+    { value: "worker_no_show", label: "A health worker did not come for my visit" },
+    { value: "worker_conduct", label: "A health worker's behaviour" },
+    { value: "incorrect_diagnosis_flag", label: "A flag on my reading looks wrong" },
+    { value: "data_misuse", label: "Misuse of my data" },
+    { value: "access_request", label: "Request access to my data" },
+    { value: "app_problem", label: "The app is not working properly" },
+    { value: "other", label: "Something else" },
+  ],
+  phc_worker: [
+    { value: "app_problem", label: "The app is not working properly" },
+    { value: "access_request", label: "Access to records or my centre" },
+    { value: "other", label: "Something else" },
+  ],
+};
 
 function SupportTab() {
+  const { user } = useAuth();
+  const options = CATEGORIES[user?.role === "phc_worker" ? "phc_worker" : "user"];
   const list = useResource(() => account.listConcerns(), "concerns");
-  const [category, setCategory] = useState<account.Concern["category"]>("other");
+  const [category, setCategory] = useState<account.Concern["category"]>(options[0].value);
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -323,13 +335,18 @@ function SupportTab() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <Card title="Raise a concern">
+      <Card title="Raise a complaint">
         <form onSubmit={submit} className="flex flex-col gap-3">
           <Labelled label="About">
             <select value={category} onChange={(e) => setCategory(e.target.value as account.Concern["category"])} className={inputCls}>
-              {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              {options.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </Labelled>
+          {user?.role === "phc_worker" && (
+            <p className="text-sm text-ink-soft">To complain about a citizen (for example repeated missed visits), open their record and use "Report a problem".</p>
+          )}
+          {category === "worker_no_show" && <p className="text-sm text-ink-soft">Visits whose time passed with no outcome recorded are attached for the admin automatically.</p>}
+          {category === "device_issue" && <p className="text-sm text-ink-soft">Your last smartwatch sync and recent readings are attached automatically.</p>}
           <Labelled label="What happened" hint={`${description.trim().length}/2000, at least 10 characters`}>
             <textarea value={description} maxLength={2000} rows={4} onChange={(e) => setDescription(e.target.value)} className={cx(inputCls, "py-2")} />
           </Labelled>

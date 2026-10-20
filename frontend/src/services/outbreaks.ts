@@ -21,7 +21,16 @@ export interface Cluster {
   acknowledged_by: string | null;
   advisory_id: string | null;
   yours: boolean;
+  current: boolean;
+  seen_at: string;
+  reasons: string[];
+  feedback: Verdict | null;
+  feedback_note: string | null;
+  feedback_at: string | null;
+  feedback_by: string | null;
 }
+
+export type Verdict = "confirmed" | "false_alarm" | "unsure";
 
 export interface Clusters {
   items: Cluster[];
@@ -31,6 +40,8 @@ export interface Clusters {
   min_people: number;
 }
 
-export const getClusters = (signal?: AbortSignal) => api.get<Clusters>("/clusters", { signal }).then((r) => r.data);
+export const getClusters = (days: number, signal?: AbortSignal) => api.get<Clusters>("/clusters", { params: { days }, signal }).then((r) => r.data);
+export const reviewCluster = (id: string, verdict: Verdict, note: string) =>
+  api.post<Cluster>(`/clusters/${id}/feedback`, { verdict, note }).then((r) => r.data);
 export const runClustering = () => api.post<Clusters>("/clusters/run").then((r) => r.data);
 export const acknowledgeCluster = (id: string) => api.post<Cluster>(`/clusters/${id}/acknowledge`).then((r) => r.data);

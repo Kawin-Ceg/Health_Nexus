@@ -36,6 +36,7 @@ class DocumentOut(BaseModel):
     tamper_score: int | None
     uploaded_at: datetime
     checked_at: datetime | None
+    opened: bool = False
 
 
 class Decision(BaseModel):
@@ -43,8 +44,9 @@ class Decision(BaseModel):
     reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
 
 
-def document_out(d: PhcVerificationDocument) -> DocumentOut:
+def document_out(d: PhcVerificationDocument, opened: bool = False) -> DocumentOut:
     return DocumentOut(
+        opened=opened,
         id=d.id, document_type=d.document_type, original_filename=d.original_filename, content_type=d.content_type,
         size_bytes=d.size_bytes, status=d.status, check_notes=d.check_notes,
         extracted_registration_no=d.extracted_registration_no, tamper_score=d.tamper_score,
@@ -58,7 +60,15 @@ async def documents_of(db: AsyncSession, application_id: uuid.UUID) -> list[Docu
         .where(PhcVerificationDocument.application_id == application_id, PhcVerificationDocument.deleted_at.is_(None))
         .order_by(PhcVerificationDocument.uploaded_at)
     )
-    return [document_out(d) for d in rows]
+    docs = rows.all()
+    opened = set(
+        await db.scalars(
+            select(AuditLog.entity_id).where(
+                AuditLog.action == "view_verification_document", AuditLog.entity_id.in_([d.id for d in docs])
+            )
+        )
+    ) if docs else set()
+    return [document_out(d, d.id in opened) for d in docs]
 
 
 async def applicant(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_session)) -> tuple[User, PhcApplication]:

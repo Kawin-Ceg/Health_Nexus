@@ -299,6 +299,47 @@ def _usage(rows, args) -> str:
     return f"Assistant use in the last {args['days']} days, answered by {engine}:\n" + "\n".join(lines)
 
 
+
+LEVEL = {"low": "green (for information)", "medium": "yellow (take precautions)", "high": "red (emergency)"}
+SOURCE = {"watch": "smartwatch syncs", "phc": "PHC examinations", "self": "typed in by you"}
+
+
+def _exams(rows, args) -> str:
+    lines = [
+        f"- {_when(r['examined_at'])}" + (f" at {r['location']}" if r.get("location") else "")
+        + (f" by {r['examined_by']}" if r.get("examined_by") else "") + f": {_vitals_line(r['vitals'])}"
+        for r in rows
+    ]
+    return f"Examinations recorded for you in the last {args['days']} days:\n" + "\n".join(lines) + f"\n\n{DISCLAIMER}"
+
+
+def _sources(rows, args) -> str:
+    lines = [f"- {SOURCE.get(r['source'], r['source'])}: {r['readings']}, latest {_when(r['latest'])}" for r in rows]
+    return f"Your readings in the last {args['days']} days, by where they came from:\n" + "\n".join(lines)
+
+
+def _my_advisories(rows, args) -> str:
+    lines = [f"- {r['title']} ({LEVEL.get(r['severity'], r['severity'])}, until {_when(r['expires_at'])}): {r['body']}" for r in rows]
+    return "Advisories running for your area:\n" + "\n".join(lines)
+
+
+def _advisories(rows, args) -> str:
+    lines = [
+        f"- {_when(r['created_at'])}: {r['title']}, {LEVEL.get(r['severity'], r['severity'])}, {r['status']}"
+        + (f", rated {'helpful' if r['feedback'] == 'good' else 'not helpful'}" if r.get("feedback") else "")
+        for r in rows
+    ]
+    return f"Advisories published in the last {args['days']} days:\n" + "\n".join(lines)
+
+
+def _outbreaks(rows, args) -> str:
+    lines = [
+        f"- {r['syndrome']} near {r['region']}: {r['cases']} cases against {r['expected']} expected, "
+        f"onset {_when(r['first_onset'])} to {_when(r['last_onset'])}" + (" (acknowledged)" if r["acknowledged"] else " (not yet acknowledged)")
+        for r in rows
+    ]
+    return f"Outbreak signals in the last {args['days']} days:\n" + "\n".join(lines)
+
 _COMPOSERS = {
     "my_latest_reading": _latest,
     "my_vital_stats": _stats,
@@ -324,4 +365,9 @@ _COMPOSERS = {
     "signups": _signups,
     "district_activity": _districts,
     "assistant_usage": _usage,
+    "my_examinations": _exams,
+    "my_readings_by_source": _sources,
+    "my_advisories": _my_advisories,
+    "advisories_overview": _advisories,
+    "outbreak_signals": _outbreaks,
 }

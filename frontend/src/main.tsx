@@ -22,9 +22,11 @@ const Outbreaks = page(() => import("./pages/Outbreaks"), "Outbreaks");
 const Profile = page(() => import("./pages/Profile"), "Profile");
 const Settings = page(() => import("./pages/Settings"), "Settings");
 const CitizenAlerts = page(() => import("./pages/citizen/Alerts"), "CitizenAlerts");
+const CitizenVisits = page(() => import("./pages/citizen/Visits"), "CitizenVisits");
 const CitizenDashboard = page(() => import("./pages/citizen/Dashboard"), "CitizenDashboard");
 const History = page(() => import("./pages/citizen/History"), "History");
-const SubmitVitals = page(() => import("./pages/citizen/SubmitVitals"), "SubmitVitals");
+const Watch = page(() => import("./pages/citizen/Watch"), "Watch");
+const RecordExam = page(() => import("./pages/phc/RecordExam"), "RecordExam");
 const CitizenRecord = page(() => import("./pages/phc/CitizenRecord"), "CitizenRecord");
 const Citizens = page(() => import("./pages/phc/Citizens"), "Citizens");
 const PhcAlerts = page(() => import("./pages/phc/PhcAlerts"), "PhcAlerts");
@@ -108,9 +110,10 @@ createRoot(root).render(
             <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
               <Route element={<AppShell />}>
                 <Route path={paths.citizenHome} element={<CitizenDashboard />} />
-                <Route path={paths.submitVitals} element={<SubmitVitals />} />
+                <Route path={paths.watch} element={<Watch />} />
                 <Route path={paths.history} element={<History />} />
                 <Route path={paths.citizenAlerts} element={<CitizenAlerts />} />
+                <Route path={paths.citizenVisits} element={<CitizenVisits />} />
               </Route>
             </Route>
             <Route element={<ProtectedRoute allowedRoles={["phc_worker"]} />}>
@@ -118,6 +121,7 @@ createRoot(root).render(
                 <Route path={paths.phcHome} element={<PhcDashboard />} />
                 <Route path={paths.phcAlerts} element={<PhcAlerts />} />
                 <Route path={paths.phcCitizens} element={<Citizens />} />
+                <Route path="/phc/citizens/:userId/exam" element={<RecordExam />} />
                 <Route path="/phc/citizens/:userId" element={<CitizenRecord />} />
                 <Route path={paths.phcSchedule} element={<Schedule />} />
                 <Route path={paths.phcReports} element={<Reports />} />

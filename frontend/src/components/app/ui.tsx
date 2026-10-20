@@ -1,5 +1,6 @@
 import { useT } from "../../i18n";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import { Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AlertCircle, Inbox, Loader2 } from "lucide-react";
 import { SEVERITY, type Severity } from "../../lib/severity";
@@ -198,5 +199,15 @@ export function Labelled({ label, children, hint }: { label: string; children: R
       {children}
       {hint && <span className="text-xs text-ink-soft">{hint}</span>}
     </label>
+  );
+}
+
+/** A search box with a magnifier on the left. */
+export function SearchInput({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className={cx("relative", className)}>
+      <Search size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
+      <input type="search" {...rest} className={cx(inputCls, "pl-11")} />
+    </div>
   );
 }

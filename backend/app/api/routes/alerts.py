@@ -1,5 +1,7 @@
 """Alerts: a person's own notifications plus community advisories, and the PHC badge."""
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +40,9 @@ async def list_alerts(
     advisories = (
         await db.scalars(
             select(Advisory)
-            .where(targeting(user), is_active(now_utc()))
+            # Ended ones too, for the citizen's advisory history (last 365 days).
+            .where(targeting(user), Advisory.created_at >= now_utc() - timedelta(days=365))
+            .order_by(is_active(now_utc()).desc())
             .order_by(Advisory.created_at.desc())
             .limit(ADVISORY_LIMIT)
         )

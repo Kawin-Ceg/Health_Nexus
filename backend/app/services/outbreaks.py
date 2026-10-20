@@ -101,12 +101,35 @@ async def run(session: AsyncSession, now: datetime | None = None) -> list[Commun
                 window_start=start,
                 window_end=now,
             ))
+    await _carry_forward(session, found)
     session.add_all(found)
     session.add(AuditLog(user_id=None, action=RUN_ACTION, entity="community_data", entity_id=None, ip_address="system",
                          created_at=now))
     await session.execute(delete(CommunityData).where(CommunityData.window_end < now - KEEP_RUNS_FOR))
     await session.commit()
     return found
+
+
+def same_cluster(a: CommunityData, b: CommunityData) -> bool:
+    """The same group of cases seen by two runs: same syndrome, overlapping place, onsets within two days."""
+    return (
+        a.syndrome == b.syndrome
+        and haversine_km(a.centre_lat, a.centre_lng, b.centre_lat, b.centre_lng) <= max(a.radius_km, b.radius_km) + PARAMS.radius_km
+        and abs((a.first_onset - b.first_onset).total_seconds()) <= 2 * 86400
+    )
+
+
+async def _carry_forward(session: AsyncSession, found: list[CommunityData]) -> None:
+    last = await last_run_at(session)
+    if last is None:
+        return
+    earlier = (await session.scalars(select(CommunityData).where(CommunityData.window_end == last))).all()
+    for new in found:
+        old = next((o for o in earlier if same_cluster(new, o)), None)
+        if old is None:
+            continue
+        new.acknowledged_at, new.acknowledged_by = old.acknowledged_at, old.acknowledged_by
+        new.feedback, new.feedback_note, new.feedback_at, new.feedback_by = old.feedback, old.feedback_note, old.feedback_at, old.feedback_by
 
 
 async def last_run_at(session: AsyncSession) -> datetime | None:

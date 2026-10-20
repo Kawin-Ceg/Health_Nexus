@@ -6,7 +6,7 @@ exactly the way real data is.
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,11 +84,21 @@ async def record_reading(
     measured_at: datetime,
     *,
     stored_at: datetime | None = None,
+    source: str = "watch",
+    recorded_by: uuid.UUID | None = None,
+    location: str | None = None,
+    watch_day: date | None = None,
+    watch_slot: str | None = None,
 ) -> Recorded:
     """Store and score one already-validated reading. Flushes; the caller commits."""
     history = await earlier_vitals(session, citizen.id, measured_at)
     record = HealthRecord(
         user_id=citizen.id,
+        source=source,
+        recorded_by=recorded_by,
+        location=location,
+        watch_day=watch_day,
+        watch_slot=watch_slot,
         vitals=vitals,
         symptoms=symptoms,
         geo_lat=citizen.geo_lat,
@@ -131,3 +141,18 @@ async def record_reading(
         session.add(alert)
     await session.flush()
     return Recorded(record, processed, score, len(history), signal, reviewed)
+
+
+async def submit_reading(session: AsyncSession, citizen: User, vitals: dict[str, float], symptoms: list[str],
+                         measured_at: datetime, **origin) -> Recorded:
+    """Record, score, queue the emails and commit. Every way a reading arrives goes through here."""
+    from . import notify
+
+    recorded = await record_reading(session, citizen, vitals, symptoms, measured_at, **origin)
+    if recorded.score.is_anomaly:
+        await notify.reading_flagged(
+            session, citizen, severity_of(recorded.score.anomaly_score), recorded.signal, recorded.reviewed_by_someone
+        )
+    await session.commit()
+    return recorded
+

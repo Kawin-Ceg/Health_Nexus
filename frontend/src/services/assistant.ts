@@ -10,6 +10,8 @@ export interface Retrieval {
   row_count: number;
   columns: string[];
   rows: Record<string, unknown>[];
+  grounded?: boolean | null;
+  sources?: { tool: string; title: string; args: Record<string, unknown>; row_count: number }[];
 }
 
 export interface ChatMessage {
@@ -19,7 +21,6 @@ export interface ChatMessage {
   created_at: string;
   was_refused: boolean;
   refusal_reason: RefusalReason | null;
-  generated_sql: string | null;
   retrieval: Retrieval | null;
   latency_ms: number | null;
 }

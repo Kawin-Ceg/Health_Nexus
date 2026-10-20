@@ -6,7 +6,7 @@ import {
   BarChart3,
   Building2,
   Bell,
-  Bot,
+  Sparkles,
   CalendarDays,
   ClipboardList,
   History,
@@ -18,12 +18,12 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  PlusCircle,
   ScrollText,
   Settings,
   UserRound,
   Users,
   Volume2,
+  Watch,
   VolumeX,
   X,
 } from "lucide-react";
@@ -186,15 +186,15 @@ export function AppShell() {
   const items: Item[] =
     user?.role === "admin"
       ? [
-          { to: paths.adminHome, label: "Overview", icon: LayoutDashboard, end: true },
+          { to: paths.adminHome, label: "Dashboard", icon: LayoutDashboard, end: true },
           { to: paths.adminApplications, label: "Applications", icon: BadgeCheck, badge: badges.pendingApplications },
           { to: paths.adminAccounts, label: "Accounts", icon: Users },
           { to: paths.adminCentres, label: "Health centres", icon: Building2 },
-          { to: paths.adminConcerns, label: "Concerns", icon: LifeBuoy, badge: badges.openConcerns },
+          { to: paths.adminConcerns, label: "Complaints", icon: LifeBuoy, badge: badges.openConcerns },
           { to: paths.outbreaks, label: "Outbreaks", icon: Activity },
           { to: paths.advisories, label: "Advisories", icon: Megaphone },
           { to: paths.adminAudit, label: "Audit trail", icon: ScrollText },
-          { to: paths.assistant, label: "Assistant", icon: Bot },
+          { to: paths.assistant, label: "Nira", icon: Sparkles },
         ]
       : user?.role === "phc_worker"
         ? [
@@ -204,17 +204,18 @@ export function AppShell() {
             { to: paths.phcSchedule, label: "Schedule", icon: CalendarDays },
             { to: paths.phcReports, label: "Reports", icon: BarChart3 },
             { to: paths.phcMap, label: "Risk map", icon: Map },
-            { to: paths.assistant, label: "Assistant", icon: Bot },
+            { to: paths.assistant, label: "Nira", icon: Sparkles },
             { to: paths.outbreaks, label: "Outbreaks", icon: Activity },
             { to: paths.advisories, label: "Advisories", icon: Megaphone },
             { to: paths.notifications, label: "Notifications", icon: ClipboardList, badge: badges.phcUnread },
           ]
         : [
             { to: paths.citizenHome, label: t("nav.dashboard"), icon: LayoutDashboard, end: true },
-            { to: paths.submitVitals, label: t("nav.log"), icon: PlusCircle },
+            { to: paths.watch, label: t("nav.watch"), icon: Watch },
             { to: paths.history, label: t("nav.history"), icon: History },
             { to: paths.citizenAlerts, label: t("nav.alerts"), icon: Bell, badge: badges.citizenUnread },
-            { to: paths.assistant, label: t("nav.assistant"), icon: Bot },
+            { to: paths.citizenVisits, label: t("nav.visits"), icon: CalendarDays },
+            { to: paths.assistant, label: t("nav.assistant"), icon: Sparkles },
           ];
   // Profile and settings are citizen and worker pages; an admin has neither.
   const account: Item[] =
@@ -224,6 +225,30 @@ export function AppShell() {
           { to: paths.profile, label: t("nav.profile"), icon: UserRound },
           { to: paths.settings, label: t("nav.settings"), icon: Settings },
         ];
+
+  const iconBtn =
+    "grid h-10 w-10 place-items-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-ink";
+  const toolbar = (
+    <div className="flex items-center gap-1">
+      {user?.role === "user" && <LanguageSwitch compact className={iconBtn} />}
+      <ThemeToggle className={iconBtn} />
+      <button type="button" onClick={toggleSound} aria-pressed={sound} title={`${t("shell.sounds")}: ${sound ? t("shell.on") : t("shell.off")}`} className={iconBtn}>
+        {sound ? <Volume2 size={18} aria-hidden="true" /> : <VolumeX size={18} aria-hidden="true" />}
+        <span className="visually-hidden">{t("shell.sounds")}</span>
+      </button>
+      {account.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          title={item.label}
+          aria-label={item.label}
+          className={({ isActive }) => cx(iconBtn, isActive && "bg-lime text-olive")}
+        >
+          <item.icon size={18} aria-hidden="true" />
+        </NavLink>
+      ))}
+    </div>
+  );
 
   const link = (item: Item) => (
     <NavLink
@@ -235,7 +260,7 @@ export function AppShell() {
         cx(
           "relative flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium transition-colors",
           collapsed && "lg:justify-center lg:px-0",
-          isActive ? "bg-lime text-olive" : "text-ink-soft hover:bg-surface hover:text-ink",
+          isActive ? "bg-paper text-ink shadow-sm" : "text-ink hover:bg-paper/40",
         )
       }
     >
@@ -259,6 +284,7 @@ export function AppShell() {
     <div className={cx("min-h-dvh bg-paper lg:grid", collapsed ? "lg:grid-cols-[84px_1fr]" : "lg:grid-cols-[264px_1fr]")}>
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-paper/90 px-4 py-2 backdrop-blur lg:hidden">
         <Logo />
+        <div className="ml-auto mr-1">{toolbar}</div>
         <button
           type="button"
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-ink hover:bg-paper-raised"
@@ -273,7 +299,7 @@ export function AppShell() {
       <aside
         id="app-nav"
         className={cx(
-          "relative isolate overflow-clip border-r border-line bg-paper-raised p-4 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col",
+          "relative isolate overflow-clip border-r border-olive/15 bg-matcha p-4 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col",
           open ? "flex flex-col" : "hidden",
         )}
       >
@@ -285,7 +311,7 @@ export function AppShell() {
             aria-expanded={!collapsed}
             aria-controls="app-nav"
             title={collapsed ? "Show the sidebar" : "Hide the sidebar"}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-surface hover:text-ink"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink hover:bg-paper/40"
           >
             {collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
             <span className="visually-hidden">{collapsed ? "Show the sidebar" : "Hide the sidebar"}</span>
@@ -293,7 +319,7 @@ export function AppShell() {
         </div>
         {user && (
           <p className={cx("mb-5 hidden px-2", !collapsed && "lg:block")}>
-            <span className="inline-flex items-center rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold text-ink-soft">
+            <span className="inline-flex items-center rounded-full border border-olive/20 bg-paper/60 px-3 py-1 text-xs font-semibold text-ink">
               {ROLE_LABEL[user.role]}
             </span>
           </p>
@@ -303,51 +329,13 @@ export function AppShell() {
         </nav>
         <div className="mt-6 lg:mt-auto">
           {!collapsed && <Doodle piece="beads" className="static! -mb-2! ml-auto w-20 lg:block!" />}
-          <nav aria-label="Account" className="flex flex-col gap-1 border-t border-line pt-3">
-            {account.map(link)}
-            {user?.role === "user" &&
-              (collapsed ? (
-                <LanguageSwitch
-                  compact
-                  className="hidden min-h-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-ink lg:flex"
-                />
-              ) : null)}
-            {user?.role === "user" && (
-              <LanguageSwitch
-                className={cx(
-                  "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
-                  collapsed && "lg:hidden",
-                )}
-              />
-            )}
-            <ThemeToggle
-              withLabel
-              labelClassName={hide}
-              className={cx(
-                "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
-                collapsed && "lg:justify-center lg:px-0",
-              )}
-            />
-            <button
-              type="button"
-              onClick={toggleSound}
-              aria-pressed={sound}
-              title={collapsed ? `Sounds ${sound ? "on" : "off"}` : undefined}
-              className={cx(
-                "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
-                collapsed && "lg:justify-center lg:px-0",
-              )}
-            >
-              {sound ? <Volume2 size={18} aria-hidden="true" /> : <VolumeX size={18} aria-hidden="true" />}
-              <span className={cx("flex-1 text-left", hide)}>{t("shell.sounds")}</span>
-              <span className={cx("text-xs text-ink-muted", hide)}>{sound ? t("shell.on") : t("shell.off")}</span>
-            </button>
+          <nav aria-label="Account" className="flex flex-col gap-1 border-t border-olive/20 pt-3">
             <button
               type="button"
               onClick={() => void logout()}
               title={collapsed ? "Sign out" : undefined}
               className={cx(
-                "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink",
+                "flex min-h-11 items-center gap-3 rounded-full px-4 text-sm font-medium text-ink transition-colors hover:bg-paper/40",
                 collapsed && "lg:justify-center lg:px-0",
               )}
             >
@@ -357,10 +345,10 @@ export function AppShell() {
           </nav>
           {user && (
             <div
-              className={cx("mt-3 flex items-center gap-3 rounded-3xl border border-line bg-surface p-3", collapsed && "lg:justify-center lg:border-0 lg:bg-transparent lg:p-0")}
+              className={cx("mt-3 flex items-center gap-3 rounded-3xl border border-olive/15 bg-paper/70 p-3", collapsed && "lg:justify-center lg:border-0 lg:bg-transparent lg:p-0")}
               title={collapsed ? `${user.name} · ${user.email}` : undefined}
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-lime font-display text-base text-olive" aria-hidden="true">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-olive font-display text-base text-paper" aria-hidden="true">
                 {initials(user.name)}
               </span>
               <span className={cx("min-w-0", hide)}>
@@ -371,9 +359,14 @@ export function AppShell() {
           )}
         </div>
       </aside>
-      <main className={location.pathname === paths.assistant ? "min-w-0" : "mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-10"}>
-        <Outlet />
-      </main>
+      <div className="min-w-0">
+        <div className="sticky top-0 z-30 hidden h-14 items-center justify-end border-b border-line bg-paper/90 px-6 backdrop-blur lg:flex">
+          {toolbar}
+        </div>
+        <main className={location.pathname === paths.assistant ? "min-w-0" : "mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-10"}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

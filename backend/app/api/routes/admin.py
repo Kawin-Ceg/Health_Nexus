@@ -11,17 +11,18 @@ import io
 import secrets
 import uuid
 from datetime import datetime, timedelta
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, StringConstraints
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.core.dependencies import require_admin
 from app.db.session import get_session
 from app.models import (
+    Advisory,
     Alert,
     AuditLog,
     ChatMessage,
@@ -86,37 +87,295 @@ class Overview(BaseModel):
     open_flags: int
     facilities_active: int
     assistant_questions_last_7_days: int
+    area: str | None = None
+    pending_today: int = 0
+    pending_over_3_days: int = 0
+    flags_daily: list[int] = []
+    top_flag_centres: list[dict] = []
+    oldest_applications: list[dict] = []
+    open_concern_list: list[dict] = []
+    oldest_pending_at: datetime | None = None
+    concerns_in_review: int = 0
+    open_flags_high: int = 0
+    centres_without_workers: int = 0
+    citizen_activity: dict[str, list[int]] = {}
+    worker_activity: dict[str, list[int]] = {}
+
+
+def area_of(admin: User) -> str | None:
+    """A district admin sees their district only; an admin with no district sees the whole state."""
+    return admin.district.strip() if admin.district else None
+
+
+def in_area(column, area: str | None):
+    return func.lower(column) == area.lower() if area else true()
 
 
 @router.get("/overview", response_model=Overview)
-async def overview(db: AsyncSession = Depends(get_session)) -> Overview:
-    week_ago = utcnow() - timedelta(days=7)
-    by_role = dict((await db.execute(select(User.role, func.count()).group_by(User.role))).all())
+async def overview(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_session)) -> Overview:
+    area = area_of(admin)
+    now = utcnow()
+    week_ago = now - timedelta(days=7)
+    people = select(User.id).where(in_area(User.district, area))
+    centres = select(ValidPhcFacility.id).where(in_area(ValidPhcFacility.district, area))
+    pending = (PhcApplication.status == ApplicationStatus.pending, in_area(PhcApplication.district, area))
+    open_flag = (ProcessedData.is_anomaly.is_(True), ProcessedData.resolution.is_(None), ProcessedData.user_id.in_(people))
+    by_role = dict(
+        (await db.execute(select(User.role, func.count()).where(in_area(User.district, area)).group_by(User.role))).all()
+    )
 
     async def count(query) -> int:
         return await db.scalar(query) or 0
 
     return Overview(
+        area=area,
         users_by_role={r.value: by_role.get(r, 0) for r in UserRole},
-        inactive_accounts=await count(select(func.count()).where(User.is_active.is_(False))),
-        unverified_accounts=await count(select(func.count()).where(User.is_verified.is_(False))),
-        pending_applications=await count(
-            select(func.count()).where(PhcApplication.status == ApplicationStatus.pending)
-        ),
+        inactive_accounts=await count(select(func.count()).where(User.is_active.is_(False), in_area(User.district, area))),
+        unverified_accounts=await count(select(func.count()).where(User.is_verified.is_(False), in_area(User.district, area))),
+        pending_applications=await count(select(func.count()).where(*pending)),
+        pending_today=await count(select(func.count()).where(*pending, PhcApplication.created_at >= now - timedelta(days=1))),
+        pending_over_3_days=await count(select(func.count()).where(*pending, PhcApplication.created_at < now - timedelta(days=3))),
         workers_without_facility=await count(
-            select(func.count()).where(User.role == UserRole.phc_worker, User.phc_id.is_(None))
+            select(func.count()).where(User.role == UserRole.phc_worker, User.phc_id.is_(None), in_area(User.district, area))
         ),
         open_concerns=await count(
-            select(func.count()).where(Concern.status.in_([ConcernStatus.open, ConcernStatus.in_review]))
+            select(func.count()).where(Concern.status.in_([ConcernStatus.open, ConcernStatus.in_review]), Concern.user_id.in_(people))
         ),
-        readings_last_7_days=await count(select(func.count()).where(HealthRecord.created_at >= week_ago)),
-        open_flags=await count(
-            select(func.count()).where(ProcessedData.is_anomaly.is_(True), ProcessedData.resolution.is_(None))
+        concerns_in_review=await count(
+            select(func.count()).where(Concern.status == ConcernStatus.in_review, Concern.user_id.in_(people))
         ),
-        facilities_active=await count(select(func.count()).where(ValidPhcFacility.is_active.is_(True))),
+        readings_last_7_days=await count(
+            select(func.count()).where(HealthRecord.created_at >= week_ago, HealthRecord.user_id.in_(people))
+        ),
+        open_flags=await count(select(func.count()).where(*open_flag)),
+        open_flags_high=await count(select(func.count()).where(*open_flag, ProcessedData.anomaly_score >= 0.5)),
+        facilities_active=await count(
+            select(func.count()).where(ValidPhcFacility.is_active.is_(True), in_area(ValidPhcFacility.district, area))
+        ),
+        centres_without_workers=await count(
+            select(func.count()).select_from(ValidPhcFacility).where(
+                ValidPhcFacility.is_active.is_(True),
+                in_area(ValidPhcFacility.district, area),
+                ~ValidPhcFacility.id.in_(select(User.phc_id).where(User.role == UserRole.phc_worker, User.phc_id.is_not(None))),
+            )
+        ),
         assistant_questions_last_7_days=await count(
-            select(func.count()).where(ChatMessage.role == ChatMessageRole.user, ChatMessage.created_at >= week_ago)
+            select(func.count()).where(
+                ChatMessage.role == ChatMessageRole.user, ChatMessage.created_at >= week_ago, ChatMessage.user_id.in_(people)
+            )
         ),
+        oldest_pending_at=await db.scalar(select(func.min(PhcApplication.created_at)).where(*pending)),
+        flags_daily=[
+            await count(
+                select(func.count()).where(
+                    ProcessedData.is_anomaly.is_(True), ProcessedData.user_id.in_(people),
+                    ProcessedData.processed_at >= now - timedelta(days=d + 1), ProcessedData.processed_at < now - timedelta(days=d),
+                )
+            )
+            for d in range(6, -1, -1)
+        ],
+        top_flag_centres=[
+            {"name": name, "count": n}
+            for name, n in (
+                await db.execute(
+                    select(ValidPhcFacility.name, func.count())
+                    .select_from(ProcessedData)
+                    .join(User, User.id == ProcessedData.user_id)
+                    .join(ValidPhcFacility, ValidPhcFacility.id == User.phc_id)
+                    .where(*open_flag)
+                    .group_by(ValidPhcFacility.name)
+                    .order_by(func.count().desc())
+                    .limit(3)
+                )
+            ).all()
+        ],
+        oldest_applications=[
+            {"id": str(a.id), "name": u.name, "centre": a.phc_name, "created_at": a.created_at.isoformat()}
+            for a, u in (
+                await db.execute(
+                    select(PhcApplication, User).join(User, User.id == PhcApplication.user_id)
+                    .where(*pending).order_by(PhcApplication.created_at).limit(3)
+                )
+            ).all()
+        ],
+        open_concern_list=[
+            {"id": str(c.id), "ref": c.ticket_ref, "category": c.category.value, "subject": c.description[:90],
+             "status": c.status.value, "created_at": c.created_at.isoformat()}
+            for c in (
+                await db.scalars(
+                    select(Concern).where(Concern.status.in_([ConcernStatus.open, ConcernStatus.in_review]), Concern.user_id.in_(people))
+                    .order_by(Concern.created_at).limit(3)
+                )
+            ).all()
+        ],
+        citizen_activity=await _weekly(db, {
+            "Watch readings": (
+                select(func.count()).select_from(HealthRecord).where(HealthRecord.source == "watch", HealthRecord.user_id.in_(people)),
+                HealthRecord.created_at,
+            ),
+            "Anomalies flagged": (
+                select(func.count()).select_from(ProcessedData).where(ProcessedData.is_anomaly.is_(True), ProcessedData.user_id.in_(people)),
+                ProcessedData.processed_at,
+            ),
+            "Assistant questions": (
+                select(func.count()).select_from(ChatMessage).join(User, User.id == ChatMessage.user_id)
+                .where(ChatMessage.role == ChatMessageRole.user, User.role == UserRole.user, in_area(User.district, area)),
+                ChatMessage.created_at,
+            ),
+            "New citizens": (
+                select(func.count()).select_from(User).where(User.role == UserRole.user, in_area(User.district, area)),
+                User.created_at,
+            ),
+        }),
+        worker_activity=await _weekly(db, {
+            "Examinations recorded": (
+                select(func.count()).select_from(HealthRecord).where(HealthRecord.source == "phc", HealthRecord.user_id.in_(people)),
+                HealthRecord.created_at,
+            ),
+            "Flags reviewed": (
+                select(func.count()).select_from(ProcessedData).where(ProcessedData.reviewed_at.is_not(None), ProcessedData.user_id.in_(people)),
+                ProcessedData.reviewed_at,
+            ),
+            "Visits booked": (
+                select(func.count()).select_from(ScheduledVisit).where(ScheduledVisit.citizen_id.in_(people)),
+                ScheduledVisit.created_at,
+            ),
+            "Advisories published": (
+                select(func.count()).select_from(Advisory).where(
+                    (Advisory.phc_id.in_(centres)) | in_area(Advisory.district, area)
+                ),
+                Advisory.created_at,
+            ),
+        }),
+    )
+
+
+WEEKS = 8
+
+
+async def _weekly(db: AsyncSession, series: dict) -> dict[str, list[int]]:
+    """Per series, counts for each of the last WEEKS weeks, oldest first."""
+    now = utcnow()
+    out: dict[str, list[int]] = {}
+    for name, (query, column) in series.items():
+        values = []
+        for w in range(WEEKS, 0, -1):
+            start, end = now - timedelta(days=7 * w), now - timedelta(days=7 * (w - 1))
+            values.append(await db.scalar(query.where(column >= start, column < end)) or 0)
+        out[name] = values
+    return out
+
+
+class PeriodTotals(BaseModel):
+    scheduled: int
+    done: int
+    missed: int
+    examinations: int
+    advisories: int
+    has_data: bool
+
+
+class VisitWeek(BaseModel):
+    start: datetime
+    end: datetime
+    scheduled: int
+    done: int
+    missed: int
+
+
+class CentreActivity(BaseModel):
+    facility_id: uuid.UUID
+    name: str
+    district: str
+    workers: int
+    citizens: int
+    citizens_monitored: int
+    flags_open: int
+    flags_critical: int
+    upcoming_visits: int
+    range_start: datetime
+    range_end: datetime
+    current: PeriodTotals
+    previous: PeriodTotals
+    weeks: list[VisitWeek]
+
+
+@router.get("/centre-activity", response_model=CentreActivity)
+async def centre_activity(
+    facility_id: uuid.UUID,
+    days: int = Query(30, ge=7, le=365),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+) -> CentreActivity:
+    """Visits, examinations and advisories for one centre over `days`, against the `days` before."""
+    facility = await db.get(ValidPhcFacility, facility_id)
+    area = area_of(admin)
+    if facility is None or (area and facility.district.lower() != area.lower()):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, FACILITY_NOT_FOUND)
+    now = utcnow()
+    since = now - timedelta(days=days)
+    citizens = select(User.id).where(User.phc_id == facility.id, User.role == UserRole.user)
+    workers = select(User.id).where(User.phc_id == facility.id, User.role == UserRole.phc_worker)
+
+    async def count(query) -> int:
+        return await db.scalar(query) or 0
+
+    def visits(start, end, *where):
+        return select(func.count()).select_from(ScheduledVisit).where(
+            ScheduledVisit.worker_id.in_(workers),
+            ScheduledVisit.scheduled_for >= start,
+            ScheduledVisit.scheduled_for < end,
+            ScheduledVisit.status != VisitStatus.cancelled,
+            *where,
+        )
+
+    async def totals(start, end) -> PeriodTotals:
+        scheduled = await count(visits(start, end))
+        done = await count(visits(start, end, ScheduledVisit.status == VisitStatus.completed))
+        missed = await count(visits(start, end, ScheduledVisit.status == VisitStatus.missed))
+        exams = await count(
+            select(func.count()).select_from(HealthRecord).where(
+                HealthRecord.recorded_by.in_(workers), HealthRecord.created_at >= start, HealthRecord.created_at < end
+            )
+        )
+        advisories = await count(
+            select(func.count()).select_from(Advisory).where(
+                Advisory.phc_id == facility.id, Advisory.created_at >= start, Advisory.created_at < end
+            )
+        )
+        return PeriodTotals(scheduled=scheduled, done=done, missed=missed, examinations=exams, advisories=advisories,
+                            has_data=bool(scheduled or exams or advisories))
+
+    weeks = []
+    cursor = since
+    while cursor < now:
+        stop = min(cursor + timedelta(days=7), now)
+        weeks.append(VisitWeek(
+            start=cursor, end=stop,
+            scheduled=await count(visits(cursor, stop)),
+            done=await count(visits(cursor, stop, ScheduledVisit.status == VisitStatus.completed)),
+            missed=await count(visits(cursor, stop, ScheduledVisit.status == VisitStatus.missed)),
+        ))
+        cursor = stop
+
+    open_flags = (ProcessedData.user_id.in_(citizens), ProcessedData.is_anomaly.is_(True), ProcessedData.resolution.is_(None))
+    return CentreActivity(
+        facility_id=facility.id,
+        name=facility.name,
+        district=facility.district,
+        workers=await count(select(func.count()).select_from(workers.subquery())),
+        citizens=await count(select(func.count()).select_from(citizens.subquery())),
+        citizens_monitored=await count(
+            select(func.count(func.distinct(HealthRecord.user_id))).where(HealthRecord.user_id.in_(citizens), HealthRecord.timestamp >= since)
+        ),
+        flags_open=await count(select(func.count()).where(*open_flags)),
+        flags_critical=await count(select(func.count()).where(*open_flags, ProcessedData.anomaly_score >= 0.75)),
+        upcoming_visits=await count(visits(now, now + timedelta(days=365), ScheduledVisit.status == VisitStatus.scheduled)),
+        range_start=since,
+        range_end=now,
+        current=await totals(since, now),
+        previous=await totals(since - timedelta(days=days), since),
+        weeks=weeks,
     )
 
 
@@ -193,6 +452,7 @@ class ApplicationsOut(BaseModel):
     items: list[ApplicationItem]
     total: int
     counts: dict[str, int]
+    districts: list[str] = []
 
 
 class HistoryItem(BaseModel):
@@ -258,11 +518,22 @@ def _applications_query():
 async def list_applications(
     status_: ApplicationStatus | None = Query(None, alias="status"),
     q: str | None = Query(None, max_length=120),
+    district: str | None = Query(None, max_length=120),
+    designation: Designation | None = None,
+    days: int | None = Query(None, ge=1, le=365),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_session),
 ) -> ApplicationsOut:
-    query = _applications_query()
+    filters = [in_area(PhcApplication.district, area_of(admin))]
+    if district:
+        filters.append(PhcApplication.district.ilike(district.strip()))
+    if designation:
+        filters.append(PhcApplication.designation == designation)
+    if days:
+        filters.append(PhcApplication.created_at >= utcnow() - timedelta(days=days))
+    query = _applications_query().where(*filters)
     if status_:
         query = query.where(PhcApplication.status == status_)
     if q:
@@ -275,12 +546,18 @@ async def list_applications(
     # Oldest pending first: whoever has waited longest is reviewed first.
     rows = (await db.execute(query.order_by(PhcApplication.created_at).limit(limit).offset(offset))).all()
     counts = dict(
-        (await db.execute(select(PhcApplication.status, func.count()).group_by(PhcApplication.status))).all()
+        (await db.execute(select(PhcApplication.status, func.count()).where(*filters).group_by(PhcApplication.status))).all()
     )
+    districts = (
+        await db.scalars(
+            select(PhcApplication.district).where(in_area(PhcApplication.district, area_of(admin))).distinct().order_by(PhcApplication.district)
+        )
+    ).all()
     return ApplicationsOut(
         items=[ApplicationItem(**_item(a, u, f, r)) for a, u, f, r in rows],
         total=total,
         counts={s.value: counts.get(s, 0) for s in ApplicationStatus},
+        districts=list(districts),
     )
 
 
@@ -490,11 +767,17 @@ async def list_users(
     role: UserRole | None = None,
     state_: Literal["active", "inactive", "unverified"] | None = Query(None, alias="status"),
     q: str | None = Query(None, max_length=120),
+    sort: Literal["newest", "oldest", "name", "approved"] = "newest",
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_session),
 ) -> AccountsOut:
-    query = select(User, ValidPhcFacility.name).outerjoin(ValidPhcFacility, ValidPhcFacility.id == User.phc_id)
+    query = (
+        select(User, ValidPhcFacility.name)
+        .outerjoin(ValidPhcFacility, ValidPhcFacility.id == User.phc_id)
+        .where(in_area(User.district, area_of(admin)))
+    )
     if role:
         query = query.where(User.role == role)
     if state_ == "active":
@@ -507,7 +790,15 @@ async def list_users(
         like = f"%{q.strip()}%"
         query = query.where(or_(User.name.ilike(like), User.email.ilike(like)))
     total = await db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = (await db.execute(query.order_by(User.created_at.desc()).limit(limit).offset(offset))).all()
+    order = {
+        "newest": (User.created_at.desc(),),
+        "oldest": (User.created_at.asc(),),
+        "name": (func.lower(User.name).asc(),),
+        "approved": (func.coalesce(PhcApplication.reviewed_at, User.verified_at).desc().nulls_last(), User.created_at.desc()),
+    }[sort]
+    if sort == "approved":
+        query = query.outerjoin(PhcApplication, PhcApplication.user_id == User.id)
+    rows = (await db.execute(query.order_by(*order).limit(limit).offset(offset))).all()
     return AccountsOut(
         items=[
             AccountItem(
@@ -593,6 +884,10 @@ class ConcernItem(BaseModel):
     raised_by: str
     raised_by_email: str
     raised_by_role: UserRole
+    raised_by_district: str | None
+    subject: str | None
+    subject_role: UserRole | None
+    evidence: dict[str, Any] | None
     handled_by: str | None
     created_at: datetime
     updated_at: datetime
@@ -607,20 +902,30 @@ class ConcernsOut(BaseModel):
 
 Raiser = aliased(User)
 Handler = aliased(User)
+Subject = aliased(User)
+
+STAGES = {
+    "not_reviewed": (ConcernStatus.open,),
+    "in_progress": (ConcernStatus.in_review,),
+    "action_taken": (ConcernStatus.resolved, ConcernStatus.rejected),
+}
 
 
 def _concerns_query():
     return (
-        select(Concern, Raiser, Handler.name)
+        select(Concern, Raiser, Handler.name, Subject)
         .join(Raiser, Raiser.id == Concern.user_id)
         .outerjoin(Handler, Handler.id == Concern.handled_by)
+        .outerjoin(Subject, Subject.id == Concern.subject_id)
     )
 
 
-def _concern(c: Concern, raiser: User, handler: str | None) -> ConcernItem:
+def _concern(c: Concern, raiser: User, handler: str | None, subject: User | None) -> ConcernItem:
     return ConcernItem(
         id=c.id, ticket_ref=c.ticket_ref, category=c.category, description=c.description, status=c.status,
         admin_note=c.admin_note, raised_by=raiser.name, raised_by_email=raiser.email, raised_by_role=raiser.role,
+        raised_by_district=raiser.district, subject=subject.name if subject else None,
+        subject_role=subject.role if subject else None, evidence=c.evidence,
         handled_by=handler, created_at=c.created_at, updated_at=c.updated_at, resolved_at=c.resolved_at,
     )
 
@@ -629,22 +934,46 @@ def _concern(c: Concern, raiser: User, handler: str | None) -> ConcernItem:
 async def list_concerns(
     status_: ConcernStatus | None = Query(None, alias="status"),
     category: ConcernCategory | None = None,
+    raiser: Literal["user", "phc_worker"] | None = None,
+    stage: Literal["not_reviewed", "in_progress", "action_taken"] | None = None,
+    q: str | None = Query(None, max_length=120),
+    days: int | None = Query(None, ge=1, le=365),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_session),
 ) -> ConcernsOut:
-    query = _concerns_query()
+    mine = in_area(Raiser.district, area_of(admin))
+    if raiser:
+        mine = and_(mine, Raiser.role == UserRole(raiser))
+    if days:
+        mine = and_(mine, Concern.created_at >= utcnow() - timedelta(days=days))
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        mine = and_(mine, or_(Raiser.name.ilike(like), Raiser.email.ilike(like), Concern.ticket_ref.ilike(like),
+                              Concern.description.ilike(like), Subject.name.ilike(like)))
+    query = _concerns_query().where(mine)
     if status_:
         query = query.where(Concern.status == status_)
+    if stage:
+        query = query.where(Concern.status.in_(STAGES[stage]))
     if category:
         query = query.where(Concern.category == category)
     total = await db.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = (await db.execute(query.order_by(Concern.created_at.desc()).limit(limit).offset(offset))).all()
-    counts = dict((await db.execute(select(Concern.status, func.count()).group_by(Concern.status))).all())
+    counts = dict(
+        (
+            await db.execute(
+                select(Concern.status, func.count()).join(Raiser, Raiser.id == Concern.user_id)
+                .outerjoin(Subject, Subject.id == Concern.subject_id).where(mine).group_by(Concern.status)
+            )
+        ).all()
+    )
     return ConcernsOut(
         items=[_concern(*r) for r in rows],
         total=total,
-        counts={s.value: counts.get(s, 0) for s in ConcernStatus},
+        counts={**{s.value: counts.get(s, 0) for s in ConcernStatus},
+                **{k: sum(counts.get(s, 0) for s in v) for k, v in STAGES.items()}},
     )
 
 

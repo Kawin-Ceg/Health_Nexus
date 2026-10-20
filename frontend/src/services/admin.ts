@@ -4,7 +4,41 @@ import type { Designation, Role } from "./auth";
 
 export type ApplicationStatus = "pending" | "approved" | "rejected";
 export type ConcernStatus = "open" | "in_review" | "resolved" | "rejected";
-export type ConcernCategory = "data_misuse" | "incorrect_diagnosis_flag" | "harassment" | "access_request" | "other";
+export type ConcernCategory =
+  | "data_misuse"
+  | "incorrect_diagnosis_flag"
+  | "harassment"
+  | "access_request"
+  | "other"
+  | "device_issue"
+  | "app_problem"
+  | "worker_conduct"
+  | "worker_no_show"
+  | "citizen_missed_visits"
+  | "citizen_conduct";
+export type ConcernStage = "not_reviewed" | "in_progress" | "action_taken";
+
+export interface EvidenceVisit {
+  when: string;
+  at: string;
+  location: string | null;
+  reason: string | null;
+  worker: string | null;
+  status: string;
+  explanation: string | null;
+}
+
+export interface Evidence {
+  kind: "missed_visits" | "worker_no_show" | "device";
+  window_days?: number;
+  threshold?: number;
+  missed?: number;
+  unexplained?: number;
+  eligible?: boolean;
+  visits?: EvidenceVisit[];
+  last_sync?: string | null;
+  last_7_days?: Record<string, number>;
+}
 export type AccountStatus = "active" | "inactive" | "unverified";
 
 export interface Overview {
@@ -18,7 +52,49 @@ export interface Overview {
   open_flags: number;
   facilities_active: number;
   assistant_questions_last_7_days: number;
+  oldest_pending_at: string | null;
+  area: string | null;
+  pending_today: number;
+  pending_over_3_days: number;
+  flags_daily: number[];
+  top_flag_centres: { name: string; count: number }[];
+  oldest_applications: { id: string; name: string; centre: string; created_at: string }[];
+  open_concern_list: { id: string; ref: string; category: string; subject: string; status: string; created_at: string }[];
+  concerns_in_review: number;
+  open_flags_high: number;
+  centres_without_workers: number;
+  citizen_activity: Record<string, number[]>;
+  worker_activity: Record<string, number[]>;
 }
+
+export interface PeriodTotals {
+  scheduled: number;
+  done: number;
+  missed: number;
+  examinations: number;
+  advisories: number;
+  has_data: boolean;
+}
+
+export interface CentreActivity {
+  facility_id: string;
+  name: string;
+  district: string;
+  workers: number;
+  citizens: number;
+  citizens_monitored: number;
+  flags_open: number;
+  flags_critical: number;
+  upcoming_visits: number;
+  range_start: string;
+  range_end: string;
+  current: PeriodTotals;
+  previous: PeriodTotals;
+  weeks: { start: string; end: string; scheduled: number; done: number; missed: number }[];
+}
+
+export const getCentreActivity = (facilityId: string, days: number, signal?: AbortSignal) =>
+  get<CentreActivity>("/admin/centre-activity", { facility_id: facilityId, days }, signal);
 
 export interface FacilityOption {
   id: string;
@@ -78,6 +154,10 @@ export interface ConcernItem {
   raised_by: string;
   raised_by_email: string;
   raised_by_role: Role;
+  raised_by_district: string | null;
+  subject: string | null;
+  subject_role: Role | null;
+  evidence: Evidence | null;
   handled_by: string | null;
   created_at: string;
   updated_at: string;
@@ -102,8 +182,15 @@ const clean = (p: object) => Object.fromEntries(Object.entries(p).filter(([, v])
 
 export const getOverview = (signal?: AbortSignal) => get<Overview>("/admin/overview", undefined, signal);
 
-export const getApplications = (p: { status?: ApplicationStatus | ""; q?: string }, signal?: AbortSignal) =>
-  get<{ items: ApplicationItem[]; total: number; counts: Record<ApplicationStatus, number> }>("/admin/applications", clean(p), signal);
+export const getApplications = (
+  p: { status?: ApplicationStatus | ""; q?: string; district?: string; designation?: string; days?: number | "" },
+  signal?: AbortSignal,
+) =>
+  get<{ items: ApplicationItem[]; total: number; counts: Record<ApplicationStatus, number>; districts: string[] }>(
+    "/admin/applications",
+    clean(p),
+    signal,
+  );
 export const getApplication = (id: string, signal?: AbortSignal) => get<ApplicationDetail>(`/admin/applications/${id}`, undefined, signal);
 export const approveApplication = (id: string, facility_id: string, note?: string) =>
   post<ApplicationDetail>(`/admin/applications/${id}/approve`, { facility_id, note: note || undefined });
@@ -114,14 +201,16 @@ export const searchFacilities = (p: { q?: string; district?: string; state?: str
   get<FacilityOption[]>("/admin/facilities", clean(p), signal);
 
 export const getAccounts = (
-  p: { role?: Role | ""; status?: AccountStatus | ""; q?: string; limit: number; offset: number },
+  p: { role?: Role | ""; status?: AccountStatus | ""; q?: string; sort?: string; limit: number; offset: number },
   signal?: AbortSignal,
 ) => get<{ items: Account[]; total: number; limit: number; offset: number }>("/admin/users", clean(p), signal);
 export const deactivateAccount = (id: string, reason: string) => post<Account>(`/admin/users/${id}/deactivate`, { reason });
 export const reactivateAccount = (id: string) => post<Account>(`/admin/users/${id}/reactivate`);
 
-export const getConcerns = (p: { status?: ConcernStatus | ""; category?: ConcernCategory | "" }, signal?: AbortSignal) =>
-  get<{ items: ConcernItem[]; total: number; counts: Record<ConcernStatus, number> }>("/admin/concerns", clean(p), signal);
+export const getConcerns = (
+  p: { status?: ConcernStatus | ""; category?: ConcernCategory | ""; raiser?: "user" | "phc_worker"; stage?: ConcernStage; q?: string; days?: number | "" },
+  signal?: AbortSignal,
+) => get<{ items: ConcernItem[]; total: number; counts: Record<ConcernStatus | ConcernStage, number> }>("/admin/concerns", clean(p), signal);
 export const updateConcern = (id: string, body: { status: ConcernStatus; admin_note?: string }) =>
   api.patch<ConcernItem>(`/admin/concerns/${id}`, body).then((r) => r.data);
 

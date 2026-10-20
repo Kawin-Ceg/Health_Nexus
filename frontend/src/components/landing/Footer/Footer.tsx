@@ -23,7 +23,6 @@ export function Footer() {
   return (
     <footer className={styles.footer}>
       <Doodle piece="helix" className={styles.helix} />
-      <Doodle piece="beads" className={styles.beads} delay={1} />
       <Container>
         <div className={styles.top}>
           <div className={styles.brand}>

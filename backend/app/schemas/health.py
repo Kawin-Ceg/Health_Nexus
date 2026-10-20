@@ -129,6 +129,8 @@ class PopulationOut(BaseModel):
 class VitalsResult(BaseModel):
     id: uuid.UUID
     measured_at: datetime
+    vitals: dict[str, float] = {}
+    source: str = "watch"
     flagged: bool
     anomaly_score: float
     severity: Severity | None
@@ -156,6 +158,10 @@ class ReadingOut(BaseModel):
     signal: str | None
     reviewed: bool
     population: PopulationOut | None = None
+    source: str = "self"
+    watch_slot: str | None = None
+    recorded_by: str | None = None
+    location: str | None = None
 
 
 class HistoryOut(BaseModel):
@@ -216,6 +222,13 @@ class VisitOut(BaseModel):
     case_id: uuid.UUID | None
     citizen: VisitPerson | None = None  # set for the worker's view
     worker_name: str | None = None  # set for the citizen's view
+    missed_reason: str | None = None  # the citizen's explanation for a missed visit
+    visit_type: str = "home"
+    duration_minutes: int = 30
+    notes: str | None = None  # the worker's view only
+    cancelled_by: str | None = None
+    cancel_reason: str | None = None
+    worker_phone: str | None = None
 
 
 class FacilitySummary(BaseModel):
@@ -255,6 +268,12 @@ class AdvisoryOut(BaseModel):
     active: bool
     reach: int | None = None
     can_withdraw: bool = False
+    area: str | None = None
+    radius_km: float | None = None
+    red_reason: str | None = None
+    feedback: str | None = None
+    feedback_note: str | None = None
+    feedback_at: datetime | None = None
 
 
 class AlertsOut(BaseModel):

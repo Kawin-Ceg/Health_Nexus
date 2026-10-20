@@ -1,6 +1,6 @@
 import type { Severity } from "../lib/severity";
 import { api } from "./api";
-import type { AlertItem, Baseline, PopulationCheck, Visit, VisitPerson, VitalCheck } from "./health";
+import type { AlertItem, Baseline, PopulationCheck, Visit, VisitPerson, VitalCheck, VitalsResult } from "./health";
 
 export type Engagement = "attention" | "never_logged" | "silent" | "ok";
 export type Resolution = "reviewed" | "dismissed";
@@ -206,10 +206,22 @@ export const getMap = (signal?: AbortSignal) => get<RiskMap>("/phc/map", undefin
 export const getPhcBadge = (signal?: AbortSignal) =>
   get<{ unread: number; citizens_flagged: number }>("/phc-alerts/unread-count", undefined, signal);
 
-export const bookVisit = (body: { citizen_id: string; case_id?: string | null; scheduled_for: string; reason?: string; location?: string }) =>
+export interface VisitFields {
+  scheduled_for: string;
+  reason?: string;
+  location?: string;
+  visit_type?: import("./health").VisitType;
+  duration_minutes?: number;
+  notes?: string;
+}
+export const getAllVisits = (signal?: AbortSignal) => get<{ visits: Visit[]; cutoff_hours: number }>("/schedule/all", undefined, signal);
+export const bookVisit = (body: VisitFields & { citizen_id: string; case_id?: string | null }) =>
   api.post<Visit>("/phc/visits", body).then((r) => r.data);
 export const getSchedule = (signal?: AbortSignal) => get<Schedule>("/schedule", undefined, signal);
-export const updateVisit = (id: string, body: { action: "complete" | "cancel" | "miss" | "move"; scheduled_for?: string }) =>
+export const updateVisit = (
+  id: string,
+  body: { action: "complete" | "cancel" | "miss" | "move" | "edit"; cancel_reason?: string } & Partial<VisitFields>,
+) =>
   api.patch<Visit>(`/schedule/${id}`, body).then((r) => r.data);
 
 export interface FeedItem {
@@ -224,3 +236,18 @@ export interface FeedItem {
 }
 
 export const getFeed = (signal?: AbortSignal) => get<{ items: FeedItem[]; days: number; limit: number }>("/phc/alerts", undefined, signal);
+
+export const recordExam = (
+  userId: string,
+  body: { vitals: Record<string, number>; symptoms: string[]; location: string; measured_at?: string },
+) => api.post<VitalsResult>(`/phc/citizens/${userId}/readings`, body).then((r) => r.data);
+
+export interface MissedVisits {
+  window_days: number;
+  threshold: number;
+  missed: number;
+  unexplained: number;
+  eligible: boolean;
+  visits: { when: string; at: string; location: string | null; reason: string | null; worker: string | null; explanation: string | null }[];
+}
+export const getMissedVisits = (citizenId: string, signal?: AbortSignal) => get<MissedVisits>(`/phc/citizens/${citizenId}/missed-visits`, undefined, signal);

@@ -4,14 +4,16 @@ One question goes through:
 
 1. Safety: an emergency gets the emergency number at once; a request for a
    diagnosis or medicine advice is declined.
-2. Plan: Gemini (if configured) or the rule-based router picks one tool from
-   catalog.py and fills its parameters. A short follow-up ("and last month?")
-   reuses the previous tool.
-3. Retrieve: the tool's SQL runs in a READ ONLY transaction with a timeout,
-   with the caller's scope (:me / :phc_id) bound on the server.
+2. Plan: Gemini (if configured) or the rule-based router picks up to three tools
+   from catalog.py (one per part of the question) and fills their parameters.
+   A short follow-up ("and last month?") reuses the previous tool.
+3. Retrieve: each tool's SQL runs in a READ ONLY transaction with a timeout,
+   with the caller's scope (:me / :phc_id / :district) bound on the server.
 4. Answer: Gemini words the answer from those rows only, or the template does.
-5. Record: the answer is stored with the SQL that ran and the rows it used,
-   so every answer can show where it came from.
+5. Verify: every number in Gemini's answer must appear in the rows it was given
+   (grounding.py); otherwise the template answer is used instead.
+6. Record: the answer is stored with the SQL that ran, the rows it used and
+   whether it passed the check, so every answer can show where it came from.
 """
 
 import logging
@@ -32,7 +34,7 @@ from app.models.enums import ChatMessageRole, ChatRefusalReason, UserRole
 from app.services.catchment import NO_FACILITY
 from app.services.visits import format_local
 
-from . import llm, router
+from . import grounding, llm, router
 from .catalog import BY_NAME, Tool, tools_for
 from .compose import compose
 
@@ -50,6 +52,8 @@ SUGGESTIONS: dict[UserRole, list[str]] = {
         "When is my next visit?",
         "How many readings have I logged this week?",
         "Which health centre looks after me?",
+        "Any advisories for my area?",
+        "My latest readings and my next visit",
     ],
     UserRole.phc_worker: [
         "Give me an overview of my catchment",
@@ -58,6 +62,7 @@ SUGGESTIONS: dict[UserRole, list[str]] = {
         "What symptoms are being reported this week?",
         "Which localities have the most flags?",
         "What visits do I have in the next 3 days?",
+        "Any outbreak signals near my centre?",
     ],
     UserRole.admin: [
         "Give me a platform overview",
@@ -66,6 +71,7 @@ SUGGESTIONS: dict[UserRole, list[str]] = {
         "How many people signed up in the last 30 days?",
         "Summarise the open support concerns",
         "How is the assistant being used this week?",
+        "Any outbreak signals in my district?",
     ],
 }
 
@@ -81,6 +87,11 @@ EMPTY_ANSWERS: dict[str, str] = {
     "unlinked_workers": "Every approved PHC worker is linked to a health centre.",
     "concerns_summary": "Nobody has raised a support concern yet.",
     "symptom_counts": "No symptoms were reported with readings in the last {days} days.",
+    "my_examinations": "No health worker has recorded an examination for you in the last {days} days.",
+    "my_readings_by_source": "You have no readings in the last {days} days.",
+    "my_advisories": "There are no advisories running for your area right now.",
+    "advisories_overview": "No advisories were published in the last {days} days.",
+    "outbreak_signals": "No outbreak signals were flagged in the last {days} days.",
 }
 INSUFFICIENT = {"my_latest_reading", "my_vital_stats"}
 
@@ -93,6 +104,11 @@ class Outcome:
     rows: list[dict[str, Any]] = field(default_factory=list)
     engine: str = "rules"
     refusal: ChatRefusalReason | None = None
+    sources: list["Source"] = field(default_factory=list)
+    grounded: bool | None = None
+
+
+Source = tuple[Tool, dict[str, Any], list[dict[str, Any]]]
 
 
 def suggestions_for(role: UserRole) -> list[str]:
@@ -120,6 +136,7 @@ def _binds(tool: Tool, args: dict[str, Any], user: User) -> dict[str, Any]:
     # Scope comes from the signed-in user, never from the question or the model.
     values["me"] = user.id
     values["phc_id"] = user.phc_id
+    values["district"] = user.district if user.role == UserRole.admin else None
     return {k: v for k, v in values.items() if re.search(rf"(?<!:):{k}\b", tool.sql)}
 
 
@@ -141,7 +158,7 @@ def _help(role: UserRole) -> str:
         UserRole.phc_worker: "the citizens in your catchment, their flags and readings, your visits, and locality trends",
         UserRole.admin: "accounts, worker applications, health centres, concerns and platform activity (totals only, never anyone's readings)",
     }.get(role, "your data")
-    return f"I answer questions from HealthNexus records: {scope}. Try asking:\n{examples}"
+    return f"I'm Nira. I answer questions from HealthNexus records: {scope}. Try asking:\n{examples}"
 
 
 def _empty(tool: Tool, args: dict[str, Any]) -> Outcome:
@@ -169,27 +186,36 @@ Previous = tuple[Tool, dict[str, Any]] | None
 
 async def _plan(
     user: User, question: str, history: list[tuple[str, str]], previous: Previous, usage: llm.Usage
-) -> tuple[Tool, dict[str, Any], str] | None:
+) -> tuple[list[tuple[Tool, dict[str, Any]]], str] | None:
     allowed = {t.name: t for t in tools_for(user.role)}
     if llm.enabled():
         try:
-            chosen = await llm.choose_tool(user.role.value, question, list(allowed.values()), history, usage)
-            if chosen and chosen[0] in allowed:
-                tool = allowed[chosen[0]]
+            picked = []
+            for name, raw in await llm.choose_tools(user.role.value, question, list(allowed.values()), history, usage):
+                tool = allowed.get(name)
+                if tool is None or any(p[0] is tool for p in picked):
+                    continue
                 # The model's arguments get exactly the same cleaning as the router's.
-                args = {k: p.clean(chosen[1].get(k)) for k, p in tool.params.items()}
+                args = {k: p.clean(raw.get(k)) for k, p in tool.params.items()}
                 if tool.name != "citizen_summary" or args.get("name"):
-                    return tool, args, "gemini"
+                    picked.append((tool, args))
+            if picked:
+                return picked, "gemini"
         except Exception:  # any SDK, network or quota failure: answer with the rules instead
             log.exception("Gemini planning failed; using the rule-based router")
     plan = router.plan(user.role, question)
     if plan:
-        return plan.tool, plan.args, "rules"
+        return [(plan.tool, plan.args)], "rules"
     if previous and previous[0].name in allowed:
         args = router.follow_up(previous[0], previous[1], question)
         if args is not None:
-            return previous[0], args, "rules"
+            return [(previous[0], args)], "rules"
     return None
+
+
+def _template(sources: list[Source]) -> str:
+    parts = [compose(tool.name, rows, args) if rows else _empty(tool, args).content for tool, args, rows in sources]
+    return "\n\n".join(parts)
 
 
 async def _answer(
@@ -216,37 +242,54 @@ async def _answer(
             "I can only answer questions about HealthNexus records, and I couldn't match that to one. " + _help(user.role),
             refusal=ChatRefusalReason.out_of_scope,
         )
-    tool, args, engine_used = planned
-    if tool.needs_facility and user.phc_id is None:
-        return Outcome(NO_FACILITY, tool, args, refusal=ChatRefusalReason.error)
+    plan, engine_used = planned
+    plan = [(tool, args) for tool, args in plan if not (tool.needs_facility and user.phc_id is None)]
+    if not plan:
+        first = planned[0][0]
+        return Outcome(NO_FACILITY, first[0], first[1], refusal=ChatRefusalReason.error)
 
-    try:
-        rows = await retrieve(tool, args, user, engine)
-    except Exception:
-        log.exception("Assistant retrieval failed for %s", tool.name)
-        return Outcome("I couldn't read your records just now. Please try again in a moment.", tool, args,
-                       refusal=ChatRefusalReason.error)
-    if not rows:
-        outcome = _empty(tool, args)
-        outcome.engine = engine_used
-        return outcome
-    if tool.name == "my_activity" and not rows[0]["readings_all_time"]:
-        return Outcome(compose(tool.name, rows, args), tool, args, rows, engine_used,
-                       refusal=ChatRefusalReason.insufficient_history)
+    sources: list[Source] = []
+    for tool, args in plan:
+        try:
+            sources.append((tool, args, await retrieve(tool, args, user, engine)))
+        except Exception:
+            log.exception("Assistant retrieval failed for %s", tool.name)
+            return Outcome("I couldn't read your records just now. Please try again in a moment.", tool, args,
+                           refusal=ChatRefusalReason.error)
+    tool, args, rows = sources[0]
 
-    content = None
+    if len(sources) == 1:
+        if not rows:
+            outcome = _empty(tool, args)
+            outcome.engine, outcome.sources = engine_used, sources
+            return outcome
+        if tool.name == "my_activity" and not rows[0]["readings_all_time"]:
+            return Outcome(compose(tool.name, rows, args), tool, args, rows, engine_used,
+                           refusal=ChatRefusalReason.insufficient_history, sources=sources)
+    elif not any(r for _, _, r in sources):
+        return Outcome(_template(sources), tool, args, rows, engine_used,
+                       refusal=ChatRefusalReason.no_matching_records, sources=sources)
+
+    content, grounded = None, None
     if llm.enabled():
         try:
-            content = await llm.write_answer(
-                user.role.value, question, tool, args, _plain(rows), history, format_local(utcnow()), usage
+            written, seen = await llm.write_answer(
+                user.role.value, question, sources, history, format_local(utcnow()), usage
             )
-            engine_used = "gemini"
+            counts = " ".join(str(len(r)) for _, _, r in sources)
+            missing = grounding.unsupported(written, [seen, question, counts, format_local(utcnow())])
+            if missing:
+                log.warning("Answer not grounded (%s): %s", ", ".join(missing[:5]), question)
+                grounded, engine_used = False, "gemini, replaced by template"
+            else:
+                content, grounded, engine_used = written, True, "gemini"
         except Exception:
             log.exception("Gemini answer failed; using the template")
     if content is None:
-        content = compose(tool.name, rows, args)
-        engine_used = "rules" if engine_used == "rules" else "gemini+template"
-    return Outcome(content, tool, args, rows, engine_used)
+        content = _template(sources)
+        if engine_used == "gemini":
+            engine_used = "gemini+template"
+    return Outcome(content, tool, args, rows, engine_used, sources=sources, grounded=grounded)
 
 
 async def ask(db: AsyncSession, user: User, session: ChatSession, question: str) -> tuple[ChatMessage, ChatMessage]:
@@ -285,13 +328,19 @@ async def ask(db: AsyncSession, user: User, session: ChatSession, question: str)
             "row_count": len(outcome.rows),
             "columns": list(kept[0].keys()) if kept else [],
             "rows": kept,
+            "grounded": outcome.grounded,
+            "sources": [
+                {"tool": t.name, "title": t.title, "args": _plain(a), "row_count": len(r)}
+                for t, a, r in (outcome.sources or [(outcome.tool, outcome.args, outcome.rows)])
+            ],
         }
     answer = ChatMessage(
         session_id=session.id,
         user_id=user.id,
         role=ChatMessageRole.assistant,
         content=outcome.content,
-        generated_sql=outcome.tool.sql.strip() if outcome.tool else None,
+        generated_sql="\n;\n".join(t.sql.strip() for t, _, _ in outcome.sources) if outcome.sources
+        else (outcome.tool.sql.strip() if outcome.tool else None),
         retrieval=retrieval,
         was_refused=outcome.refusal is not None,
         refusal_reason=outcome.refusal,

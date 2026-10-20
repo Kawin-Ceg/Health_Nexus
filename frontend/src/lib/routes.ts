@@ -11,9 +11,10 @@ export const paths = {
   pendingApproval: "/pending-approval",
   onboarding: "/onboarding",
   citizenHome: "/app",
-  submitVitals: "/app/log",
+  watch: "/app/watch",
   history: "/app/history",
   citizenAlerts: "/app/alerts",
+  citizenVisits: "/app/visits",
   phcHome: "/phc",
   phcAlerts: "/phc/alerts",
   phcCitizens: "/phc/citizens",
@@ -40,6 +41,7 @@ export const paths = {
 } as const;
 
 export const citizenRecordPath = (userId: string) => `/phc/citizens/${userId}`;
+export const examPath = (userId: string) => `/phc/citizens/${userId}/exam`;
 
 /**
  * Where a signed-in user belongs, decided by their state. The one place this is

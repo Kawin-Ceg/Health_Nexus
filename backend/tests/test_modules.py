@@ -6,7 +6,15 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select, text, update
 
-from app.core.security import create_access_token, hash_password
+from fastapi.encoders import jsonable_encoder
+from pydantic import ValidationError
+
+from app.api.views import vitals_result
+from app.core.security import create_access_token, decode_access_token, hash_password
+from app.db.session import get_session
+from app.main import app
+from app.schemas.health import VitalsIn
+from app.services.readings import submit_reading
 from app.models import Alert, ScheduledVisit, User, UserProfile, ValidPhcFacility
 from app.models.base import utcnow
 from app.models.enums import Gender, UserRole
@@ -66,8 +74,28 @@ async def world(db):
     }
 
 
-async def submit(client, headers, vitals, **extra):
-    return await client.post(f"{BASE}/health/vitals", json={"vitals": vitals, **extra}, headers=headers)
+class Stored:
+    def __init__(self, status_code: int, body=None):
+        self.status_code = status_code
+        self._body = body
+
+    def json(self):
+        return self._body
+
+
+async def submit(client, headers, vitals, symptoms=(), measured_at=None):
+    """A reading arriving from the citizen's smartwatch, through the same service every reading uses."""
+    try:
+        data = VitalsIn(vitals=vitals, symptoms=list(symptoms), measured_at=measured_at)
+    except ValidationError:
+        return Stored(422)
+    claims = decode_access_token(headers["Authorization"].removeprefix("Bearer "))
+    async for session in app.dependency_overrides[get_session]():
+        citizen = await session.get(User, uuid.UUID(claims["sub"]))
+        if not citizen.consent:
+            return Stored(403)
+        recorded = await submit_reading(session, citizen, data.vitals, data.symptoms, data.measured_at or utcnow(), source="watch")
+        return Stored(201, jsonable_encoder(vitals_result(recorded)))
 
 
 # --- Phase 1 -------------------------------------------------------------------

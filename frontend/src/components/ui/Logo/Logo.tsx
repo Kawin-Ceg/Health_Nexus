@@ -22,13 +22,13 @@ export function Logo({ tone = "default", compact = false }: { tone?: "default" |
   return (
     <Link to={routes.home} className={styles.logo} aria-label={brand.homeLabel}>
       {tone === "default" && (
-        <img src="/brand/wordmark.png" alt="" width={132} height={36} className={`${styles.mark} ${styles.onLight}`} />
+        <img src="/brand/wordmark.png" alt="" width={173} height={30} className={`${styles.mark} ${styles.onLight}`} />
       )}
       <img
         src="/brand/wordmark-light.png"
         alt=""
-        width={132}
-        height={36}
+        width={173}
+        height={30}
         className={`${styles.mark} ${tone === "light" ? "" : styles.onDark}`}
       />
     </Link>

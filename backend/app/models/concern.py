@@ -1,8 +1,9 @@
 import secrets
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import ForeignKey, String, Text, text
+from sqlalchemy import JSON, ForeignKey, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, CreatedAt, UUIDPk, utcnow
@@ -14,7 +15,7 @@ def new_ticket_ref() -> str:
 
 
 class Concern(UUIDPk, CreatedAt, Base):
-    """Support tickets raised by users."""
+    """A complaint or support request. subject_id is who it is about; evidence is what the app recorded."""
 
     __tablename__ = "concerns"
 
@@ -33,3 +34,5 @@ class Concern(UUIDPk, CreatedAt, Base):
     handled_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
     resolved_at: Mapped[datetime | None]
+    subject_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    evidence: Mapped[dict[str, Any] | None] = mapped_column(JSON)

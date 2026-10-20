@@ -308,6 +308,9 @@ class VisitCreate(BaseModel):
     scheduled_for: datetime
     reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] | None = None
     location: Annotated[str, StringConstraints(strip_whitespace=True, max_length=160)] | None = None
+    visit_type: Literal["home", "centre", "follow_up", "vaccination", "maternal", "screening"] = "home"
+    duration_minutes: Annotated[int, Field(ge=10, le=240)] = 30
+    notes: Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)] | None = None
 
     @field_validator("scheduled_for")
     @classmethod

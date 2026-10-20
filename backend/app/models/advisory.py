@@ -24,3 +24,11 @@ class Advisory(UUIDPk, CreatedAt, Base):
     expires_at: Mapped[datetime] = mapped_column(index=True)
     withdrawn_at: Mapped[datetime | None]
     cluster_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("community_data.id", ondelete="SET NULL"))
+    area: Mapped[str | None] = mapped_column(String(120))
+    radius_km: Mapped[float | None]
+    centre_lat: Mapped[float | None]
+    centre_lng: Mapped[float | None]
+    red_reason: Mapped[str | None] = mapped_column(Text)
+    feedback: Mapped[str | None] = mapped_column(String(8))
+    feedback_note: Mapped[str | None] = mapped_column(Text)
+    feedback_at: Mapped[datetime | None]

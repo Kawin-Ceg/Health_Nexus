@@ -3,11 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Phone } from "lucide-react";
 import { BasisTag, PopulationNote, ScoreBreakdown } from "../../components/app/ModelInsights";
 import { BookVisitForm, NoFacility, ResolveControls } from "../../components/app/phc";
+import { ReportCitizen } from "../../components/app/ReportCitizen";
 import { TrendChart } from "../../components/app/TrendChart";
 import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, Stat, VisitBadge, cx } from "../../components/app/ui";
 import { fmtDate, fmtDateTime, fmtVisit, plural } from "../../lib/format";
 import { oneOf, useQueryState } from "../../lib/params";
-import { paths } from "../../lib/routes";
+import { examPath, paths } from "../../lib/routes";
 import { useResource } from "../../lib/useResource";
 import { getMetrics } from "../../services/health";
 import { getRecord, resolveCitizen } from "../../services/phc";
@@ -26,6 +27,7 @@ export function CitizenRecord() {
   );
   const [chosen, setChosen] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const [r, info] = record.data ?? [null, null];
   const metrics = useMemo(() => new Map((info?.metrics ?? []).map((m) => [m.key, m])), [info]);
@@ -74,10 +76,15 @@ export function CitizenRecord() {
                 <Phone size={16} aria-hidden="true" /> {id.phone}
               </a>
             )}
+            <Link to={examPath(id.id)} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-line px-4 text-sm font-semibold text-ink hover:bg-paper">
+              Record examination
+            </Link>
+            <Btn tone="ghost" onClick={() => setReporting((v) => !v)}>Report a problem</Btn>
             <Btn tone="primary" onClick={() => setBooking((b) => !b)}>Book visit</Btn>
           </>
         }
       />
+      {reporting && <ReportCitizen citizenId={id.id} name={id.name} onClose={() => setReporting(false)} />}
       {booking && (
         <div className="mb-6">
           <BookVisitForm citizen={person} onCancel={() => setBooking(false)} onBooked={() => { setBooking(false); record.reload(); }} />

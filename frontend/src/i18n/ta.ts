@@ -4,10 +4,12 @@ export const ta: Partial<Record<MessageKey, string>> = {
   "lang.label": "மொழி",
 
   "nav.dashboard": "முகப்பு",
+  "nav.watch": "ஸ்மார்ட்வாட்ச்",
   "nav.log": "அளவீடுகளைப் பதிவு செய்",
   "nav.history": "வரலாறு",
   "nav.alerts": "எச்சரிக்கைகள் & வருகைகள்",
-  "nav.assistant": "உதவியாளர்",
+  "nav.visits": "வருகைகள்",
+  "nav.assistant": "Nira",
   "nav.profile": "சுயவிவரம்",
   "nav.settings": "அமைப்புகள்",
   "shell.sounds": "ஒலிகள்",
@@ -113,7 +115,7 @@ export const ta: Partial<Record<MessageKey, string>> = {
   "history.reviewed": "பார்வையிடப்பட்டது",
   "history.awaiting": "பார்வைக்குக் காத்திருக்கிறது",
 
-  "alerts.title": "எச்சரிக்கைகள் & வருகைகள்",
+  "alerts.title": "எச்சரிக்கைகள்",
   "alerts.lead": "உங்கள் சுகாதாரப் பணியாளர் முன்பதிவு செய்த வருகைகளும், உங்கள் அளவீடுகள் பற்றிய எச்சரிக்கைகளும்.",
   "alerts.attention": "உங்கள் கவனம் தேவை",
   "alerts.upcoming": "வரவிருக்கும் வருகைகள்",

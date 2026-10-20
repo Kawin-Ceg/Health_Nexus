@@ -112,7 +112,14 @@ export function History() {
                       <span className={cx("h-2.5 w-2.5 shrink-0 rounded-full", tone ? tone.dot : "bg-success")} aria-hidden="true" />
                       <span>
                         <span className="block text-sm font-semibold text-ink">{fmtDateTime(r.measured_at)}</span>
-                        <span className="block text-xs text-ink-muted">{fmtAgo(r.measured_at)}</span>
+                        <span className="block text-xs text-ink-muted">
+                          {fmtAgo(r.measured_at)} ·{" "}
+                          {r.source === "phc"
+                            ? `Examination by ${r.recorded_by ?? "your health worker"}`
+                            : r.source === "watch"
+                              ? `Smartwatch${r.watch_slot ? `, ${r.watch_slot}` : ""}`
+                              : "Entered by you"}
+                        </span>
                       </span>
                     </div>
                     <div className="min-w-0">
@@ -173,6 +180,12 @@ export function History() {
                           );
                         })}
                       </ul>
+                      {r.source === "phc" && (
+                        <p className="mt-4 text-sm text-ink-soft">
+                          Recorded by {r.recorded_by ?? "your health worker"}
+                          {r.location ? ` at ${r.location}` : ""}.
+                        </p>
+                      )}
                       {r.signal && <p className="mt-4 text-sm text-ink">{r.signal}</p>}
                       <PopulationNote check={r.population} className="mt-4" />
                       {r.symptoms.length > 0 && (
@@ -196,7 +209,7 @@ export function History() {
                               {t("history.keep")}
                             </Btn>
                           </div>
-                        ) : (
+                        ) : r.source === "phc" ? null : (
                           <Btn tone="ghost" onClick={() => setConfirming(r.id)} aria-label={`Delete reading from ${fmtDateTime(r.measured_at)}`}>
                             <Trash2 size={16} aria-hidden="true" /> {t("history.mistake")}
                           </Btn>

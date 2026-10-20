@@ -5,8 +5,9 @@ router) only picks one of these tools and fills its declared parameters; it
 never writes SQL. Scope binds are added on the server from the signed-in user
 and are never parameters:
 
-    :me      the caller's own user id
-    :phc_id  the caller's health centre (PHC workers only)
+    :me        the caller's own user id
+    :phc_id    the caller's health centre (PHC workers only)
+    :district  an admin's district (NULL for a state-wide admin)
 
 So a citizen's tools can only ever read rows with user_id = :me, a worker's
 only rows in their catchment, and an admin's only aggregates and account
@@ -34,6 +35,23 @@ _CATCHMENT = f"u.phc_id = :phc_id AND u.role = 'user' AND {WORKER_ACCESS_SQL}"
 _COMMUNITY = COMMUNITY_SQL
 _OPEN = "pd.is_anomaly AND pd.resolution IS NULL"
 _SINCE = "now() - make_interval(days => :days)"
+
+
+def _in_district(column: str) -> str:
+    """An admin sees only their own district; a state-wide admin (no district) sees all."""
+    return f"(CAST(:district AS text) IS NULL OR lower({column}) = lower(CAST(:district AS text)))"
+
+
+# The advisories one citizen is shown, mirroring api/routes/advisories.targeting.
+_FOR_ME = """(
+  (a.scope = 'centre' AND a.phc_id = me.phc_id)
+  OR (a.scope = 'centre' AND a.radius_km IS NOT NULL AND me.geo_lat IS NOT NULL
+      AND power((a.centre_lat - me.geo_lat) * 111, 2)
+        + power((a.centre_lng - me.geo_lng) * 111 * cos(radians(me.geo_lat)), 2) <= a.radius_km * a.radius_km)
+  OR (a.scope = 'area' AND lower(a.district) = lower(me.district) AND lower(a.area) IN (lower(me.area), lower(me.pincode)))
+  OR (a.scope = 'district' AND lower(a.district) = lower(me.district))
+  OR (a.scope = 'state' AND lower(a.state) = lower(me.state))
+)"""
 
 
 @dataclass(frozen=True)
@@ -485,16 +503,19 @@ LIMIT 10""",
         name="platform_overview",
         roles=ADMIN,
         title="Platform overview",
-        description="Accounts by role, deactivated accounts, readings in a window, open flags, pending worker applications and open concerns.",
+        description="For the admin's district: accounts by role, deactivated accounts, readings in a window, open flags, pending worker applications and open concerns.",
         sql=f"""
-SELECT (SELECT count(*) FROM users WHERE role = 'user') AS citizens,
-       (SELECT count(*) FROM users WHERE role = 'phc_worker') AS phc_workers,
-       (SELECT count(*) FROM users WHERE role = 'pending_phc') AS awaiting_approval,
-       (SELECT count(*) FROM users WHERE NOT is_active) AS deactivated,
-       (SELECT count(*) FROM health_records hr WHERE hr.created_at >= {_SINCE}) AS readings,
-       (SELECT count(*) FROM processed_data pd WHERE {_OPEN}) AS open_flags,
-       (SELECT count(*) FROM phc_applications WHERE status = 'pending') AS pending_applications,
-       (SELECT count(*) FROM concerns WHERE status IN ('open', 'in_review')) AS open_concerns""",
+SELECT (SELECT count(*) FROM users u WHERE u.role = 'user' AND {_in_district("u.district")}) AS citizens,
+       (SELECT count(*) FROM users u WHERE u.role = 'phc_worker' AND {_in_district("u.district")}) AS phc_workers,
+       (SELECT count(*) FROM users u WHERE u.role = 'pending_phc' AND {_in_district("u.district")}) AS awaiting_approval,
+       (SELECT count(*) FROM users u WHERE NOT u.is_active AND {_in_district("u.district")}) AS deactivated,
+       (SELECT count(*) FROM health_records hr JOIN users u ON u.id = hr.user_id
+        WHERE hr.created_at >= {_SINCE} AND {_in_district("u.district")}) AS readings,
+       (SELECT count(*) FROM processed_data pd JOIN users u ON u.id = pd.user_id
+        WHERE {_OPEN} AND {_in_district("u.district")}) AS open_flags,
+       (SELECT count(*) FROM phc_applications pa WHERE pa.status = 'pending' AND {_in_district("pa.district")}) AS pending_applications,
+       (SELECT count(*) FROM concerns c JOIN users u ON u.id = c.user_id
+        WHERE c.status IN ('open', 'in_review') AND {_in_district("u.district")}) AS open_concerns""",
         params={"days": DAYS(7)},
         patterns=(
             (r"\b(overview|summary|summarise|summarize|at a glance|how is the platform|stats|statistics|how many (users|accounts|citizens|workers))\b", 3),
@@ -505,12 +526,12 @@ SELECT (SELECT count(*) FROM users WHERE role = 'user') AS citizens,
         roles=ADMIN,
         title="PHC applications waiting",
         description="PHC worker applications waiting for a decision, oldest first.",
-        sql="""
+        sql=f"""
 SELECT pa.created_at AS applied_at, u.name, u.email, u.is_verified AS email_confirmed,
        pa.designation, pa.phc_name, pa.district, pa.state, pa.years_of_service
 FROM phc_applications pa
 JOIN users u ON u.id = pa.user_id
-WHERE pa.status = 'pending'
+WHERE pa.status = 'pending' AND {_in_district("pa.district")}
 ORDER BY pa.created_at
 LIMIT :limit""",
         params={"limit": LIMIT(20)},
@@ -531,6 +552,7 @@ SELECT f.name, f.district, f.state,
         WHERE c.phc_id = f.id AND {_OPEN}) AS open_flags
 FROM valid_phc_facilities f
 JOIN users u ON u.phc_id = f.id
+WHERE {_in_district("f.district")}
 GROUP BY f.id, f.name, f.district, f.state
 ORDER BY (count(*) FILTER (WHERE u.role = 'phc_worker' AND u.is_active) = 0) DESC, citizens DESC
 LIMIT :limit""",
@@ -544,10 +566,10 @@ LIMIT :limit""",
         roles=ADMIN,
         title="Workers with no health centre",
         description="Approved PHC workers not linked to any health centre (they see no citizens).",
-        sql="""
+        sql=f"""
 SELECT u.name, u.email, u.created_at, u.district, u.state
 FROM users u
-WHERE u.role = 'phc_worker' AND u.phc_id IS NULL
+WHERE u.role = 'phc_worker' AND u.phc_id IS NULL AND {_in_district("u.district")}
 ORDER BY u.created_at
 LIMIT 50""",
         patterns=(
@@ -559,9 +581,11 @@ LIMIT 50""",
         roles=ADMIN,
         title="Support concerns",
         description="Support concerns counted by status and category.",
-        sql="""
+        sql=f"""
 SELECT c.status, c.category, count(*) AS concerns, min(c.created_at) AS oldest
 FROM concerns c
+JOIN users u ON u.id = c.user_id
+WHERE {_in_district("u.district")}
 GROUP BY c.status, c.category
 ORDER BY c.status, concerns DESC""",
         patterns=(
@@ -576,7 +600,7 @@ ORDER BY c.status, concerns DESC""",
         sql=f"""
 SELECT u.role, count(*) AS accounts, count(*) FILTER (WHERE u.is_verified) AS email_confirmed
 FROM users u
-WHERE u.created_at >= {_SINCE}
+WHERE u.created_at >= {_SINCE} AND {_in_district("u.district")}
 GROUP BY u.role
 ORDER BY accounts DESC""",
         params={"days": DAYS(30)},
@@ -597,7 +621,7 @@ SELECT coalesce(u.district, 'Unspecified') AS district,
 FROM users u
 LEFT JOIN health_records hr ON hr.user_id = u.id AND hr.timestamp >= {_SINCE}
 LEFT JOIN processed_data pd ON pd.health_record_id = hr.id
-WHERE u.role = 'user' AND {_COMMUNITY}
+WHERE u.role = 'user' AND {_COMMUNITY} AND {_in_district("u.district")}
 GROUP BY 1
 HAVING count(DISTINCT u.id) >= 3
 ORDER BY readings DESC
@@ -619,11 +643,102 @@ SELECT u.role,
        round(avg(m.latency_ms) FILTER (WHERE m.role = 'assistant')) AS avg_latency_ms
 FROM chat_messages m
 JOIN users u ON u.id = m.user_id
-WHERE m.created_at >= {_SINCE}
+WHERE m.created_at >= {_SINCE} AND {_in_district("u.district")}
 GROUP BY u.role""",
         params={"days": DAYS(7)},
         patterns=(
             (r"\b(assistant|chatbot|chat bot|questions asked|usage)\b", 4),
+        ),
+    ),
+    # --- Newer features -------------------------------------------------------------
+    Tool(
+        name="my_examinations",
+        roles=CITIZEN,
+        title="Your examinations",
+        description="Examinations a PHC health worker recorded for the citizen: when, where, by whom and the vitals measured.",
+        sql=f"""
+SELECT hr.timestamp AS examined_at, hr.location, w.name AS examined_by, hr.vitals, hr.symptoms
+FROM health_records hr
+LEFT JOIN users w ON w.id = hr.recorded_by
+WHERE hr.user_id = :me AND hr.source = 'phc' AND hr.timestamp >= {_SINCE}
+ORDER BY hr.timestamp DESC
+LIMIT 10""",
+        params={"days": DAYS(365)},
+        patterns=(
+            (r"\b(exam|exams|examination|examinations|examined|check-?up|checkups?|health worker (measured|checked|recorded))\b", 4),
+        ),
+    ),
+    Tool(
+        name="my_readings_by_source",
+        roles=CITIZEN,
+        title="Where your readings came from",
+        description="The citizen's readings in a window split by source: smartwatch sync, PHC examination, or typed in; with the latest of each.",
+        sql=f"""
+SELECT hr.source, count(*) AS readings, max(hr.timestamp) AS latest
+FROM health_records hr
+WHERE hr.user_id = :me AND hr.timestamp >= {_SINCE}
+GROUP BY hr.source
+ORDER BY readings DESC""",
+        params={"days": DAYS(30)},
+        patterns=(
+            (r"\b(smart ?watch|watch|synced?|sync|wearable|source of my readings)\b", 4),
+        ),
+    ),
+    Tool(
+        name="my_advisories",
+        roles=CITIZEN,
+        title="Advisories for you",
+        description="Community health advisories currently running for where the citizen lives or is registered: title, message, importance (low=green, medium=yellow, high=red) and end date.",
+        sql=f"""
+SELECT a.created_at, a.title, a.body, a.severity, a.expires_at
+FROM advisories a
+JOIN users me ON me.id = :me
+WHERE a.withdrawn_at IS NULL AND a.expires_at > now() AND {_FOR_ME}
+ORDER BY a.created_at DESC
+LIMIT 10""",
+        patterns=(
+            (r"\b(advisory|advisories|notice|notices|announcement|announcements|precautions?|warnings? (in|for) my area)\b", 4),
+        ),
+    ),
+    Tool(
+        name="advisories_overview",
+        roles=WORKER | ADMIN,
+        title="Advisories published",
+        description="Community advisories published in a window (a worker's centre, or an admin's district): title, importance, who it went to, whether running, and the admin's feedback.",
+        sql=f"""
+SELECT a.created_at, a.title, a.severity, a.scope, a.area, a.radius_km,
+       CASE WHEN a.withdrawn_at IS NOT NULL THEN 'withdrawn'
+            WHEN a.expires_at > now() THEN 'running' ELSE 'ended' END AS status,
+       a.feedback
+FROM advisories a
+WHERE a.created_at >= {_SINCE}
+  AND (CAST(:phc_id AS uuid) IS NULL OR a.phc_id = CAST(:phc_id AS uuid))
+  AND {_in_district("a.district")}
+ORDER BY a.created_at DESC
+LIMIT :limit""",
+        params={"days": DAYS(90), "limit": LIMIT(15)},
+        patterns=(
+            (r"\b(advisory|advisories|notice|notices|announcement|announcements|published|broadcast)\b", 4),
+        ),
+    ),
+    Tool(
+        name="outbreak_signals",
+        roles=WORKER | ADMIN,
+        title="Outbreak signals",
+        description="Outbreak clusters the space-time clustering flagged in a window (a worker's centre, or an admin's district): syndrome, cases vs expected, place, onset dates and whether acknowledged.",
+        sql=f"""
+SELECT cd.syndrome, cd.cases, round(cd.expected::numeric, 1) AS expected, round(cd.p_value::numeric, 4) AS p_value,
+       cd.region, cd.district, round(cd.radius_km::numeric, 1) AS radius_km,
+       cd.first_onset, cd.last_onset, cd.acknowledged_at IS NOT NULL AS acknowledged
+FROM community_data cd
+WHERE cd.outbreak_flag AND cd.window_end >= {_SINCE}
+  AND (CAST(:phc_id AS uuid) IS NULL OR cd.phc_ids::jsonb @> to_jsonb(ARRAY[CAST(:phc_id AS uuid)::text]))
+  AND {_in_district("cd.district")}
+ORDER BY cd.cases DESC
+LIMIT 10""",
+        params={"days": DAYS(14)},
+        patterns=(
+            (r"\b(outbreak|outbreaks|cluster|clusters|epidemic|spreading|signal|signals)\b", 5),
         ),
     ),
 )

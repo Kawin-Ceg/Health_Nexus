@@ -10,9 +10,6 @@ export function FinalCta() {
   return (
     <section className={styles.section} aria-labelledby={finalCta.headingId}>
       <Doodle piece="network" className={styles.network} ambient />
-      <Doodle piece="microbe" className={styles.microbe} delay={1} />
-      <Doodle piece="tissue" className={styles.tissue} delay={2} />
-      <Doodle piece="coral" className={styles.coral} delay={1} />
       <Doodle piece="botanical" className={styles.botanical} delay={3} />
       <Container>
         <BlurIn className={styles.inner}>

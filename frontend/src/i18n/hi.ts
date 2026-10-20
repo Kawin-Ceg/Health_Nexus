@@ -4,10 +4,12 @@ export const hi: Partial<Record<MessageKey, string>> = {
   "lang.label": "भाषा",
 
   "nav.dashboard": "डैशबोर्ड",
+  "nav.watch": "स्मार्टवॉच",
   "nav.log": "माप दर्ज करें",
   "nav.history": "इतिहास",
   "nav.alerts": "अलर्ट और विज़िट",
-  "nav.assistant": "सहायक",
+  "nav.visits": "मुलाकातें",
+  "nav.assistant": "Nira",
   "nav.profile": "प्रोफ़ाइल",
   "nav.settings": "सेटिंग्स",
   "shell.sounds": "ध्वनियाँ",
@@ -113,7 +115,7 @@ export const hi: Partial<Record<MessageKey, string>> = {
   "history.reviewed": "देखा गया",
   "history.awaiting": "जाँच बाकी",
 
-  "alerts.title": "अलर्ट और विज़िट",
+  "alerts.title": "अलर्ट",
   "alerts.lead": "आपके स्वास्थ्य कर्मी द्वारा बुक की गई विज़िट, और आपके माप से जुड़े सभी अलर्ट, नए पहले।",
   "alerts.attention": "आपका ध्यान चाहिए",
   "alerts.upcoming": "आने वाली विज़िट",
