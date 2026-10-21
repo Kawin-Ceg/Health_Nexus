@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.12.*"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -417,6 +417,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "jupyterlab", specifier = ">=4" },
+    { name = "matplotlib", specifier = ">=3.9" },
     { name = "pytest", specifier = ">=8" },
 ]
 
