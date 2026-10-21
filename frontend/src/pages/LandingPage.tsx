@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import { chartFallbackLabel, insights } from "../content/landing";
 import {
   CommunityInsights,
-  CommunityShowcase,
   FeatureShowcase,
   FinalCta,
   Footer,
   Hero,
+  Roles,
   LandingNavbar,
   PrivacyBanner,
 } from "../components/landing";
@@ -27,12 +27,12 @@ function ChartSectionFallback() {
 
 export function LandingPage() {
   return (
-    <>
+    <div className="landing">
       <LandingNavbar />
       <main>
         <Hero />
+        <Roles />
         <FeatureShowcase />
-        <CommunityShowcase />
         <LazySection placeholder={<ChartSectionFallback />}>
           <Suspense fallback={<ChartSectionFallback />}>
             <CommunityInsights />
@@ -42,6 +42,6 @@ export function LandingPage() {
         <FinalCta />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { CircleCheck, Eye, EyeOff } from "lucide-react";
 import styles from "./Field.module.css";
 
 interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
@@ -11,21 +11,31 @@ interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size">
   revealable?: boolean;
   /** A control beside the label, such as a "Forgot password?" link. */
   labelAside?: ReactNode;
+  /** Shown in green once the value is valid, e.g. "Looks good". */
+  success?: string;
 }
 
 export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(
-  { label, error, hint, revealable, labelAside, type = "text", className, ...input },
+  { label, error, hint, revealable, labelAside, success, type = "text", className, "aria-describedby": extraDescribedBy, ...input },
   ref,
 ) {
   const id = useId();
   const [revealed, setRevealed] = useState(false);
-  const describedBy = [error && `${id}-error`, hint && !error && `${id}-hint`].filter(Boolean).join(" ") || undefined;
+  const ok = !error && success;
+  const describedBy =
+    [error && `${id}-error`, ok && `${id}-ok`, hint && !error && `${id}-hint`, extraDescribedBy].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className={className ? `${styles.field} ${className}` : styles.field}>
       <div className={styles.labelRow}>
         <label htmlFor={id} className={styles.label}>
           {label}
+          {input.required && (
+            <span className={styles.required}>
+              <span aria-hidden="true"> *</span>
+              <span className="visually-hidden"> (required)</span>
+            </span>
+          )}
         </label>
         {labelAside}
       </div>
@@ -37,6 +47,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(
           type={revealable && revealed ? "text" : type}
           className={revealable ? `${styles.input} ${styles.padded}` : styles.input}
           aria-invalid={error ? true : undefined}
+          aria-required={input.required || undefined}
           aria-describedby={describedBy}
         />
         {revealable && (
@@ -54,6 +65,12 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(
       {hint && !error && (
         <p id={`${id}-hint`} className={styles.hint}>
           {hint}
+        </p>
+      )}
+      {ok && (
+        <p id={`${id}-ok`} className={styles.success}>
+          <CircleCheck size={14} aria-hidden="true" />
+          {success}
         </p>
       )}
       {error && (

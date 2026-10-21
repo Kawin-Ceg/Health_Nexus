@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Phone } from "lucide-react";
-import { BasisTag, ScoreBreakdown } from "../../components/app/ModelInsights";
+import { BasisTag, PopulationNote, ScoreBreakdown } from "../../components/app/ModelInsights";
 import { BookVisitForm, NoFacility, ResolveControls } from "../../components/app/phc";
+import { ReportCitizen } from "../../components/app/ReportCitizen";
 import { TrendChart } from "../../components/app/TrendChart";
 import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, Stat, VisitBadge, cx } from "../../components/app/ui";
 import { fmtDate, fmtDateTime, fmtVisit, plural } from "../../lib/format";
 import { oneOf, useQueryState } from "../../lib/params";
-import { paths } from "../../lib/routes";
+import { examPath, paths } from "../../lib/routes";
 import { useResource } from "../../lib/useResource";
 import { getMetrics } from "../../services/health";
 import { getRecord, resolveCitizen } from "../../services/phc";
@@ -26,6 +27,7 @@ export function CitizenRecord() {
   );
   const [chosen, setChosen] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const [r, info] = record.data ?? [null, null];
   const metrics = useMemo(() => new Map((info?.metrics ?? []).map((m) => [m.key, m])), [info]);
@@ -70,14 +72,19 @@ export function CitizenRecord() {
         actions={
           <>
             {id.phone && (
-              <a href={`tel:${id.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-ink">
+              <a href={`tel:${id.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-line px-4 text-sm font-semibold text-ink">
                 <Phone size={16} aria-hidden="true" /> {id.phone}
               </a>
             )}
+            <Link to={examPath(id.id)} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-line px-4 text-sm font-semibold text-ink hover:bg-paper">
+              Record examination
+            </Link>
+            <Btn tone="ghost" onClick={() => setReporting((v) => !v)}>Report a problem</Btn>
             <Btn tone="primary" onClick={() => setBooking((b) => !b)}>Book visit</Btn>
           </>
         }
       />
+      {reporting && <ReportCitizen citizenId={id.id} name={id.name} onClose={() => setReporting(false)} />}
       {booking && (
         <div className="mb-6">
           <BookVisitForm citizen={person} onCancel={() => setBooking(false)} onBooked={() => { setBooking(false); record.reload(); }} />
@@ -86,14 +93,14 @@ export function CitizenRecord() {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <label className="text-sm text-ink-soft" htmlFor="window">Showing the last</label>
-        <select id="window" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-lg border border-line bg-surface px-2 text-sm">
+        <select id="window" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-xl border border-line bg-surface px-2 text-sm">
           {WINDOWS.map((w) => <option key={w} value={w}>{w} days</option>)}
         </select>
         <span className="text-xs text-ink-soft">{fmtDate(r.window.start)} – {fmtDate(r.window.end)}. Every figure below covers this period.</span>
       </div>
 
       {(before.open_flags > 0 || before.visits_without_outcome > 0) && (
-        <div role="note" className="mb-6 rounded-xl border border-warn/40 bg-warn/10 p-4 text-sm text-ink">
+        <div role="note" className="mb-6 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-ink">
           <strong>From before this period:</strong>{" "}
           {before.open_flags > 0 && `${plural(before.open_flags, "unresolved flag")} (oldest ${fmtDate(before.oldest_flag_at!)}). `}
           {before.visits_without_outcome > 0 && `${plural(before.visits_without_outcome, "visit")} with no outcome recorded.`}
@@ -165,7 +172,7 @@ export function CitizenRecord() {
           className="mb-6"
           title={`${metric.label} in this period`}
           aside={charted.length > 1 && (
-            <select aria-label="Measurement to chart" value={metric.key} onChange={(e) => setChosen(e.target.value)} className="min-h-11 rounded-lg border border-line bg-surface px-2 text-sm">
+            <select aria-label="Measurement to chart" value={metric.key} onChange={(e) => setChosen(e.target.value)} className="min-h-11 rounded-xl border border-line bg-surface px-2 text-sm">
               {charted.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
           )}
@@ -190,11 +197,13 @@ export function CitizenRecord() {
                   {t.flagged && t.checks.length > 0 && (
                     <details className="mt-1">
                       <summary className="cursor-pointer text-xs font-semibold text-brand">Why it was flagged</summary>
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-col gap-2">
                         <ScoreBreakdown checks={t.checks} metrics={metrics} who="worker" />
+                        <PopulationNote check={t.population} />
                       </div>
                     </details>
                   )}
+                  {!t.flagged && t.population?.unusual && <PopulationNote check={t.population} className="mt-1" />}
                   <p className="text-xs text-ink-soft">
                     {Object.entries(t.vitals).map(([k, v]) => `${metrics.get(k)?.label ?? k} ${v.toFixed(metrics.get(k)?.decimals ?? 0)}`).join(" · ")}
                     {t.symptoms.length > 0 && ` · ${t.symptoms.join(", ")}`}

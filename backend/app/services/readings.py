@@ -6,7 +6,7 @@ exactly the way real data is.
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Alert, HealthRecord, ProcessedData, User
 from app.models.enums import AlertType
 
-from .catchment import workers_serving
+from .catchment import worker_access_allowed, workers_serving
 from .scoring import BASELINE_WINDOW, MIN_BASELINE_READINGS, ScoreResult, robust_baseline, score_reading
 from .triage import alert_severity, describe_signal, severity_of
 from .visit_state import format_local
@@ -60,13 +60,19 @@ async def earlier_vitals(session: AsyncSession, user_id: uuid.UUID, before: date
     return list(reversed(rows.all()))
 
 
-def _citizen_message(signal: str, measured_at: datetime, reviewed: bool) -> str:
-    follow_up = (
-        "Your health centre has been notified and may contact you."
-        if reviewed
-        else "No health worker is assigned to your centre yet, so nobody is reviewing this. "
-        "If you feel unwell, see a doctor."
-    )
+def _citizen_message(signal: str, measured_at: datetime, reviewed: bool, access: bool) -> str:
+    if reviewed:
+        follow_up = "Your health centre has been notified and may contact you."
+    elif not access:
+        follow_up = (
+            "You have turned off health worker access, so nobody at your centre will see this. "
+            "If you feel unwell, see a doctor."
+        )
+    else:
+        follow_up = (
+            "No health worker is assigned to your centre yet, so nobody is reviewing this. "
+            "If you feel unwell, see a doctor."
+        )
     return f"Your reading from {format_local(measured_at)} was flagged: {signal}. {follow_up}"
 
 
@@ -78,11 +84,21 @@ async def record_reading(
     measured_at: datetime,
     *,
     stored_at: datetime | None = None,
+    source: str = "watch",
+    recorded_by: uuid.UUID | None = None,
+    location: str | None = None,
+    watch_day: date | None = None,
+    watch_slot: str | None = None,
 ) -> Recorded:
     """Store and score one already-validated reading. Flushes; the caller commits."""
     history = await earlier_vitals(session, citizen.id, measured_at)
     record = HealthRecord(
         user_id=citizen.id,
+        source=source,
+        recorded_by=recorded_by,
+        location=location,
+        watch_day=watch_day,
+        watch_slot=watch_slot,
         vitals=vitals,
         symptoms=symptoms,
         geo_lat=citizen.geo_lat,
@@ -104,22 +120,39 @@ async def record_reading(
         basis=score.basis,
         model_version=score.model_version,
         details=score.details_json(),
+        population=score.population_json(),
     )
     if stored_at is not None:
         processed.processed_at = stored_at
     session.add(processed)
 
     signal = describe_signal(score.features, vitals) if score.is_anomaly else None
-    reviewed = await workers_serving(session, citizen.phc_id) > 0
+    access = await worker_access_allowed(session, citizen.id)
+    reviewed = access and await workers_serving(session, citizen.phc_id) > 0
     if score.is_anomaly:
         alert = Alert(
             user_id=citizen.id,
             alert_type=AlertType.personal,
             severity=alert_severity(severity_of(score.anomaly_score)),
-            message=_citizen_message(signal or "one of your values is outside its usual range", measured_at, reviewed),
+            message=_citizen_message(signal or "one of your values is outside its usual range", measured_at, reviewed, access),
         )
         if stored_at is not None:
             alert.created_at = stored_at
         session.add(alert)
     await session.flush()
     return Recorded(record, processed, score, len(history), signal, reviewed)
+
+
+async def submit_reading(session: AsyncSession, citizen: User, vitals: dict[str, float], symptoms: list[str],
+                         measured_at: datetime, **origin) -> Recorded:
+    """Record, score, queue the emails and commit. Every way a reading arrives goes through here."""
+    from . import notify
+
+    recorded = await record_reading(session, citizen, vitals, symptoms, measured_at, **origin)
+    if recorded.score.is_anomaly:
+        await notify.reading_flagged(
+            session, citizen, severity_of(recorded.score.anomaly_score), recorded.signal, recorded.reviewed_by_someone
+        )
+    await session.commit()
+    return recorded
+

@@ -1,39 +1,35 @@
 import { ArrowRight } from "lucide-react";
 import { finalCta, routes } from "../../../content/landing";
-import { Reveal } from "../../animations/Reveal/Reveal";
 import { Button } from "../../ui/Button/Button";
 import { Container } from "../../ui/Container/Container";
-import { Eyebrow } from "../Eyebrow/Eyebrow";
+import { BlurIn } from "../BlurIn/BlurIn";
+import { Doodle } from "../Doodle/Doodle";
 import styles from "./FinalCta.module.css";
 
 export function FinalCta() {
-  const { heading } = finalCta;
   return (
     <section className={styles.section} aria-labelledby={finalCta.headingId}>
-      <Container className={styles.layout}>
-        <Reveal className={styles.copy}>
-          <Eyebrow>{finalCta.eyebrow}</Eyebrow>
+      <Doodle piece="network" className={styles.network} ambient />
+      <Doodle piece="botanical" className={styles.botanical} delay={3} />
+      <Container>
+        <BlurIn className={styles.inner}>
           <h2 id={finalCta.headingId} className={styles.title}>
-            {heading.lead}
-            <em>{heading.emphasis}</em>
-            {heading.tail}
+            {finalCta.heading.lead}
+            <br />
+            {finalCta.heading.rest}
           </h2>
-          <p className={styles.body}>{finalCta.body}</p>
-          <Button to={routes.signup} size="lg" className={styles.cta}>
-            {finalCta.cta}
-            <ArrowRight size={18} aria-hidden="true" />
-          </Button>
-        </Reveal>
-
-        <ul className={styles.benefits} aria-label={finalCta.benefitsLabel}>
-          {finalCta.benefits.map(({ icon: Icon, title, body }, i) => (
-            <Reveal as="li" key={title} delay={(i + 1) as 1 | 2 | 3 | 4} className={styles.benefit}>
-              <Icon size={24} strokeWidth={1.75} aria-hidden />
-              <h3 className={styles.benefitTitle}>{title}</h3>
-              <p className={styles.benefitBody}>{body}</p>
-            </Reveal>
-          ))}
-        </ul>
+          <div className={styles.ctas}>
+            <Button to={routes.signup} size="lg" variant="secondary">
+              {finalCta.cta}
+              <ArrowRight size={18} aria-hidden="true" />
+            </Button>
+            <Button to={routes.phcSignup} size="lg" variant="secondary">
+              {finalCta.secondaryCta}
+              <ArrowRight size={18} aria-hidden="true" />
+            </Button>
+          </div>
+          <p className={styles.note}>{finalCta.note}</p>
+        </BlurIn>
       </Container>
     </section>
   );

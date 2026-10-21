@@ -74,16 +74,13 @@ A population-level intelligence layer designed to identify health patterns from 
 
 ### 🤖 4. AI Health Assistant
 
-An AI-powered conversational interface for healthcare-related information and personalized assistance.
+A chat assistant for citizens, PHC workers and administrators that answers questions from the user's own HealthNexus records (SQL-driven retrieval-augmented generation):
 
-The system is planned around:
-
-* Large Language Models (LLMs)
-* Retrieval-Augmented Generation (RAG)
-* Trusted healthcare knowledge sources
-* Context-aware responses
-* User health context
-* Safety-aware response generation
+* Each role has a fixed catalog of read-only, parameterized SQL queries (`backend/app/services/assistant/catalog.py`); the model never writes SQL
+* The caller's scope (their own records, or their health centre's catchment) is bound on the server
+* Gemini, when `GEMINI_API_KEYS` is set, picks the query and words the answer from the returned rows; without a key, a rule-based router and templated answers are used
+* Every answer is stored with the SQL that ran and the rows it used, and the chat shows them
+* Requests for a diagnosis or medicine advice are declined; emergencies are pointed to 108
 
 > **Note:** HealthNexus is intended to assist users with healthcare information and decision support. It is not a replacement for qualified medical professionals.
 
@@ -176,10 +173,12 @@ HealthNexus/
 │   ├── schemas/
 │   └── models/
 │
-├── ml/
-│   ├── models/
-│   ├── training/
-│   └── inference/
+├── model/                  # anomaly model: code, training, evaluation, trained artifacts
+│   ├── healthnexus_ml/     # preprocessing.py, anomaly.py, vitals.py, train.py, evaluate.py
+│   ├── artifacts/          # vitals_anomaly.joblib (loaded by the API) + model card
+│   ├── notebooks/          # the research write-up (01-04)
+│   ├── reports/            # evaluation metrics and figures
+│   └── tests/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md
@@ -284,19 +283,19 @@ The project aims to maintain compatibility with relevant healthcare and data-pro
 
 HealthNexus is being developed incrementally:
 
-* [ ] Project foundation
-* [ ] Frontend architecture
-* [ ] Backend API architecture
-* [ ] User authentication
-* [ ] Health profile
-* [ ] Health metric tracking
+* [x] Project foundation
+* [x] Frontend architecture
+* [x] Backend API architecture
+* [x] User authentication
+* [x] Health profile
+* [x] Health metric tracking
 * [ ] Healthcare facility discovery
-* [ ] AI health assistant
-* [ ] RAG pipeline
-* [ ] ML intelligence layer
+* [x] AI health assistant
+* [x] RAG pipeline
+* [x] ML intelligence layer
 * [ ] Community disease analytics
 * [ ] Security hardening
-* [ ] Testing
+* [x] Testing
 * [ ] Deployment
 
 ---

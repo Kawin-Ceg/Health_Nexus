@@ -2,43 +2,65 @@
    color: rgb(var(--hn-ink));  background: rgb(var(--hn-brand) / 0.08); */
 
 :root {
-  /* Colour (light defaults; themes.css swaps these under .dark) */
-  --hn-ink: 22 33 31;
-  --hn-ink-soft: 61 74 71;
-  --hn-paper: 250 247 242;
-  --hn-paper-raised: 243 238 229;
-  --hn-surface: 255 255 255;
-  --hn-line: 228 221 207;
+  /* Colour (light is the default; themes.css swaps these under .dark).
+     Cream paper, near-black ink and buttons, lime for highlights and selection. */
+  --hn-ink: 17 17 17;
+  --hn-ink-soft: 74 70 56; /* 7:1 on milk honey */
+  --hn-ink-muted: 98 92 72; /* 4.8:1 on milk honey */
+  --hn-paper: 241 232 199; /* #F1E8C7 milk honey */
+  --hn-paper-raised: 232 221 182; /* #E8DDB6 sunken bands */
+  --hn-surface: 251 247 234; /* #FBF7EA cards */
+  --hn-matcha: 156 167 99; /* #9CA763 sidebar and highlights */
+  --hn-forest: 52 78 52; /* #344E34 deep green buttons */
+  --hn-line: 224 212 168; /* #E0D4A8 */
+  --hn-line-strong: 140 139 128;
 
-  --hn-brand: 14 70 64; /* #0E4640 teal, primary */
-  --hn-brand-soft: 222 236 232; /* tinted brand fill */
-  --hn-on-brand: 255 255 255; /* text on brand fills */
-  --hn-accent: 193 101 59; /* #C1653B terracotta, decorative + large text */
-  --hn-accent-ink: 158 74 38; /* terracotta dark enough for small text (AA) */
-  --hn-warn: 140 92 10; /* 'elevated'; AA as small text on paper and surface */
-  --hn-danger: 176 38 31; /* form errors; AA on paper and surface */
-  --hn-on-danger: 255 255 255; /* text on a solid danger fill */
-  --hn-danger-soft: 252 234 231;
-  --hn-success: 24 110 72;
-  --hn-success-soft: 224 242 232;
+  --hn-brand: 17 17 17; /* buttons, links, active states */
+  --hn-brand-strong: 0 0 0;
+  --hn-brand-soft: 156 167 99; /* matcha fill, with ink or olive text */
+  --hn-on-brand: 250 249 243;
+  --hn-lime: 156 167 99; /* matcha */
+  --hn-olive: 28 32 8; /* text on matcha, 7:1 */
+  --hn-glow: 255 245 198; /* #FFF5C6 hover glow */
+  --hn-accent: 178 106 0;
+  --hn-accent-ink: 122 79 0;
+  --hn-warn: 122 79 0;
+  --hn-warn-soft: 255 244 214;
+  --hn-danger: 180 35 24;
+  --hn-on-danger: 255 255 255;
+  --hn-danger-soft: 253 237 235;
+  --hn-success: 43 98 54;
+  --hn-success-soft: 232 243 234;
+  --hn-info: 58 79 160; /* #3A4FA0, the illustration blue */
+  --hn-info-soft: 232 240 250;
+  --hn-chart-normal: 140 139 128;
 
   /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
-  --hn-sev-critical: 176 38 31;
+  --hn-sev-critical: 176 53 43;
   --hn-sev-high: 166 64 16;
   --hn-sev-moderate: 140 92 10;
-  --hn-sev-low: 74 96 92;
+  --hn-sev-low: 98 99 30;
 
-  --hn-panel: 12 38 35; /* dark surface for hero side + footer */
-  --hn-panel-raised: 22 55 51;
-  --hn-on-panel: 240 236 228;
-  --hn-on-panel-soft: 183 199 194;
-  --hn-on-panel-error: 240 164 128; /* readable error text on the dark panel */
+  --hn-panel: 17 17 17;
+  --hn-panel-raised: 34 34 32;
+  --hn-on-panel: 250 249 243;
+  --hn-on-panel-soft: 196 195 186;
+  --hn-on-panel-error: 240 164 128;
 
-  --hn-focus: 14 70 64;
+  --hn-focus: 31 79 168; /* #1F4FA8, never mistaken for selection */
+
+  /* Buttons: pills with a soft glow on hover */
+  --hn-button-radius: 999px;
+  --hn-button-border: 1.5px;
+  --hn-button-outline: 17 17 17;
+  --hn-button-glow: 0 0 48px rgb(var(--hn-glow));
+  --hn-button-font: var(--hn-font-display);
+  --hn-button-weight: 450;
+  --hn-button-lg-size: 1.0625rem;
 
   /* Type */
-  --hn-font-sans: "Inter Variable", "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --hn-font-serif: Georgia, "Times New Roman", serif; /* italic emphasis words only */
+  --hn-font-sans: "Inter Variable", "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Tamil", "Noto Sans Devanagari", sans-serif;
+  --hn-font-display: "Newsreader Variable", Georgia, "Times New Roman", "Noto Sans Tamil", "Noto Sans Devanagari", serif;
 
   --hn-text-xs: 0.75rem;
   --hn-text-sm: 0.875rem;
@@ -67,11 +89,11 @@
   --hn-space-20: 80px;
   --hn-space-24: 96px;
 
-  /* Radii: cards 16/24, controls 12, small chips 8 */
-  --hn-radius-sm: 8px;
-  --hn-radius-md: 12px;
-  --hn-radius-lg: 16px;
-  --hn-radius-xl: 24px;
+  /* Radii: badges and inputs 6, buttons 8, panels 12, feature hub 16 */
+  --hn-radius-sm: 6px;
+  --hn-radius-md: 8px;
+  --hn-radius-lg: 12px;
+  --hn-radius-xl: 16px;
   --hn-radius-pill: 999px;
 
   /* Shadows are tinted with ink, never pure black */

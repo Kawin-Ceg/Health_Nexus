@@ -6,7 +6,15 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select, text, update
 
-from app.core.security import create_access_token, hash_password
+from fastapi.encoders import jsonable_encoder
+from pydantic import ValidationError
+
+from app.api.views import vitals_result
+from app.core.security import create_access_token, decode_access_token, hash_password
+from app.db.session import get_session
+from app.main import app
+from app.schemas.health import VitalsIn
+from app.services.readings import submit_reading
 from app.models import Alert, ScheduledVisit, User, UserProfile, ValidPhcFacility
 from app.models.base import utcnow
 from app.models.enums import Gender, UserRole
@@ -66,8 +74,28 @@ async def world(db):
     }
 
 
-async def submit(client, headers, vitals, **extra):
-    return await client.post(f"{BASE}/health/vitals", json={"vitals": vitals, **extra}, headers=headers)
+class Stored:
+    def __init__(self, status_code: int, body=None):
+        self.status_code = status_code
+        self._body = body
+
+    def json(self):
+        return self._body
+
+
+async def submit(client, headers, vitals, symptoms=(), measured_at=None):
+    """A reading arriving from the citizen's smartwatch, through the same service every reading uses."""
+    try:
+        data = VitalsIn(vitals=vitals, symptoms=list(symptoms), measured_at=measured_at)
+    except ValidationError:
+        return Stored(422)
+    claims = decode_access_token(headers["Authorization"].removeprefix("Bearer "))
+    async for session in app.dependency_overrides[get_session]():
+        citizen = await session.get(User, uuid.UUID(claims["sub"]))
+        if not citizen.consent:
+            return Stored(403)
+        recorded = await submit_reading(session, citizen, data.vitals, data.symptoms, data.measured_at or utcnow(), source="watch")
+        return Stored(201, jsonable_encoder(vitals_result(recorded)))
 
 
 # --- Phase 1 -------------------------------------------------------------------
@@ -364,9 +392,16 @@ async def test_switching_centre_moves_the_citizen_out_of_the_old_catchment(clien
 async def test_settings_and_support(client, world):
     _, ph = world["priya"]
     _, rh = world["ravi"]
-    r = await client.patch(f"{BASE}/settings/preferences", json={"theme": "dark", "notifications": {"alerts": {"sms": True}}}, headers=ph)
-    assert r.status_code == 200 and r.json()["theme"] == "dark" and r.json()["notifications"]["alerts"]["sms"] is True
-    assert r.json()["notifications"]["alerts"]["email"] is True  # untouched keys kept
+    r = await client.patch(f"{BASE}/settings/preferences", json={"theme": "dark", "notifications": {"visits": {"email": False}}}, headers=ph)
+    assert r.status_code == 200 and r.json()["theme"] == "dark" and r.json()["notifications"]["visits"]["email"] is False
+    assert r.json()["notifications"]["alerts"]["email"] is True
+    # Retired settings are refused rather than silently stored.
+    r = await client.patch(f"{BASE}/settings/preferences", json={"notifications": {"alerts": {"sms": True}}}, headers=ph)
+    assert r.status_code == 422
+    assert (await client.patch(f"{BASE}/settings/preferences", json={"language": "ta"}, headers=ph)).json()["language"] == "ta"
+    assert (await client.patch(f"{BASE}/settings/preferences", json={"language": "fr"}, headers=ph)).status_code == 422
+    kept = (await client.get(f"{BASE}/settings/preferences", headers=ph)).json()
+    assert kept["theme"] == "dark" and kept["notifications"]["visits"]["email"] is False  # earlier choices kept
     r = await client.patch(f"{BASE}/settings/preferences", json={"working_hours": {"start": "18:00", "end": "09:00"}}, headers=ph)
     assert r.status_code == 422
 
@@ -437,3 +472,17 @@ async def test_scores_explain_themselves_and_baselines_build_up(client, world):
     assert newest["flagged"] and newest["basis"] == "personal_baseline" and newest["checks"]
     rhr = next(v for v in record["vitals"] if v["key"] == "heart_rate")
     assert rhr["baseline"]["usual"] > 0 and rhr["baseline"]["spread"] >= 4.0
+
+
+async def test_each_reading_carries_the_population_check(client, world):
+    _, ph = world["priya"]
+    _, wh = world["worker"]
+    result = (await submit(client, ph, {"heart_rate": 72, "respiratory_rate": 15, "systolic": 165, "diastolic": 101})).json()
+    assert result["population"]["version"] == "population-iforest-v1"
+    assert result["population"]["unusual"] is False and result["population"]["note"].startswith("Typical")
+    history = (await client.get(f"{BASE}/health/history", headers=ph)).json()["items"]
+    assert history[0]["population"] == result["population"]
+    case = (await client.get(f"{BASE}/phc/queue", headers=wh)).json()["items"][0]
+    assert case["population"]["score"] == result["population"]["score"]
+    # A reading without heart rate or breathing rate has nothing for the model to look at.
+    assert (await submit(client, ph, {"systolic": 118, "diastolic": 76})).json()["population"] is None

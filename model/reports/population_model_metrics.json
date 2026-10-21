@@ -1,0 +1,58 @@
+{
+  "scorer_model_version": "personal-baseline-v1",
+  "population_model_version": "population-iforest-v1",
+  "test_people": 15,
+  "test_readings": 1249,
+  "note": "LifeSnaps resting values stand in for spot readings; real spot readings are noisier, so the population model's false-flag cost here is a lower bound.",
+  "variants": [
+    {
+      "variant": "app scorer (shipped)",
+      "false_flags": 0.012,
+      "established|mild": 0.071,
+      "established|moderate": 0.571,
+      "established|strong": 1.0,
+      "new user|mild": 0.133,
+      "new user|moderate": 0.6,
+      "new user|strong": 0.867
+    },
+    {
+      "variant": "+ population model flags at 1 (new users)",
+      "false_flags": 0.012,
+      "established|mild": 0.071,
+      "established|moderate": 0.571,
+      "established|strong": 1.0,
+      "new user|mild": 0.133,
+      "new user|moderate": 0.6,
+      "new user|strong": 0.867
+    },
+    {
+      "variant": "+ population model flags at 0.75 (new users)",
+      "false_flags": 0.012,
+      "established|mild": 0.071,
+      "established|moderate": 0.571,
+      "established|strong": 1.0,
+      "new user|mild": 0.133,
+      "new user|moderate": 0.6,
+      "new user|strong": 0.867
+    },
+    {
+      "variant": "+ population model flags at 0.5 (new users)",
+      "false_flags": 0.012,
+      "established|mild": 0.071,
+      "established|moderate": 0.571,
+      "established|strong": 1.0,
+      "new user|mild": 0.133,
+      "new user|moderate": 0.6,
+      "new user|strong": 0.867
+    }
+  ],
+  "agreement": {
+    "readings": 1249,
+    "population_unusual_share": 0.0432,
+    "unusual_that_the_app_also_flagged": 0.13,
+    "flags_the_population_model_agrees_with": 0.467,
+    "new_user_readings": 105,
+    "new_user_readings_unusual": 0
+  },
+  "decision": "The app shows the population check with every reading but does not let it flag: on held-out people it added no detection, and most readings it calls unusual are ordinary for that person."
+}

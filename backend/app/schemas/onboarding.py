@@ -84,10 +84,15 @@ class ProfileFields(BaseModel):
 
 
 class ConsentAnswers(BaseModel):
-    """Step 5. Both answers are explicit; there is no default to fall back on."""
+    """Step 5. The answers are explicit; there is no default to fall back on.
+
+    phc_worker_access is optional for older clients: unanswered, a citizen's centre
+    can see them until they turn it off (services/consent.allows_worker_access).
+    """
 
     health_tracking: bool
     community_surveillance: bool
+    phc_worker_access: bool | None = None
 
 
 class ProfileCreate(ProfileFields):

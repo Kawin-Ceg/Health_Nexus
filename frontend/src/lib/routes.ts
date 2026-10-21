@@ -11,9 +11,10 @@ export const paths = {
   pendingApproval: "/pending-approval",
   onboarding: "/onboarding",
   citizenHome: "/app",
-  submitVitals: "/app/log",
+  watch: "/app/watch",
   history: "/app/history",
   citizenAlerts: "/app/alerts",
+  citizenVisits: "/app/visits",
   phcHome: "/phc",
   phcAlerts: "/phc/alerts",
   phcCitizens: "/phc/citizens",
@@ -21,15 +22,26 @@ export const paths = {
   phcReports: "/phc/reports",
   phcMap: "/phc/map",
   notifications: "/notifications",
+  advisories: "/advisories",
+  outbreaks: "/outbreaks",
   settings: "/settings",
   profile: "/profile",
   confirmEmail: "/confirm-email",
   adminHome: "/admin",
+  adminApplications: "/admin/applications",
+  adminAccounts: "/admin/accounts",
+  adminConcerns: "/admin/concerns",
+  adminAudit: "/admin/audit",
+  adminCentres: "/admin/centres",
+  assistant: "/assistant",
   sessions: "/account/sessions",
   unauthorized: "/unauthorized",
+  privacy: "/privacy-policy",
+  terms: "/terms",
 } as const;
 
 export const citizenRecordPath = (userId: string) => `/phc/citizens/${userId}`;
+export const examPath = (userId: string) => `/phc/citizens/${userId}/exam`;
 
 /**
  * Where a signed-in user belongs, decided by their state. The one place this is

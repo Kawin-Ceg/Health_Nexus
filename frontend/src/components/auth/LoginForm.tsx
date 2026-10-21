@@ -25,12 +25,21 @@ export function LoginForm() {
   return (
     <form className={styles.form} onSubmit={onSubmit} noValidate>
       {form.formError && <Banner tone="error">{form.formError}</Banner>}
-      <Field label="Email" type="email" autoComplete="email" inputMode="email" {...form.field("email")} />
+      <Field
+        label="Email"
+        type="email"
+        autoComplete="email"
+        inputMode="email"
+        required
+        {...form.field("email")}
+        success={!form.problems.email ? "Looks good" : undefined}
+      />
       <Field
         label="Password"
         type="password"
         revealable
         autoComplete="current-password"
+        required
         labelAside={
           <Link to={paths.forgotPassword} className={styles.link}>
             Forgot password?

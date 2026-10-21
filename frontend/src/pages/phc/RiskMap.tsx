@@ -19,9 +19,9 @@ export function RiskMap() {
   const blocked = workerState(map);
   if (blocked) return blocked;
   const m = map.data;
-  const placed = m?.items.filter((i) => i.lat !== null && i.lng !== null) ?? [];
+  const placed = m?.items.filter((i): i is LocalityRisk & { lat: number; lng: number } => i.lat !== null && i.lng !== null) ?? [];
   const centre: [number, number] | null =
-    m && m.facility_lat !== null && m.facility_lng !== null ? [m.facility_lat, m.facility_lng] : placed[0] ? [placed[0].lat!, placed[0].lng!] : null;
+    m && m.facility_lat !== null && m.facility_lng !== null ? [m.facility_lat, m.facility_lng] : placed[0] ? [placed[0].lat, placed[0].lng] : null;
 
   return (
     <>
@@ -35,7 +35,7 @@ export function RiskMap() {
                 {placed.map((i) => (
                   <CircleMarker
                     key={i.locality}
-                    center={[i.lat!, i.lng!]}
+                    center={[i.lat, i.lng]}
                     radius={10 + Math.sqrt(i.citizens) * 3}
                     pathOptions={{ color: "rgb(var(--hn-surface))", weight: 2, fillColor: LEVEL[i.level].color, fillOpacity: 0.75 }}
                   >

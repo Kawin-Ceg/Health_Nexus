@@ -104,3 +104,17 @@ def test_details_are_json_ready_for_storage():
     stored = result.details_json()
     assert set(stored) == {"heart_rate", "systolic"}
     assert {"stage", "weight", "published", "baseline", "spread", "z", "confirmed", "safety"} <= set(stored["heart_rate"])
+
+
+def test_the_trained_population_model_checks_every_heart_and_breathing_reading():
+    usual = score_reading(USER, {"heart_rate": 68, "respiratory_rate": 15}, [])
+    assert usual.population is not None and usual.population.version == "population-iforest-v1"
+    assert usual.population.features == ("heart_rate", "respiratory_rate") and not usual.population.unusual
+
+    odd = score_reading(USER, {"heart_rate": 99, "respiratory_rate": 20}, [])
+    assert odd.population.unusual and odd.population.percentile > 0.97
+    # It informs; it never flags on its own. Both values are inside the published ranges.
+    assert not odd.is_anomaly
+
+    # Nothing to compare without heart rate or breathing rate.
+    assert score_reading(USER, {"systolic": 118, "diastolic": 76}, []).population is None

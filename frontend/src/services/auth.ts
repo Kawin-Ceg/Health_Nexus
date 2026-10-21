@@ -17,6 +17,7 @@ export interface Application {
   state: string;
   years_of_service: number;
   status: "pending" | "approved" | "rejected";
+  rejection_reason?: string | null;
   created_at: string;
 }
 

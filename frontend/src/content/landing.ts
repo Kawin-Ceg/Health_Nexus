@@ -1,32 +1,17 @@
-/* All landing-page copy. Components read from here and hold no text of their own.
-   Headings are split so the emphasis word can be set in italic serif. */
+/* All landing-page copy. Components read from here and hold no text of their own. */
 
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
-  BellRing,
   ClipboardList,
-  Droplet,
-  Footprints,
-  HandHeart,
-  HeartPulse,
-  Hospital,
   MapPin,
   MessageCircle,
-  Moon,
-  ShieldCheck,
-  Sparkles,
+  Stethoscope,
   TrendingUp,
   Users,
 } from "lucide-react";
 
 export type Icon = LucideIcon;
-
-export interface Heading {
-  lead: string;
-  emphasis: string;
-  tail: string;
-}
 
 export interface NavLink {
   label: string;
@@ -40,8 +25,8 @@ export interface IconItem {
 }
 
 export const brand = {
-  name: "HealthNexus",
-  homeLabel: "HealthNexus home",
+  name: "Health Nexus",
+  homeLabel: "Health Nexus home",
   tagline: "Personal health tracking and community health intelligence, built with primary health centres.",
 };
 
@@ -57,13 +42,14 @@ export const routes = {
 export const nav = {
   label: "Main",
   links: [
+    { label: "Who it's for", href: "#roles" },
     { label: "Features", href: "#features" },
     { label: "Community", href: "#community" },
-    { label: "Health Insights", href: "#insights" },
+    { label: "Health insights", href: "#insights" },
     { label: "Privacy", href: "#privacy" },
   ] satisfies NavLink[],
   login: "Log in",
-  getStarted: "Get started",
+  getStarted: "Create account",
   openMenu: "Open menu",
   closeMenu: "Close menu",
   menuTitle: "Menu",
@@ -71,38 +57,52 @@ export const nav = {
 
 export const hero = {
   headingId: "hero-heading",
-  eyebrow: "Health surveillance for everyone",
-  heading: { lead: "Your health, and your community's, in ", emphasis: "one", tail: " place." } satisfies Heading,
-  body: "Log your vitals, spot changes early, and help local health workers see outbreaks before they spread.",
+  heading: { lead: "Your health and your community's,", highlight: "in one place." },
   primaryCta: "Create account",
   secondaryCta: "I'm a PHC worker",
+  trust: ["Free for citizens", "Explains, never diagnoses", "Your data stays yours"],
   chat: {
-    label: "Example: HealthNexus explaining a smartwatch reading",
-    source: "From your smartwatch, synced 7:40 am",
-    question: "My watch says my resting heart rate is 88 today. Is that normal for me?",
-    typing: "HealthNexus is typing",
+    label: "Example conversation with the Health Nexus assistant",
+    source: "Example conversation",
+    question: "My resting heart rate is 88 today. Is that normal for me?",
     answer:
-      "It's higher than your usual 72 bpm. It started rising after three nights of short sleep. If it stays high for two more days, we'll let your PHC know.",
-    reason: "Driven by: resting heart rate",
+      "That's higher than your usual resting rate, which has been about 72 bpm over your last 30 days. A single higher reading can happen with poor sleep, caffeine, stress or illness. If it stays above your usual range for several days, or you feel unwell, talk to your health centre.",
+    reason: "Based on: your logged resting heart rate, last 30 days",
+    disclaimer: "Health Nexus explains readings; it does not diagnose.",
   },
-  pillarsLabel: "What HealthNexus covers",
-  pillars: [
-    { icon: HeartPulse, title: "Personal Health", body: "Track vitals against your own normal, not a generic average." },
-    { icon: Hospital, title: "Healthcare Access", body: "Find your nearest PHC and book a visit when you need one." },
-    { icon: Users, title: "Community Intelligence", body: "Anonymous signals show what is going around your area." },
-    { icon: ShieldCheck, title: "Secure & Private", body: "Your records stay yours. You choose who can see them." },
-  ] satisfies IconItem[],
 };
 
-export const phone = {
-  greeting: "Good morning",
-  date: "Today",
-  status: "All vitals in your usual range",
-  tiles: [
-    { icon: HeartPulse, label: "Heart Rate", value: "72", unit: "bpm", tone: "brand" },
-    { icon: Moon, label: "Sleep", value: "7h 20m", unit: "", tone: "neutral" },
-    { icon: Footprints, label: "Steps", value: "6,418", unit: "", tone: "neutral" },
-    { icon: Droplet, label: "SpO₂", value: "98", unit: "%", tone: "accent" },
+export const roles = {
+  id: "roles",
+  headingId: "roles-heading",
+  eyebrow: "Who it's for",
+  heading: "Pick where you start",
+  body: "Health Nexus has one place for each person who uses it.",
+  items: [
+    {
+      role: "citizen",
+      who: "For citizens",
+      title: "Look after your health",
+      body: "Log your readings, see how they compare with your usual, and know a health worker is watching for unusual ones.",
+      cta: "Create account",
+      href: "/signup",
+    },
+    {
+      role: "worker",
+      who: "For PHC workers",
+      title: "Look after your area",
+      body: "Review flagged readings from your health centre, book visits and see which localities need attention.",
+      cta: "Apply as a PHC worker",
+      href: "/signup/phc-worker",
+    },
+    {
+      role: "admin",
+      who: "For administrators",
+      title: "Keep it running safely",
+      body: "Approve health workers, manage accounts and answer concerns. Admin accounts are set up for you.",
+      cta: "Sign in",
+      href: "/login",
+    },
   ] as const,
 };
 
@@ -110,33 +110,39 @@ export const features = {
   id: "features",
   headingId: "features-heading",
   eyebrow: "Features",
-  heading: { lead: "Everything you need to ", emphasis: "stay", tail: " ahead of your health." } satisfies Heading,
-  body: "Built for citizens, and for the health workers who look after them.",
+  heading: "What Health Nexus does",
+  body: "Built for citizens and the health workers who look after them.",
+  hub: { title: "Health Nexus", body: "You, your health centre and your community, connected.", hint: "Hover or tap to explore" },
   items: [
     {
       icon: Activity,
-      title: "Personal Health Tracking",
-      body: "Log your vitals and see how today compares with your usual.",
+      title: "Track your readings",
+      body: "Log blood pressure, heart rate, temperature, oxygen and more. Each reading is compared with your own usual, not a generic average.",
     },
     {
       icon: ClipboardList,
-      title: "Unified Health Record",
-      body: "Readings, visits and reminders in one place.",
+      title: "Your health record",
+      body: "Readings, flags, visits and notifications in one place. Every flag shows which reading caused it.",
     },
     {
       icon: MapPin,
-      title: "Find Healthcare Nearby",
-      body: "See the health centre that covers your area.",
+      title: "Your health centre",
+      body: "See the primary health centre that covers your area, and get notified when its health worker books a visit with you.",
     },
     {
       icon: Users,
-      title: "Community Intelligence",
-      body: "Spot illness spreading nearby, without naming anyone.",
+      title: "Community signals",
+      body: "Health workers see how many people in each locality have unusual readings, without anyone being named.",
     },
     {
       icon: MessageCircle,
-      title: "AI Health Assistant",
+      title: "Plain-language explanations",
       body: "Ask about your readings in plain words. It explains; it doesn't diagnose.",
+    },
+    {
+      icon: Stethoscope,
+      title: "Health worker tools",
+      body: "A worklist of flagged citizens, visit scheduling and a locality risk map for each health centre.",
     },
   ] satisfies IconItem[],
 };
@@ -144,28 +150,27 @@ export const features = {
 export const community = {
   id: "community",
   headingId: "community-heading",
-  eyebrow: "Community",
-  heading: { lead: "See what's happening ", emphasis: "around", tail: " you." } satisfies Heading,
-  body: "When many people nearby show the same change, local health workers hear about it early.",
-  live: "Live",
-  liveLabel: "Community signals are updated as readings come in",
-  mapCaption: "Signals grouped by locality",
-  localities: ["Mylapore", "Adyar", "Ambattur", "Tambaram"],
+  eyebrow: "For PHC workers",
+  heading: "How community signals work",
+  body: "When several people in one locality show unusual readings, the health worker for that area can see it early. Signals use grouped readings; no individual is named.",
+  exampleCaption: "Example: how a health worker sees localities (illustrative, not real data)",
+  exampleColumns: { area: "Area", citizens: "Citizens", flagged: "With an unusual reading", status: "Status" },
+  exampleRows: [
+    { area: "Area A", citizens: 42, flagged: 9, status: "Above usual, under review" },
+    { area: "Area B", citizens: 35, flagged: 2, status: "Typical" },
+    { area: "Area C", citizens: 28, flagged: 1, status: "Typical" },
+    { area: "Area D", citizens: 19, flagged: 0, status: "Typical" },
+  ],
   points: [
     {
       icon: Activity,
-      title: "Disease Surveillance",
-      body: "Unusual readings that cluster in time and place are flagged to the nearest PHC.",
+      title: "Locality view",
+      body: "Each locality shows the share of its citizens with an open flag. Localities with fewer than three people are merged so nobody can be identified.",
     },
     {
       icon: TrendingUp,
-      title: "Trend Analysis",
-      body: "Week-on-week patterns show whether a local rise is growing or settling.",
-    },
-    {
-      icon: HandHeart,
-      title: "Community Impact",
-      body: "Every reading you log helps protect the people who live near you.",
+      title: "Trend analysis",
+      body: "Week-on-week counts show whether a local rise is growing or settling.",
     },
   ] satisfies IconItem[],
 };
@@ -175,17 +180,20 @@ export type ChartRow = { period: string; normal: number; elevated: number; high:
 export const insights = {
   id: "insights",
   headingId: "insights-heading",
-  eyebrow: "Health Insights",
-  heading: { lead: "Community health, ", emphasis: "at a glance", tail: "." } satisfies Heading,
-  body: "Anonymous readings from a sample district, grouped by severity each week.",
-  chartTitle: "Anonymous readings by severity, last 8 weeks",
+  eyebrow: "Health insights",
+  heading: "Community health at a glance",
+  body: "Each reading is grouped by how far it is from that person's own usual range: within it, somewhat above, or well above.",
+  chartTitle: "Readings by distance from each person's usual range, 8 weeks",
   chartSummary:
-    "Stacked bars for eight weeks. Normal readings stay steady around 900 a week, while elevated and high readings rise in weeks 6 and 7 and ease in week 8.",
-  illustrative: "Illustrative sample data",
+    "Stacked bars for eight weeks. Readings within the usual range stay steady around 900 a week, while readings above it rise in weeks 6 and 7 and ease in week 8.",
+  illustrative: "Illustrative example, not real data",
+  periodNote: "W1 is 8 weeks ago; W8 is this week.",
+  tableToggle: "Show data table",
+  tableColumns: { period: "Week", total: "Total" },
   legend: {
-    normal: "Normal",
-    elevated: "Elevated",
-    high: "High",
+    normal: "Within usual range",
+    elevated: "Somewhat above",
+    high: "Well above",
   },
   tooltipTotal: "Total",
   data: [
@@ -198,45 +206,47 @@ export const insights = {
     { period: "W7", normal: 858, elevated: 203, high: 61 },
     { period: "W8", normal: 921, elevated: 164, high: 39 },
   ] satisfies ChartRow[],
-  stats: [
-    { value: "1,124", label: "Anonymous reports this week" },
-    { value: "14", label: "Regions monitored" },
-    { value: "3", label: "Active community alerts" },
-  ],
+  stats: {
+    thisWeek: "Example readings this week",
+    aboveUsual: "Example readings above usual this week",
+    areas: { value: "4", label: "Example areas" },
+  },
 };
 
 export const privacy = {
   id: "privacy",
   headingId: "privacy-heading",
-  eyebrow: "Privacy & Trust",
-  heading: { lead: "Your data is ", emphasis: "yours", tail: ". Always." } satisfies Heading,
-  body: "Community insights only ever use anonymous, grouped readings. Health workers see your details only inside their own catchment, and you can export or delete your records at any time.",
+  eyebrow: "Privacy & trust",
+  heading: "Your data stays yours",
+  points: [
+    "Community views only use grouped counts. Localities with fewer than three people are merged so nobody can be picked out.",
+    "Health workers see your details only if you are registered at their health centre.",
+    "You can download all your data, delete any reading, change your consent choices, or deactivate your account from Settings.",
+    "Passwords and sign-in tokens are stored only as one-way hashes.",
+  ],
   link: "Read our privacy policy",
 };
 
 export const finalCta = {
   headingId: "final-cta-heading",
   eyebrow: "Get started",
-  heading: { lead: "Start looking after your health ", emphasis: "today", tail: "." } satisfies Heading,
-  body: "Free for citizens. Setup takes about two minutes.",
+  heading: { lead: "Start looking after your health,", rest: "and your community's, today" },
+  body: "Free for citizens. Create an account, confirm your email, and set up your health profile.",
   cta: "Create account",
-  benefitsLabel: "Why people join",
-  benefits: [
-    { icon: ShieldCheck, title: "Secure & Private", body: "Encrypted records you control." },
-    { icon: Sparkles, title: "AI-Powered Insights", body: "Every flag shows which vital caused it." },
-    { icon: Users, title: "Community Driven", body: "Your readings help people nearby." },
-    { icon: BellRing, title: "Smart Reminders", body: "Nudges for readings and visits." },
-  ] satisfies IconItem[],
+  secondaryCta: "I'm a PHC worker",
+  note: "No ads. Download your data or delete any reading, any time.",
 };
 
 export const footer = {
   label: "Footer",
+  statement: "It explains; it doesn't diagnose.",
+  emergency: "In an emergency, call 108.",
   columns: [
     {
       title: "Platform",
       links: [
         { label: "Features", href: "#features" },
-        { label: "Health Insights", href: "#insights" },
+        { label: "Health insights", href: "#insights" },
         { label: "Community", href: "#community" },
         { label: "Privacy & Trust", href: "#privacy" },
       ],
@@ -250,21 +260,12 @@ export const footer = {
       ],
     },
   ] satisfies { title: string; links: NavLink[] }[],
-  newsletter: {
-    title: "Health updates, monthly",
-    body: "Community health news for your district. No spam.",
-    label: "Email address",
-    placeholder: "you@example.com",
-    submit: "Subscribe",
-    success: "Thanks. Check your inbox to confirm.",
-    invalid: "Enter a valid email address.",
-  },
   legalLabel: "Legal",
   legal: [
     { label: "Privacy policy", href: routes.privacy },
-    { label: "Terms", href: routes.terms },
+    { label: "Terms of service", href: routes.terms },
   ] satisfies NavLink[],
-  copyright: `© ${new Date().getFullYear()} HealthNexus`,
+  copyright: `© ${new Date().getFullYear()} Health Nexus`,
 };
 
 export const chartFallbackLabel = "Loading community insights";

@@ -2,9 +2,8 @@ import { lazy } from "react";
 
 export { LandingNavbar } from "./LandingNavbar/LandingNavbar";
 export { Hero } from "./Hero/Hero";
-export { PhoneMockup } from "./PhoneMockup/PhoneMockup";
+export { Roles } from "./Roles/Roles";
 export { FeatureShowcase } from "./FeatureShowcase/FeatureShowcase";
-export { CommunityShowcase } from "./CommunityShowcase/CommunityShowcase";
 export { PrivacyBanner } from "./PrivacyBanner/PrivacyBanner";
 export { FinalCta } from "./FinalCta/FinalCta";
 export { Footer } from "./Footer/Footer";

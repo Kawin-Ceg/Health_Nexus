@@ -24,7 +24,7 @@ export function Reports() {
         title="Reports"
         lead={r ? `${fmtDate(r.window.start)} – ${fmtDate(r.window.end)} (whole days, India time).` : undefined}
         actions={
-          <select aria-label="Period" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-xl border border-line bg-surface px-3 text-sm">
+          <select aria-label="Period" value={String(days)} onChange={(e) => set({ days: e.target.value })} className="min-h-11 rounded-2xl border border-line bg-surface px-3 text-sm">
             {WINDOWS.map((w) => <option key={w} value={w}>Last {w} days</option>)}
           </select>
         }
@@ -51,7 +51,7 @@ export function Reports() {
                       const d = active && (payload?.[0]?.payload as ReportsData["daily"][number] | undefined);
                       if (!d) return null;
                       return (
-                        <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-[var(--hn-shadow-md)]">
+                        <div className="rounded-xl border border-line bg-surface px-3 py-2 text-xs shadow-[var(--hn-shadow-md)]">
                           <p className="text-ink-soft">{fmtDate(d.date)}</p>
                           <p className="text-ink"><strong>{d.readings}</strong> readings, {d.flags} flagged</p>
                         </div>

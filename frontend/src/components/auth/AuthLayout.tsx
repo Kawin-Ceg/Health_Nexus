@@ -1,14 +1,12 @@
 import type { ReactNode } from "react";
-import { HeartPulse, MapPin, ShieldCheck } from "lucide-react";
-import { brand } from "../../content/landing";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { paths } from "../../lib/routes";
+import { Doodle } from "../landing/Doodle/Doodle";
+import { SoundToggle } from "../landing/SoundToggle/SoundToggle";
+import { ThemeToggle } from "../ui/ThemeToggle/ThemeToggle";
 import { Logo } from "../ui/Logo/Logo";
 import styles from "./AuthLayout.module.css";
-
-const points = [
-  { icon: HeartPulse, text: "Track your vitals and see what is normal for you." },
-  { icon: MapPin, text: "Stay linked to your own primary health centre." },
-  { icon: ShieldCheck, text: "Your data stays private. You choose what is shared." },
-];
 
 interface AuthLayoutProps {
   title: string;
@@ -20,29 +18,30 @@ interface AuthLayoutProps {
   wide?: boolean;
 }
 
-/** Two columns: brand panel on the left (hidden on small screens), form on the right. */
+/** One centred card on the cream page, with the illustrations around the edges. */
 export function AuthLayout({ title, subtitle, children, footer, wide = false }: AuthLayoutProps) {
   return (
-    <div className={styles.layout}>
-      <aside className={styles.panel}>
-        <Logo tone="light" />
-        <div className={styles.pitch}>
-          <p className={styles.tagline}>{brand.tagline}</p>
-          <ul className={styles.points}>
-            {points.map(({ icon: Icon, text }) => (
-              <li key={text}>
-                <Icon size={20} aria-hidden="true" />
-                <span>{text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </aside>
+    <div className={`landing ${styles.layout}`}>
+      <Doodle piece="network" className={styles.network} ambient />
+      <Doodle piece="beads" className={styles.beads} />
+      <Doodle piece="botanical" className={styles.botanical} delay={2} />
+      <Doodle piece="tree" className={styles.tree} delay={2} />
+      <Doodle piece="ecg" className={styles.ecg} delay={1} />
+      <Doodle piece="radial" className={styles.radial} delay={4} />
+
+      <header className={styles.topBar}>
+        <Logo />
+        <span className={styles.topActions}>
+          <ThemeToggle className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-line bg-surface/70 text-ink-soft transition-colors hover:border-ink/30 hover:text-ink" />
+          <SoundToggle />
+          <Link to={paths.home} className={styles.back}>
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back to home
+          </Link>
+        </span>
+      </header>
 
       <main className={styles.main}>
-        <div className={styles.mobileLogo}>
-          <Logo />
-        </div>
         <div className={wide ? `${styles.card} ${styles.wide}` : styles.card}>
           <header className={styles.header}>
             <h1>{title}</h1>
@@ -51,6 +50,7 @@ export function AuthLayout({ title, subtitle, children, footer, wide = false }: 
           {children}
           {footer && <div className={styles.footer}>{footer}</div>}
         </div>
+        <p className={styles.note}>It explains; it doesn't diagnose. In an emergency, call 108.</p>
       </main>
     </div>
   );

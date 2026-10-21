@@ -1,32 +1,35 @@
 import type { ThemeChoice } from "../lib/theme";
 import { api } from "./api";
 
-export type ConsentType =
-  | "community_surveillance"
-  | "health_tracking"
-  | "phc_worker_access"
-  | "research_analytics"
-  | "marketing_updates";
+export type ConsentType = "community_surveillance" | "health_tracking" | "phc_worker_access" | "research_analytics";
 
-export interface Channels {
-  email: boolean;
-  sms: boolean;
-  in_app: boolean;
-}
+export type FlagSeverity = "critical" | "high" | "moderate" | "low";
 
+/** Everything is always shown in the app; these choose what is also emailed. */
 export interface Preferences {
   theme: ThemeChoice;
   language: "en" | "ta" | "hi";
-  notifications: { alerts: Channels; surveillance: Channels; announcements: Channels };
-  alert_threshold: number;
+  notifications: { alerts: { email: boolean }; visits: { email: boolean } };
+  alert_email_min_severity: FlagSeverity;
   working_hours: { start: string; end: string };
-  resubmission_reminders: boolean;
+  reading_reminders: boolean;
 }
 
 export interface Concern {
   id: string;
   ticket_ref: string;
-  category: "data_misuse" | "incorrect_diagnosis_flag" | "harassment" | "access_request" | "other";
+  category:
+    | "data_misuse"
+  | "incorrect_diagnosis_flag"
+  | "harassment"
+  | "access_request"
+  | "other"
+  | "device_issue"
+  | "app_problem"
+  | "worker_conduct"
+  | "worker_no_show"
+  | "citizen_missed_visits"
+  | "citizen_conduct";
   description: string;
   status: "open" | "in_review" | "resolved" | "rejected";
   admin_note: string | null;
@@ -110,8 +113,8 @@ export const deactivate = (password: string) =>
   data(api.post<{ detail: string }>("/settings/deactivate", { password, confirm: "DEACTIVATE" }));
 
 export const listConcerns = () => data(api.get<Concern[]>("/settings/concerns"));
-export const raiseConcern = (category: Concern["category"], description: string) =>
-  data(api.post<Concern>("/settings/concerns", { category, description }));
+export const raiseConcern = (category: Concern["category"], description: string, subjectId?: string) =>
+  data(api.post<Concern>("/settings/concerns", { category, description, ...(subjectId ? { subject_id: subjectId } : {}) }));
 
 export const getHealthCentre = () => data(api.get<HealthCentre>("/settings/health-centre"));
 export const changeHealthCentre = (phc_id: string) => data(api.patch<HealthCentre>("/settings/health-centre", { phc_id }));

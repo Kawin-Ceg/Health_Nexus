@@ -60,7 +60,7 @@ export function TrendChart({ metric, points, height = 240 }: { metric: Metric; p
                 const p = active && payload?.[0]?.payload as TrendPoint | undefined;
                 if (!p) return null;
                 return (
-                  <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-[var(--hn-shadow-md)]">
+                  <div className="rounded-xl border border-line bg-surface px-3 py-2 text-xs shadow-[var(--hn-shadow-md)]">
                     <p className="text-ink-soft">{fmtDateTime(p.measured_at)}</p>
                     <p className="font-semibold text-ink">
                       {p.value.toFixed(metric.decimals)} {metric.unit}

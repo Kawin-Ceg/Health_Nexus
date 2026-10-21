@@ -1,22 +1,24 @@
-"""A citizen's own readings: record, list, summarise, delete."""
+"""A citizen's own readings: smartwatch sync, list, summarise, delete."""
 
 import uuid
-from datetime import timedelta
+from datetime import date, datetime, timedelta
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from pydantic import BaseModel, StringConstraints
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.views import alert_out, visit_for_citizen
+from app.api.views import alert_out, visit_for_citizen, vitals_result
 from app.core.dependencies import require_onboarding_user
 from app.db.session import get_session
-from app.models import Alert, AuditLog, HealthRecord, ProcessedData, ScheduledVisit, User, ValidPhcFacility
+from app.models import Alert, AuditLog, HealthRecord, ProcessedData, ScheduledVisit, User, UserProfile, ValidPhcFacility
 from app.models.enums import VisitStatus
 from app.schemas.health import (
     BaselineOut,
     BaselineStatusOut,
     VitalBaseline,
-    VitalCheck,
+    PopulationOut,
     FacilitySummary,
     HistoryOut,
     LatestVital,
@@ -25,18 +27,17 @@ from app.schemas.health import (
     ReadingOut,
     SummaryOut,
     TrendPoint,
-    VitalsIn,
     VitalsResult,
 )
+from app.services import watch
 from app.services.catchment import workers_serving
 from app.services.metrics import COMMON_SYMPTOMS, VITALS, position
-from app.services.readings import SCORING_HISTORY, baseline_of, earlier_vitals, record_reading
+from app.services.readings import SCORING_HISTORY, baseline_of, earlier_vitals, submit_reading
 from app.services.scoring import (
     BASELINE_WINDOW,
     FULL_BASELINE_READINGS,
     MIN_BASELINE_READINGS,
     MODEL_VERSION,
-    ScoreResult,
     baseline_weight,
     robust_baseline,
     stage_of,
@@ -75,61 +76,143 @@ async def metrics() -> MetricsOut:
     )
 
 
-@router.post("/vitals", response_model=VitalsResult, status_code=status.HTTP_201_CREATED)
-async def submit_vitals(
-    data: VitalsIn, user: User = Depends(require_onboarding_user), db: AsyncSession = Depends(get_session)
-) -> VitalsResult:
-    if not user.consent:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, TRACKING_OFF)
-    measured_at = data.measured_at or now_utc()
-    recorded = await record_reading(db, user, data.vitals, data.symptoms, measured_at)
-    await db.commit()
+class WatchSlotOut(BaseModel):
+    key: str
+    label: str
+    hours: str
+    reading_id: uuid.UUID | None
+    measured_at: datetime | None
+    vitals: dict[str, float] | None
 
-    score = recorded.score
-    return VitalsResult(
-        id=recorded.record.id,
-        measured_at=measured_at,
-        flagged=score.is_anomaly,
-        anomaly_score=score.anomaly_score,
-        severity=severity_of(score.anomaly_score) if score.is_anomaly else None,
-        driver=top_signal(score.features) if score.is_anomaly else None,
-        signal=recorded.signal,
-        features=score.features,
-        basis=score.basis,
-        earlier_readings=recorded.earlier_readings,
-        basis_note=_basis_note(score),
-        reviewed_by_someone=recorded.reviewed_by_someone,
-        model_version=score.model_version,
-        checks=_checks(score),
-        watch=score.watch,
+
+class WatchOut(BaseModel):
+    connected: bool
+    brand: str | None
+    current_slot: str
+    day: date
+    slots: list[WatchSlotOut]
+
+
+class WatchConnect(BaseModel):
+    brand: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=60)]
+
+
+class WatchSyncOut(BaseModel):
+    reading: VitalsResult
+    slot: str
+    already_synced: bool
+
+
+async def _profile(db: AsyncSession, user: User) -> UserProfile:
+    profile = await db.scalar(select(UserProfile).where(UserProfile.user_id == user.id))
+    if profile is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Finish setting up your profile first.")
+    return profile
+
+
+def _hours(s: watch.Slot) -> str:
+    return f"{s.start:02d}:00–{s.end:02d}:00"
+
+
+async def _watch_state(db: AsyncSession, user: User, profile: UserProfile) -> WatchOut:
+    slot, day = watch.slot_at(now_utc())
+    done = await watch.synced_today(db, user.id, day)
+    return WatchOut(
+        connected=profile.has_smartwatch,
+        brand=profile.smartwatch_brand,
+        current_slot=slot.key,
+        day=day,
+        slots=[
+            WatchSlotOut(
+                key=s.key, label=s.label, hours=_hours(s),
+                reading_id=done[s.key].id if s.key in done else None,
+                measured_at=done[s.key].timestamp if s.key in done else None,
+                vitals=done[s.key].vitals if s.key in done else None,
+            )
+            for s in watch.SLOTS
+        ],
     )
 
 
-def _checks(score: ScoreResult) -> list[VitalCheck]:
-    return [
-        VitalCheck(**vars(detail), key=key, contribution=score.features.get(key, 0.0))
-        for key, detail in score.details.items()
-    ]
+@router.get("/watch", response_model=WatchOut)
+async def watch_status(user: User = Depends(require_onboarding_user), db: AsyncSession = Depends(get_session)) -> WatchOut:
+    return await _watch_state(db, user, await _profile(db, user))
 
 
-def _basis_note(score: ScoreResult) -> str:
-    """One sentence on what the reading was compared with, from the least-known vital up."""
-    stages = {d.stage for d in score.details.values()}
-    if not stages or stages == {"learning"}:
-        fewest = min((d.readings for d in score.details.values()), default=0)
-        remaining = MIN_BASELINE_READINGS - fewest
-        return (
-            f"Compared with published normal ranges. After {remaining} more "
-            f"reading{'s' if remaining != 1 else ''} we start learning what is normal for you."
-        )
-    if stages == {"personal"}:
-        return "Compared with your own usual readings."
-    return "Compared partly with published normal ranges and partly with your own usual readings, which count for more as you log more."
+@router.post("/watch/connect", response_model=WatchOut)
+async def connect_watch(
+    data: WatchConnect, user: User = Depends(require_onboarding_user), db: AsyncSession = Depends(get_session)
+) -> WatchOut:
+    profile = await _profile(db, user)
+    profile.has_smartwatch, profile.smartwatch_brand = True, data.brand
+    await db.commit()
+    return await _watch_state(db, user, profile)
 
 
-def _reading_out(record: HealthRecord, processed: ProcessedData | None) -> ReadingOut:
+@router.post("/watch/disconnect", response_model=WatchOut)
+async def disconnect_watch(user: User = Depends(require_onboarding_user), db: AsyncSession = Depends(get_session)) -> WatchOut:
+    profile = await _profile(db, user)
+    profile.has_smartwatch, profile.smartwatch_brand = False, None
+    await db.commit()
+    return await _watch_state(db, user, profile)
+
+
+@router.post("/watch/sync", response_model=WatchSyncOut)
+async def sync_watch(
+    response: Response, user: User = Depends(require_onboarding_user), db: AsyncSession = Depends(get_session)
+) -> WatchSyncOut:
+    """Fetch the current slot's reading from the watch. Once per slot; a repeat returns the same reading."""
+    if not user.consent:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, TRACKING_OFF)
+    profile = await _profile(db, user)
+    if not profile.has_smartwatch:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Connect your smartwatch first.")
+    await db.execute(select(User.id).where(User.id == user.id).with_for_update())
+    now = now_utc()
+    slot, day = watch.slot_at(now)
+    existing = (await watch.synced_today(db, user.id, day)).get(slot.key)
+    if existing is not None:
+        processed = await db.scalar(select(ProcessedData).where(ProcessedData.health_record_id == existing.id))
+        response.status_code = status.HTTP_200_OK
+        return WatchSyncOut(reading=_stored_result(existing, processed), slot=slot.key, already_synced=True)
+    vitals = await watch.simulate(db, user.id, slot, day)
+    recorded = await submit_reading(db, user, vitals, [], now, source="watch", watch_day=day, watch_slot=slot.key)
+    response.status_code = status.HTTP_201_CREATED
+    return WatchSyncOut(reading=vitals_result(recorded), slot=slot.key, already_synced=False)
+
+
+def _stored_result(record: HealthRecord, processed: ProcessedData | None) -> VitalsResult:
     flagged = bool(processed and processed.is_anomaly)
+    return VitalsResult(
+        id=record.id,
+        measured_at=record.timestamp,
+        vitals=record.vitals,
+        source=record.source,
+        flagged=flagged,
+        anomaly_score=processed.anomaly_score if processed else 0.0,
+        severity=severity_of(processed.anomaly_score) if flagged and processed else None,
+        driver=top_signal(processed.features) if flagged and processed else None,
+        signal=describe_signal(processed.features, record.vitals) if flagged and processed else None,
+        features=processed.features if processed else {},
+        basis=(processed.basis if processed else None) or "published_ranges",
+        earlier_readings=0,
+        basis_note="Already synced in this part of the day.",
+        reviewed_by_someone=False,
+        model_version=(processed.model_version if processed else None) or MODEL_VERSION,
+        checks=[],
+        watch=[],
+        population=PopulationOut.of(processed.population) if processed else None,
+    )
+
+
+def _reading_out(record: HealthRecord, processed: ProcessedData | None, recorders: dict) -> ReadingOut:
+    flagged = bool(processed and processed.is_anomaly)
+    recorder = recorders.get(record.recorded_by)
     return ReadingOut(
+        source=record.source,
+        watch_slot=record.watch_slot,
+        recorded_by=f"{recorder[0]}, {recorder[1]}" if recorder and recorder[1] else (recorder[0] if recorder else None),
+        location=record.location,
         id=record.id,
         measured_at=record.timestamp,
         vitals=record.vitals,
@@ -138,7 +221,19 @@ def _reading_out(record: HealthRecord, processed: ProcessedData | None) -> Readi
         severity=severity_of(processed.anomaly_score) if flagged and processed else None,
         signal=describe_signal(processed.features, record.vitals) if flagged and processed else None,
         reviewed=bool(processed and processed.resolution is not None),
+        population=PopulationOut.of(processed.population) if processed else None,
     )
+
+
+async def _recorders(db: AsyncSession, ids: set) -> dict:
+    if not ids:
+        return {}
+    rows = await db.execute(
+        select(User.id, User.name, ValidPhcFacility.name)
+        .outerjoin(ValidPhcFacility, ValidPhcFacility.id == User.phc_id)
+        .where(User.id.in_(ids))
+    )
+    return {uid: (name, facility) for uid, name, facility in rows.all()}
 
 
 @router.get("/baseline", response_model=BaselineStatusOut)
@@ -202,8 +297,10 @@ async def history(
     rows = await db.execute(
         query.order_by(HealthRecord.timestamp.desc(), HealthRecord.id).offset((page - 1) * page_size).limit(page_size)
     )
+    rows = rows.all()
+    recorders = await _recorders(db, {r.recorded_by for r, _ in rows if r.recorded_by})
     return HistoryOut(
-        items=[_reading_out(record, processed) for record, processed in rows.all()],
+        items=[_reading_out(record, processed, recorders) for record, processed in rows],
         total=total,
         page=page,
         page_size=page_size,
@@ -316,6 +413,8 @@ async def delete_reading(
     )
     if record is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, READING_NOT_FOUND)
+    if record.source == "phc":
+        raise HTTPException(status.HTTP_409_CONFLICT, "A reading recorded by your health worker can only be changed by your health centre.")
     # The score goes with it; a visit booked from it keeps going (case_id is SET NULL).
     await db.execute(delete(ProcessedData).where(ProcessedData.health_record_id == record.id))
     await db.delete(record)

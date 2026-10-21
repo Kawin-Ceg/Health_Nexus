@@ -15,17 +15,18 @@ if TYPE_CHECKING:
     from .user_profile import UserProfile
     from .valid_phc_facility import ValidPhcFacility
 
+# Shape and meaning: services/preferences.py. Stored rows may still carry retired
+# keys (language, sms, in_app...); they are ignored when read.
 DEFAULT_PREFERENCES: dict[str, Any] = {
-    "theme": "system",
+    "theme": "light",
     "language": "en",
     "notifications": {
-        "alerts": {"email": True, "sms": False, "in_app": True},
-        "surveillance": {"email": False, "sms": False, "in_app": True},
-        "announcements": {"email": True, "sms": False, "in_app": True},
+        "alerts": {"email": True},
+        "visits": {"email": True},
     },
-    "alert_threshold": 70,
+    "alert_email_min_severity": "low",
     "working_hours": {"start": "09:00", "end": "17:00"},
-    "resubmission_reminders": True,
+    "reading_reminders": True,
 }
 
 
@@ -87,6 +88,8 @@ class User(UUIDPk, CreatedAt, Base):
         JSON, default=default_preferences, server_default=text(f"'{json.dumps(DEFAULT_PREFERENCES)}'")
     )
     deactivated_at: Mapped[datetime | None]
+    # The last reading reminder (services/reminders.py): at most one per quiet stretch.
+    reading_reminder_at: Mapped[datetime | None]
 
     facility: Mapped["ValidPhcFacility | None"] = relationship(back_populates="users")
     profile: Mapped["UserProfile | None"] = relationship(back_populates="user", uselist=False)

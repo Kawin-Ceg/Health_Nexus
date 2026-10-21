@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
-from app.models.enums import AlertSeverity, AlertType, VisitStatus
+from app.models.enums import AdvisoryScope, AlertSeverity, AlertType, VisitStatus
 from app.services.metrics import VITALS, ImplausibleVitalError, validate_vitals
 from app.services.visit_state import VisitState, now_utc
 
@@ -100,9 +100,37 @@ class VitalCheck(BaseModel):
     contribution: float
 
 
+class PopulationOut(BaseModel):
+    """The trained population model's check (services/population.py). It informs; it never flags."""
+
+    score: float  # 0..1; 0.5 = more unusual than 97 % of the training days
+    percentile: float
+    features: list[str]
+    version: str
+    unusual: bool
+    note: str
+
+    @classmethod
+    def of(cls, stored: dict | None) -> "PopulationOut | None":
+        if not stored:
+            return None
+        from app.services.population import describe
+
+        return cls(
+            score=stored["score"],
+            percentile=stored["percentile"],
+            features=list(stored["features"]),
+            version=stored["version"],
+            unusual=stored["score"] >= 0.5,
+            note=describe(stored["score"], stored["percentile"], stored["features"]),
+        )
+
+
 class VitalsResult(BaseModel):
     id: uuid.UUID
     measured_at: datetime
+    vitals: dict[str, float] = {}
+    source: str = "watch"
     flagged: bool
     anomaly_score: float
     severity: Severity | None
@@ -117,6 +145,7 @@ class VitalsResult(BaseModel):
     checks: list[VitalCheck]
     # Unusual for this person but waiting for a second reading before it flags.
     watch: list[str]
+    population: PopulationOut | None = None
 
 
 class ReadingOut(BaseModel):
@@ -128,6 +157,11 @@ class ReadingOut(BaseModel):
     severity: Severity | None
     signal: str | None
     reviewed: bool
+    population: PopulationOut | None = None
+    source: str = "self"
+    watch_slot: str | None = None
+    recorded_by: str | None = None
+    location: str | None = None
 
 
 class HistoryOut(BaseModel):
@@ -188,6 +222,13 @@ class VisitOut(BaseModel):
     case_id: uuid.UUID | None
     citizen: VisitPerson | None = None  # set for the worker's view
     worker_name: str | None = None  # set for the citizen's view
+    missed_reason: str | None = None  # the citizen's explanation for a missed visit
+    visit_type: str = "home"
+    duration_minutes: int = 30
+    notes: str | None = None  # the worker's view only
+    cancelled_by: str | None = None
+    cancel_reason: str | None = None
+    worker_phone: str | None = None
 
 
 class FacilitySummary(BaseModel):
@@ -213,9 +254,31 @@ class SummaryOut(BaseModel):
     facility: FacilitySummary | None
 
 
+class AdvisoryOut(BaseModel):
+    id: uuid.UUID
+    scope: AdvisoryScope
+    audience: str
+    title: str
+    body: str
+    severity: AlertSeverity
+    author: str | None
+    created_at: datetime
+    expires_at: datetime
+    withdrawn_at: datetime | None
+    active: bool
+    reach: int | None = None
+    can_withdraw: bool = False
+    area: str | None = None
+    radius_km: float | None = None
+    red_reason: str | None = None
+    feedback: str | None = None
+    feedback_note: str | None = None
+    feedback_at: datetime | None = None
+
+
 class AlertsOut(BaseModel):
     alerts: list[AlertOut]
-    advisories: list[AlertOut]
+    advisories: list[AdvisoryOut]
     unread: int
 
 

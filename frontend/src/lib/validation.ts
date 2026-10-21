@@ -12,12 +12,19 @@ export function emailError(value: string): string | undefined {
   return v.length > 254 || !EMAIL_RE.test(v) ? "Enter a valid email address" : undefined;
 }
 
+/** Shown as a live checklist while a new password is typed. The API itself only enforces 8 to 72 bytes. */
+export const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
+  { label: "At least 8 characters", test: (v) => v.length >= 8 },
+  { label: "At least one letter", test: (v) => /\p{L}/u.test(v) },
+  { label: "At least one number", test: (v) => /\d/.test(v) },
+  // bcrypt only reads 72 bytes; the API refuses longer passwords rather than truncate.
+  { label: "No more than 72 characters", test: (v) => new TextEncoder().encode(v).length <= 72 },
+];
+
 export function newPasswordError(value: string): string | undefined {
   if (!value) return "Password is required";
-  if (value.length < 8) return "Use at least 8 characters";
-  // bcrypt only reads 72 bytes; the API refuses longer passwords rather than truncate.
-  if (new TextEncoder().encode(value).length > 72) return "Use at most 72 bytes (about 72 characters)";
-  return undefined;
+  const unmet = PASSWORD_RULES.find((rule) => !rule.test(value));
+  return unmet ? `Password needs: ${unmet.label.toLowerCase()}` : undefined;
 }
 
 export function integerInRange(label: string, value: string, min: number, max: number): string | undefined {

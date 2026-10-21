@@ -1,6 +1,5 @@
 """Account settings for every approved role: preferences, privacy, security, support, and the citizen's health centre."""
 
-import copy
 import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
@@ -9,7 +8,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, s
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,13 +29,13 @@ from app.models import (
     ValidPhcFacility,
 )
 from app.models.base import utcnow
-from app.models.enums import ConcernCategory, ConcernStatus, ConsentType, UserRole, VisitStatus
-from app.models.user import DEFAULT_PREFERENCES
-from app.schemas.auth import ConsentUpdate, Message, Password
+from app.models.enums import ConcernCategory, ConcernStatus, ConsentType, UserRole
+from app.schemas.auth import RETIRED_CONSENTS, ConsentUpdate, Message, Password
 from app.services import sessions
 from app.services.catchment import facility_serves_district
-from app.services.consent import current_consents, record_consents
-from app.services.visits import notify_changed
+from app.services.consent import change_consents, current_consents
+from app.services.preferences import Preferences, current_preferences, deep_merge
+from app.services.visits import cancel_open_visits
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -47,67 +46,9 @@ CONCERN_NOT_FOUND = "Concern not found."
 
 # --- Preferences -----------------------------------------------------------------
 
-HHMM = Annotated[str, StringConstraints(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")]
-
-
-class Channels(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    email: bool
-    sms: bool
-    in_app: bool
-
-
-class Notifications(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    alerts: Channels
-    surveillance: Channels
-    announcements: Channels
-
-
-class WorkingHours(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    start: HHMM
-    end: HHMM
-
-    @model_validator(mode="after")
-    def _ordered(self) -> "WorkingHours":
-        if self.start >= self.end:
-            raise ValueError("Working hours must end after they start")
-        return self
-
-
-class Preferences(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    theme: Literal["system", "light", "dark"]
-    language: Literal["en", "ta", "hi"]
-    notifications: Notifications
-    alert_threshold: Annotated[int, Field(ge=0, le=100)]
-    working_hours: WorkingHours
-    resubmission_reminders: bool
-
-
-def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
-    merged = copy.deepcopy(base)
-    for key, value in patch.items():
-        if isinstance(value, dict) and isinstance(merged.get(key), dict):
-            merged[key] = _deep_merge(merged[key], value)
-        else:
-            merged[key] = value
-    return merged
-
-
-def _current_preferences(user: User) -> Preferences:
-    """Stored values over the defaults; anything stored that no longer validates falls back to the default."""
-    stored = _deep_merge(DEFAULT_PREFERENCES, user.preferences or {})
-    try:
-        return Preferences.model_validate({k: stored[k] for k in Preferences.model_fields})
-    except ValidationError:
-        return Preferences.model_validate(DEFAULT_PREFERENCES)
-
-
 @router.get("/preferences", response_model=Preferences)
 async def get_preferences(user: User = Depends(require_any_verified)) -> Preferences:
-    return _current_preferences(user)
+    return current_preferences(user)
 
 
 @router.patch("/preferences", response_model=Preferences)
@@ -115,7 +56,7 @@ async def update_preferences(
     patch: dict[str, Any], user: User = Depends(require_any_verified), db: AsyncSession = Depends(get_session)
 ) -> Preferences:
     """Any subset, nested keys included. The merged result is validated as a whole."""
-    merged = _deep_merge(_current_preferences(user).model_dump(), patch)
+    merged = deep_merge(current_preferences(user).model_dump(), patch)
     try:
         prefs = Preferences.model_validate(merged)
     except ValidationError as exc:
@@ -144,7 +85,7 @@ class ConsentHistoryItem(BaseModel):
 
 async def _consents_out(db: AsyncSession, user: User) -> ConsentsOut:
     current = await current_consents(db, user.id)
-    return ConsentsOut(consents={t: current.get(t) for t in ConsentType})
+    return ConsentsOut(consents={t: current.get(t) for t in ConsentType if t not in RETIRED_CONSENTS})
 
 
 @router.get("/consents", response_model=ConsentsOut)
@@ -160,13 +101,7 @@ async def update_consents(
     db: AsyncSession = Depends(get_session),
 ) -> ConsentsOut:
     choices = {c.consent_type: c.granted for c in data.consents}
-    await record_consents(db, user.id, choices, source="settings", ip_address=sessions.client_ip(request))
-    if ConsentType.health_tracking in choices and user.role == UserRole.user:
-        granted = choices[ConsentType.health_tracking]
-        user.consent = granted
-        profile = await db.scalar(select(UserProfile).where(UserProfile.user_id == user.id))
-        if profile is not None:
-            profile.permission_health_tracking = granted
+    await change_consents(db, user, choices, source="settings", ip_address=sessions.client_ip(request))
     await db.commit()
     return await _consents_out(db, user)
 
@@ -216,11 +151,20 @@ async def about(user: User = Depends(require_any_verified), db: AsyncSession = D
     facility = await db.get(ValidPhcFacility, user.phc_id) if user.phc_id else None
     visit_owner = ScheduledVisit.citizen_id if user.role == UserRole.user else ScheduledVisit.worker_id
     if user.role == UserRole.user:
-        who = (
-            f"Health workers at {facility.name} can see your readings, profile and contact details."
-            if facility
-            else "No health centre is linked to your account, so no health worker can see your readings."
-        )
+        consents = await current_consents(db, user.id)
+        if not facility:
+            who = "No health centre is linked to your account, so no health worker can see your readings."
+        elif consents.get(ConsentType.phc_worker_access) is False:
+            who = (
+                f"Nobody at {facility.name}: you turned off health worker access, so your readings, profile and "
+                "contact details are hidden from its health workers and they cannot book visits with you."
+            )
+        else:
+            who = f"Health workers at {facility.name} can see your readings, profile and contact details."
+        if consents.get(ConsentType.community_surveillance):
+            who += " Area-level figures count you, without your name, in groups of at least 3 people."
+        else:
+            who += " You are left out of area-level figures."
     else:
         who = "Only you. Your own account details are never shown to citizens beyond your name on a booked visit."
     return AboutOut(
@@ -237,8 +181,9 @@ async def about(user: User = Depends(require_any_verified), db: AsyncSession = D
         ),
         who_can_see=who,
         scoring_note=(
-            "Readings are currently compared with published normal ranges. A flag is a prompt to check, "
-            "not a diagnosis."
+            "Readings are compared with published normal ranges and, once you have about a week of them, with "
+            "your own usual values. Heart rate and breathing rate are also checked against a model trained on "
+            "71 people's data, shown with each reading. A flag is a prompt to check, not a diagnosis."
         ),
     )
 
@@ -381,14 +326,7 @@ async def deactivate(
     user.is_active = False
     user.deactivated_at = now
     # Nobody should travel to a visit for an account that no longer exists.
-    open_visits = await db.execute(
-        select(ScheduledVisit, User)
-        .join(User, User.id == ScheduledVisit.worker_id)
-        .where(ScheduledVisit.citizen_id == user.id, ScheduledVisit.status == VisitStatus.scheduled)
-    )
-    for visit, worker in open_visits.all():
-        visit.status = VisitStatus.cancelled
-        notify_changed(db, visit, user, worker, "cancelled")
+    await cancel_open_visits(db, user)
     await sessions.revoke_all_for_user(db, user.id, "deactivated")
     db.add(AuditLog(user_id=user.id, action="deactivate", entity="users", entity_id=user.id,
                     ip_address=sessions.client_ip(request) or "unknown"))
@@ -406,6 +344,7 @@ async def deactivate(
 class ConcernCreate(BaseModel):
     category: ConcernCategory
     description: Annotated[str, StringConstraints(strip_whitespace=True, min_length=10, max_length=2000)]
+    subject_id: uuid.UUID | None = None
 
 
 class ConcernOut(BaseModel):
@@ -419,13 +358,17 @@ class ConcernOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     resolved_at: datetime | None
+    evidence: dict[str, Any] | None = None
 
 
 @router.post("/concerns", response_model=ConcernOut, status_code=status.HTTP_201_CREATED)
 async def raise_concern(
     data: ConcernCreate, user: User = Depends(require_any_verified), db: AsyncSession = Depends(get_session)
 ) -> Concern:
-    concern = Concern(user_id=user.id, category=data.category, description=data.description)
+    from app.services.complaints import prepare
+
+    subject, evidence = await prepare(db, user, data.category, data.subject_id)
+    concern = Concern(user_id=user.id, category=data.category, description=data.description, subject_id=subject, evidence=evidence)
     db.add(concern)
     await db.commit()
     await db.refresh(concern)
@@ -530,18 +473,7 @@ async def change_health_centre(
     if data.phc_id == user.phc_id:
         return await _health_centre(db, user)
     # Visits booked by the old centre's workers can no longer happen: they lose sight of this person.
-    open_visits = await db.execute(
-        select(ScheduledVisit, User)
-        .join(User, User.id == ScheduledVisit.worker_id)
-        .where(
-            ScheduledVisit.citizen_id == user.id,
-            ScheduledVisit.status == VisitStatus.scheduled,
-            User.phc_id != data.phc_id,
-        )
-    )
-    for visit, worker in open_visits.all():
-        visit.status = VisitStatus.cancelled
-        notify_changed(db, visit, user, worker, "cancelled")
+    await cancel_open_visits(db, user, unless_phc=data.phc_id)
     user.phc_id = data.phc_id
     db.add(AuditLog(user_id=user.id, action="change_health_centre", entity="valid_phc_facilities",
                     entity_id=data.phc_id, ip_address=sessions.client_ip(request) or "unknown"))

@@ -8,14 +8,16 @@ Every list has a server-side LIMIT.
 
 import uuid
 from datetime import date, datetime, timedelta
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import StringConstraints
 from sqlalchemy import String, and_, case, cast, func, outerjoin, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.api.routes.schedule import check_booking_time
-from app.api.views import alert_out, checks_of, person, visit_for_worker
+from app.api.views import alert_out, checks_of, person, visit_for_worker, vitals_result
 from app.db.session import get_session
 from app.models import (
     Alert,
@@ -29,7 +31,7 @@ from app.models import (
 )
 from app.models.base import utcnow
 from app.models.enums import FlagResolution, VisitStatus
-from app.schemas.health import BaselineOut, VisitOut
+from app.schemas.health import BaselineOut, PopulationOut, VisitOut, VitalsIn, VitalsResult
 from app.schemas.phc import (
     CaseOut,
     Cleared,
@@ -73,9 +75,10 @@ from app.services.catchment import (
     get_catchment_citizen,
     require_catchment_worker,
 )
+from app.services.consent import counts_in_community
 from app.services.localities import MIN_CELL, locality_of, locality_risk, suppress
 from app.services.metrics import VITALS, position
-from app.services.readings import baseline_of
+from app.services.readings import baseline_of, submit_reading
 from app.services.scoring import MIN_BASELINE_READINGS
 from app.services.sessions import client_ip
 from app.services.triage import BANDS, Severity, band_bounds, describe_signal, severity_of
@@ -292,6 +295,7 @@ def _case_out(processed: ProcessedData, record: HealthRecord, citizen: User) -> 
         symptoms=record.symptoms,
         measured_at=record.timestamp,
         basis=processed.basis,
+        population=PopulationOut.of(processed.population),
     )
 
 
@@ -560,7 +564,34 @@ def _entry(record: HealthRecord, processed: ProcessedData | None) -> TimelineEnt
         reviewed_at=processed.reviewed_at if processed else None,
         basis=processed.basis if processed else None,
         checks=checks_of(processed),
+        population=PopulationOut.of(processed.population) if processed else None,
     )
+
+
+class ExamIn(VitalsIn):
+    location: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=160)]
+
+
+@router.post("/citizens/{user_id}/readings", response_model=VitalsResult, status_code=status.HTTP_201_CREATED)
+async def record_examination(
+    user_id: uuid.UUID,
+    data: ExamIn,
+    request: Request,
+    worker: User = Depends(require_catchment_worker),
+    db: AsyncSession = Depends(get_session),
+) -> VitalsResult:
+    """Vitals a health worker measured while examining a citizen. Shows in the citizen's history as theirs."""
+    citizen = await get_catchment_citizen(db, worker, user_id)
+    if not citizen.consent:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This citizen has turned health tracking off, so no reading can be stored.")
+    recorded = await submit_reading(
+        db, citizen, data.vitals, data.symptoms, data.measured_at or now_utc(),
+        source="phc", recorded_by=worker.id, location=data.location,
+    )
+    db.add(AuditLog(user_id=worker.id, action="record_examination", entity="health_records", entity_id=recorded.record.id,
+                    ip_address=client_ip(request) or "unknown"))
+    await db.commit()
+    return vitals_result(recorded)
 
 
 @router.get("/citizens/{user_id}/record", response_model=RecordOut)
@@ -788,11 +819,16 @@ async def reports(
     ).one()
 
     by_area: dict[str, dict[str, float]] = {}
-    for area, n in (await db.execute(select(User.area, func.count()).where(User.id.in_(members)).group_by(User.area))).all():
+    # The locality breakdown is area-level, so only citizens who allowed community monitoring count in it.
+    community = counts_in_community(User.id)
+    for area, n in (
+        await db.execute(select(User.area, func.count()).where(User.id.in_(members), community).group_by(User.area))
+    ).all():
         bucket = by_area.setdefault(locality_of(area), {"citizens": 0, "submitting": 0, "readings": 0, "flags": 0})
         bucket["citizens"] += n
     area_rows = await db.execute(
         window_readings.join(User, User.id == HealthRecord.user_id)
+        .where(community)
         .with_only_columns(User.area, func.count(func.distinct(HealthRecord.user_id)), func.count(), flagged)
         .group_by(User.area)
     )
@@ -879,6 +915,9 @@ async def book_visit(
         scheduled_for=data.scheduled_for,
         reason=data.reason or None,
         location=data.location or citizen.area,
+        visit_type=data.visit_type,
+        duration_minutes=data.duration_minutes,
+        notes=data.notes or None,
     )
     db.add(visit)
     # Booking a follow-up is a review: the case leaves the queue.
@@ -915,3 +954,13 @@ async def upcoming_visits(
     )
     return VisitsOut(items=[visit_for_worker(v, c, now) for v, c in rows.all()], limit=limit)
 
+
+@router.get("/citizens/{user_id}/missed-visits")
+async def citizen_missed_visits(
+    user_id: uuid.UUID, worker: User = Depends(require_catchment_worker), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """The evidence a complaint about repeated missed visits would carry, and whether it is allowed yet."""
+    from app.services.complaints import missed_visits
+
+    citizen = await get_catchment_citizen(db, worker, user_id)
+    return await missed_visits(db, citizen.id, worker.phc_id)

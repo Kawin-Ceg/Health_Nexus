@@ -14,10 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.security import hash_password
-from app.models import Alert, ChatMessage, ChatSession, ProcessedData, ScheduledVisit, User, UserProfile
+from app.models import Advisory, ChatMessage, ChatSession, ProcessedData, ScheduledVisit, User, UserProfile
 from app.models.enums import (
+    AdvisoryScope,
     AlertSeverity,
-    AlertType,
     BloodGroup,
     ChatMessageRole,
     ConsentType,
@@ -139,12 +139,15 @@ async def seed(session: AsyncSession) -> None:
     open_flags = [f for f in flags if f.resolution is None]
 
     session.add(
-        Alert(
-            user_id=None,
-            alert_type=AlertType.community,
+        Advisory(
+            scope=AdvisoryScope.district,
+            district="Chennai",
+            state="Tamil Nadu",
+            title="Seasonal fever",
+            body="Seasonal fever cases are rising in Chennai. Report a temperature above 38 °C.",
             severity=AlertSeverity.low,
-            message="Seasonal fever cases are rising in Chennai. Report a temperature above 38 °C.",
             created_at=now - timedelta(days=5),
+            expires_at=now + timedelta(days=25),
         )
     )
 

@@ -1,4 +1,5 @@
 import type { Severity } from "../lib/severity";
+import type { Advisory } from "./advisories";
 import { api } from "./api";
 
 export interface Metric {
@@ -20,6 +21,8 @@ export interface MetricsInfo {
 export interface VitalsResult {
   id: string;
   measured_at: string;
+  vitals: Record<string, number>;
+  source: ReadingSource;
   flagged: boolean;
   anomaly_score: number;
   severity: Severity | null;
@@ -34,6 +37,18 @@ export interface VitalsResult {
   checks: VitalCheck[];
   /** Unusual for this person, but waiting for a second reading before it flags. */
   watch: string[];
+  population: PopulationCheck | null;
+}
+
+/** The trained population model's view of a reading (backend services/population.py). It never flags. */
+export interface PopulationCheck {
+  /** 0..1; 0.5 = more unusual than 97% of the training days. */
+  score: number;
+  percentile: number;
+  features: string[];
+  version: string;
+  unusual: boolean;
+  note: string;
 }
 
 export type BaselineStage = "learning" | "blending" | "personal";
@@ -88,7 +103,14 @@ export interface Reading {
   severity: Severity | null;
   signal: string | null;
   reviewed: boolean;
+  population: PopulationCheck | null;
+  source: ReadingSource;
+  watch_slot: WatchSlotKey | null;
+  recorded_by: string | null;
+  location: string | null;
 }
+
+export type ReadingSource = "watch" | "phc" | "self";
 
 export interface Page<T> {
   items: T[];
@@ -113,6 +135,8 @@ export interface AlertItem {
   created_at: string;
 }
 
+export type VisitType = "home" | "centre" | "follow_up" | "vaccination" | "maternal" | "screening";
+
 export type VisitState = "upcoming" | "today" | "due_now" | "overdue" | "completed" | "cancelled" | "missed";
 
 export interface VisitPerson {
@@ -129,6 +153,13 @@ export interface Visit {
   reason: string | null;
   location: string | null;
   status: "scheduled" | "completed" | "cancelled" | "missed";
+  missed_reason?: string | null;
+  visit_type?: VisitType;
+  duration_minutes?: number;
+  notes?: string | null;
+  cancelled_by?: "citizen" | "worker" | null;
+  cancel_reason?: string | null;
+  worker_phone?: string | null;
   state: VisitState;
   case_id: string | null;
   citizen: VisitPerson | null;
@@ -172,8 +203,21 @@ export function getMetrics(): Promise<MetricsInfo> {
   return metricsCache;
 }
 
-export const submitVitals = (body: { vitals: Record<string, number>; symptoms: string[]; measured_at?: string }) =>
-  api.post<VitalsResult>("/health/vitals", body).then((r) => r.data);
+export type WatchSlotKey = "morning" | "afternoon" | "evening" | "night";
+
+export interface WatchState {
+  connected: boolean;
+  brand: string | null;
+  current_slot: WatchSlotKey;
+  day: string;
+  slots: { key: WatchSlotKey; label: string; hours: string; reading_id: string | null; measured_at: string | null; vitals: Record<string, number> | null }[];
+}
+
+export const getWatch = (signal?: AbortSignal) => api.get<WatchState>("/health/watch", { signal }).then((r) => r.data);
+export const connectWatch = (brand: string) => api.post<WatchState>("/health/watch/connect", { brand }).then((r) => r.data);
+export const disconnectWatch = () => api.post<WatchState>("/health/watch/disconnect").then((r) => r.data);
+export const syncWatch = () =>
+  api.post<{ reading: VitalsResult; slot: WatchSlotKey; already_synced: boolean }>("/health/watch/sync").then((r) => r.data);
 
 export const getHistory = (q: HistoryQuery, signal?: AbortSignal) =>
   api
@@ -191,7 +235,7 @@ export const getBaselineStatus = (signal?: AbortSignal) =>
 export const deleteReading = (id: string) => api.delete(`/health/readings/${id}`);
 
 export const getAlerts = (signal?: AbortSignal) =>
-  api.get<{ alerts: AlertItem[]; advisories: AlertItem[]; unread: number }>("/alerts", { signal }).then((r) => r.data);
+  api.get<{ alerts: AlertItem[]; advisories: Advisory[]; unread: number }>("/alerts", { signal }).then((r) => r.data);
 
 export const getUnreadCount = (signal?: AbortSignal) =>
   api.get<{ unread: number }>("/alerts/unread-count", { signal }).then((r) => r.data.unread);
@@ -200,3 +244,5 @@ export const markRead = (ids?: string[]) => api.post<{ updated: number }>("/aler
 
 export const getMySchedule = (signal?: AbortSignal) =>
   api.get<{ visits: Visit[] }>("/schedule/mine", { signal }).then((r) => r.data.visits);
+export const cancelMyVisit = (id: string, reason: string) => api.post<Visit>(`/schedule/mine/${id}/cancel`, { reason }).then((r) => r.data);
+export const explainMissedVisit = (id: string, reason: string) => api.post<Visit>(`/schedule/mine/${id}/reason`, { reason }).then((r) => r.data);

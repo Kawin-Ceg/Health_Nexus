@@ -1,11 +1,11 @@
 .form {
   display: grid;
-  gap: var(--hn-space-5);
+  gap: var(--hn-space-4);
 }
 
 .grid {
   display: grid;
-  gap: var(--hn-space-5);
+  gap: var(--hn-space-4);
 }
 
 @media (min-width: 560px) {
@@ -79,4 +79,57 @@
   border-radius: var(--hn-radius-lg);
   background: rgb(var(--hn-brand-soft));
   color: rgb(var(--hn-brand));
+}
+
+.stepper {
+  display: grid;
+  gap: var(--hn-space-2);
+}
+
+.progress {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--hn-space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.progress li {
+  height: 4px;
+  border-radius: var(--hn-radius-pill);
+  background: rgb(var(--hn-line));
+  transition: background-color 300ms var(--hn-ease-out);
+}
+
+.progress .done {
+  background: rgb(var(--hn-brand));
+}
+
+.stepCount {
+  margin-top: var(--hn-space-2);
+  color: rgb(var(--hn-ink-muted));
+  font-size: var(--hn-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stepTitle {
+  font-size: var(--hn-text-xl);
+}
+
+.stepTitle:focus {
+  outline: none;
+}
+
+
+
+.stepActions {
+  display: flex;
+  gap: var(--hn-space-3);
+}
+
+.grow {
+  flex: 1;
 }
