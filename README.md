@@ -192,6 +192,8 @@ HealthNexus/
 
 ## 🚀 Running Authentication & Onboarding
 
+> **Preparing a demo?** Follow [docs/DEMO_READINESS.md](docs/DEMO_READINESS.md): one seed command gives every teammate the same demo accounts and scenarios on their own local database.
+
 The first module is **accounts, sign-in and citizen onboarding**. Every other page is a labelled placeholder ("coming in a later module"). The database schema already exists; nothing here creates or changes it.
 
 **You need:** Python 3.12+, Node 20+, and PostgreSQL with the schema migrated (`alembic upgrade head`).

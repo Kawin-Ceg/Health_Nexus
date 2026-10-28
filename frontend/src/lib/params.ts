@@ -1,10 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
-/**
- * Anything read from the URL is untrusted: `?days=abc` must never reach the API.
- * These parse, validate and clamp, falling back to a default.
- */
 export function intParam(raw: string | null, fallback: number, min: number, max: number): number {
   if (raw === null || !/^\d{1,6}$/.test(raw)) return fallback;
   return Math.min(max, Math.max(min, Number(raw)));
@@ -20,7 +16,6 @@ export function textParam(raw: string | null, maxLength: number): string {
   return (raw ?? "").slice(0, maxLength);
 }
 
-/** Read and write query parameters; writing an empty value removes the key. Replaces history, so filters do not flood Back. */
 export function useQueryState() {
   const [params, setParams] = useSearchParams();
   const set = useCallback(

@@ -92,7 +92,6 @@ PROFILE_COLUMNS = (
     "emergency_contact_name",
     "emergency_contact_phone",
 )
-# These live on users: they are the catchment link, not part of the health profile.
 USER_COLUMNS = ("pincode", "area")
 
 
@@ -109,7 +108,6 @@ def apply_fields(user: User, profile: UserProfile, fields: ProfileFields, facili
         if wanted(column):
             setattr(user, column, getattr(fields, column))
     if only is None or only & {"state", "district", "phc_id"}:
-        # The registry's spelling, not whatever casing the client sent.
         user.phc_id, user.state, user.district = facility.id, facility.state, facility.district
 
 

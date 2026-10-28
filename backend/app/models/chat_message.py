@@ -21,7 +21,6 @@ class ChatMessage(UUIDPk, CreatedAt, Base):
     role: Mapped[ChatMessageRole] = mapped_column(pg_enum(ChatMessageRole, "chat_message_role"))
     content: Mapped[str] = mapped_column(Text)
     generated_sql: Mapped[str | None] = mapped_column(Text)
-    # Evidence for the answer: tool, arguments, tables, columns, rows, row_count.
     retrieval: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     was_refused: Mapped[bool] = mapped_column(default=False, server_default=false())
     refusal_reason: Mapped[ChatRefusalReason | None] = mapped_column(pg_enum(ChatRefusalReason, "chat_refusal_reason"))

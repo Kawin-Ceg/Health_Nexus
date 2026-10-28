@@ -4,7 +4,6 @@ import styles from "./Auth.module.css";
 
 const icons = { error: AlertCircle, success: CheckCircle2, info: Info };
 
-/** Errors are announced immediately (role="alert"); the rest politely (role="status"). */
 export function Banner({ tone, children }: { tone: "error" | "success" | "info"; children: ReactNode }) {
   const Icon = icons[tone];
   return (

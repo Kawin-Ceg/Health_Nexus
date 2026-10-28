@@ -76,7 +76,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], name="fk_alerts_user_id_users"),
     )
 
-    # No FK on user_id: deleting an account must keep its audit trail.
     op.create_table(
         "audit_logs",
         sa.Column("id", UUID, nullable=False),

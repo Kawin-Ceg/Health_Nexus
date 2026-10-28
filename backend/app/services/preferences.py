@@ -22,8 +22,8 @@ class Notifications(BaseModel):
     """Everything is always in the app (Alerts / Notifications). These choose what is also emailed."""
 
     model_config = ConfigDict(extra="forbid")
-    alerts: Channel  # a flagged reading: the citizen's own, or one at the worker's centre
-    visits: Channel  # booked, moved, cancelled, or waiting for an outcome
+    alerts: Channel
+    visits: Channel
 
 
 class WorkingHours(BaseModel):
@@ -43,10 +43,9 @@ class Preferences(BaseModel):
     theme: Literal["system", "light", "dark"]
     language: Literal["en", "ta", "hi"]
     notifications: Notifications
-    # The least severe flag that is still emailed. "low" emails every flag.
     alert_email_min_severity: Severity
-    working_hours: WorkingHours  # PHC workers: the default slot when booking a visit
-    reading_reminders: bool  # citizens: one reminder after READING_REMINDER_AFTER without a reading
+    working_hours: WorkingHours
+    reading_reminders: bool
 
 
 def deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:

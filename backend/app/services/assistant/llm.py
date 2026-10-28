@@ -19,7 +19,6 @@ from .grounding import PROMPT_BUDGET, localize, trim
 
 log = logging.getLogger(__name__)
 
-# Per key: a hung call falls through to the next key, then to the rule-based answer.
 TIMEOUT_SECONDS = 20
 
 ROLE_NAMES = {"user": "a citizen", "phc_worker": "a Primary Health Centre (PHC) worker", "admin": "a HealthNexus administrator"}
@@ -60,7 +59,7 @@ def enabled() -> bool:
 
 async def _generate(**kwargs):
     """One generate_content call, trying each configured key in turn (quota or auth failures)."""
-    from google import genai  # imported lazily: the SDK is optional
+    from google import genai
 
     last: Exception | None = None
     for key in get_settings().gemini_keys:
@@ -69,7 +68,7 @@ async def _generate(**kwargs):
                 genai.Client(api_key=key).aio.models.generate_content(model=get_settings().GEMINI_MODEL, **kwargs),
                 TIMEOUT_SECONDS,
             )
-        except Exception as exc:  # the next key may still have quota
+        except Exception as exc:
             log.warning("Gemini call failed with one key: %s", exc)
             last = exc
     raise last or RuntimeError("no Gemini key configured")

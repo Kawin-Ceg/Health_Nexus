@@ -22,15 +22,12 @@ class ProcessedData(UUIDPk, Base):
 
     health_record_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("health_records.id"), unique=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
-    # Per-vital contribution, e.g. {"systolic": 2.8}, so a flag can explain itself.
     features: Mapped[dict[str, float]] = mapped_column(JSON)
     anomaly_score: Mapped[float]
     is_anomaly: Mapped[bool]
-    # How it was judged (services/scoring.py). NULL on rows scored before 0010.
     basis: Mapped[str | None] = mapped_column(String(32))
     model_version: Mapped[str | None] = mapped_column(String(64))
     details: Mapped[dict[str, dict] | None] = mapped_column(JSON)
-    # The trained population model's check (services/population.py). NULL before 0012 or without HR/RR.
     population: Mapped[dict | None] = mapped_column(JSON)
     processed_at: Mapped[datetime] = mapped_column(default=utcnow)
 

@@ -1,11 +1,12 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CalendarClock, CalendarPlus, Pencil } from "lucide-react";
 import { PersonLine, workerState } from "../../components/app/phc";
 import { useToast } from "../../components/app/Toaster";
 import { Btn, Empty, Labelled, Loading, PageHeader, SearchInput, cx, inputCls } from "../../components/app/ui";
 import { CUTOFF_HOURS, CancelForm, Detail, Modal, StatePill, VISIT_TYPE, changeable } from "../../components/app/visits";
 import { useDebounced } from "../../lib/useDebounced";
-import { fmtDateTime, fmtVisit, fromLocalInput, toLocalInput } from "../../lib/format";
+import { fmtDateTime, fmtStamp, fmtVisit, fromLocalInput, toLocalInput } from "../../lib/format";
 import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import type { Visit, VisitPerson, VisitType } from "../../services/health";
@@ -29,7 +30,8 @@ const PERIODS = [
 
 export function Schedule() {
   const res = useResource((s) => getAllVisits(s), "worker-visits");
-  const [tab, setTab] = useState<Tab>("upcoming");
+  const [query] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => TABS.find((t) => t.id === query.get("tab"))?.id ?? "upcoming");
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [days, setDays] = useState(0);
@@ -223,13 +225,13 @@ function VisitDetails({ visit: v, onClose, onEdit, onChanged }: { visit: Visit; 
           ) : (
             <div className="flex flex-wrap gap-2">
               {v.state !== "upcoming" && (
-                <Btn tone="primary" busy={busy === "complete"} onClick={() => void act("complete", "Visit marked done")}>Mark done</Btn>
+                <Btn tone="success" busy={busy === "complete"} onClick={() => void act("complete", "Visit marked done")}>Mark done</Btn>
               )}
-              {passed && <Btn busy={busy === "miss"} onClick={() => void act("miss", "Marked as nobody there")}>Nobody there</Btn>}
+              {passed && <Btn tone="warn" busy={busy === "miss"} onClick={() => void act("miss", "Marked as nobody there")}>Nobody there</Btn>}
               <Btn tone="ghost" onClick={onEdit}>
                 <Pencil size={15} aria-hidden="true" /> Edit
               </Btn>
-              {changeable(v) && <Btn tone="ghost" onClick={() => setCancelling(true)}>Cancel visit</Btn>}
+              {changeable(v) && <Btn tone="danger" onClick={() => setCancelling(true)}>Cancel visit</Btn>}
             </div>
           ))}
         {booked && !changeable(v) && !passed && (
@@ -245,10 +247,21 @@ function defaultSlot(): string {
   return `${toLocalInput(d).slice(0, 10)}T10:00`;
 }
 
-/** Book a new visit or edit one. The time can only change while the visit is more than 8 hours away. */
-function VisitForm({ visit, onClose, onSaved }: { visit?: Visit; onClose: () => void; onSaved: () => void }) {
+export function VisitForm({
+  visit,
+  preset,
+  caseId,
+  onClose,
+  onSaved,
+}: {
+  visit?: Visit;
+  preset?: VisitPerson;
+  caseId?: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const editing = !!visit;
-  const [citizen, setCitizen] = useState<VisitPerson | null>(visit?.citizen ?? null);
+  const [citizen, setCitizen] = useState<VisitPerson | null>(visit?.citizen ?? preset ?? null);
   const [query, setQuery] = useState("");
   const q = useDebounced(query);
   const found = useResource((s) => (editing || citizen ? Promise.resolve(null) : getDirectory({ q, limit: 8, offset: 0 }, s)), `pick-${q}-${!!citizen}`);
@@ -278,8 +291,8 @@ function VisitForm({ visit, onClose, onSaved }: { visit?: Visit; onClose: () => 
         await updateVisit(visit.id, { action: "edit", ...fields, ...(moved ? { scheduled_for: at } : {}) });
         notify({ tone: "success", title: "Visit updated", body: moved ? `${citizen.name} has been told the new time.` : citizen.name });
       } else {
-        await bookVisit({ citizen_id: citizen.id, scheduled_for: at, ...fields, location: location || undefined, reason: reason || undefined, notes: notes || undefined });
-        notify({ tone: "success", title: "Visit booked", body: `${citizen.name}, ${fmtVisit(at)}. They have been notified.` });
+        await bookVisit({ citizen_id: citizen.id, case_id: caseId, scheduled_for: at, ...fields, location: location || undefined, reason: reason || undefined, notes: notes || undefined });
+        notify({ tone: "success", title: "Visit booked", body: `${citizen.name}, ${fmtStamp(at)}. They have been notified.` });
       }
       onSaved();
     } catch (err) {
@@ -295,7 +308,7 @@ function VisitForm({ visit, onClose, onSaved }: { visit?: Visit; onClose: () => 
           {citizen ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
               <PersonLine person={citizen} linked={false} />
-              {!editing && (
+              {!editing && !preset && (
                 <button type="button" onClick={() => setCitizen(null)} className="text-sm text-ink-soft underline underline-offset-4">Change</button>
               )}
             </div>
@@ -363,7 +376,7 @@ function VisitForm({ visit, onClose, onSaved }: { visit?: Visit; onClose: () => 
         </Labelled>
         {error && <p className="text-danger">{error}</p>}
         <div className="flex gap-2">
-          <Btn tone="primary" type="submit" busy={busy} disabled={!citizen}>{editing ? "Save changes" : "Book visit"}</Btn>
+          <Btn tone={editing ? "primary" : "info"} type="submit" busy={busy} disabled={!citizen}>{editing ? "Save changes" : "Book visit"}</Btn>
           <Btn tone="ghost" onClick={onClose}>Close</Btn>
         </div>
       </form>

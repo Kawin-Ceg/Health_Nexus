@@ -4,11 +4,6 @@ export type Severity = "critical" | "high" | "moderate" | "low";
 
 export const SEVERITIES: Severity[] = ["critical", "high", "moderate", "low"];
 
-/**
- * The one definition of how a severity looks. A severity drawn differently on
- * two pages reads as two different severities, so every page imports this.
- * Colour is never the only signal: each band has a label and an icon too.
- */
 export const SEVERITY: Record<Severity, { label: string; icon: LucideIcon; text: string; badge: string; dot: string; border: string }> = {
   critical: {
     label: "Critical",

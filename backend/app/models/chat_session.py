@@ -17,7 +17,6 @@ class ChatSession(UUIDPk, CreatedAt, Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(120), default="New chat", server_default=text("'New chat'"))
-    # Named from the first question only; a manual rename sets this false.
     auto_titled: Mapped[bool] = mapped_column(default=True, server_default=true())
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 

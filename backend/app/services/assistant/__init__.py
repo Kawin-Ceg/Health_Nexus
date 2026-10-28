@@ -40,8 +40,8 @@ from .compose import compose
 
 log = logging.getLogger(__name__)
 
-MAX_ROWS = 200  # read from the database
-KEPT_ROWS = 25  # stored with the message and shown as the source
+MAX_ROWS = 200
+KEPT_ROWS = 25
 STATEMENT_TIMEOUT_MS = 5000
 
 SUGGESTIONS: dict[UserRole, list[str]] = {
@@ -75,7 +75,6 @@ SUGGESTIONS: dict[UserRole, list[str]] = {
     ],
 }
 
-# An empty result that is an answer in itself, not a failure to find anything.
 EMPTY_ANSWERS: dict[str, str] = {
     "my_flags": "None of your readings in the last {days} days were flagged.",
     "my_alerts": "You have no notifications yet.",
@@ -133,7 +132,6 @@ def _binds(tool: Tool, args: dict[str, Any], user: User) -> dict[str, Any]:
     values = dict(args)
     if tool.derive:
         values.update(tool.derive(args))
-    # Scope comes from the signed-in user, never from the question or the model.
     values["me"] = user.id
     values["phc_id"] = user.phc_id
     values["district"] = user.district if user.role == UserRole.admin else None
@@ -180,7 +178,6 @@ def _empty(tool: Tool, args: dict[str, Any]) -> Outcome:
     return Outcome("I found no matching records for that.", tool, args, refusal=ChatRefusalReason.no_matching_records)
 
 
-# The tool and arguments behind the last answer in this conversation, for follow-ups.
 Previous = tuple[Tool, dict[str, Any]] | None
 
 
@@ -195,13 +192,12 @@ async def _plan(
                 tool = allowed.get(name)
                 if tool is None or any(p[0] is tool for p in picked):
                     continue
-                # The model's arguments get exactly the same cleaning as the router's.
                 args = {k: p.clean(raw.get(k)) for k, p in tool.params.items()}
                 if tool.name != "citizen_summary" or args.get("name"):
                     picked.append((tool, args))
             if picked:
                 return picked, "gemini"
-        except Exception:  # any SDK, network or quota failure: answer with the rules instead
+        except Exception:
             log.exception("Gemini planning failed; using the rule-based router")
     plan = router.plan(user.role, question)
     if plan:

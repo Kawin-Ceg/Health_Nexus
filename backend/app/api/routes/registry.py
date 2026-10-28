@@ -205,7 +205,6 @@ async def edit_centre(
     if "name" in changes:
         facility.normalised_name = normalise_facility_name(facility.name)
     if changes:
-        # An admin has checked it: no longer a seeded placeholder.
         facility.is_placeholder = False
         _audit(db, admin, "edit_health_centre", facility.id, request)
     await db.commit()

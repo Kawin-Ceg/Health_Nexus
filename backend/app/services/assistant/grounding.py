@@ -15,7 +15,6 @@ from app.services.visit_state import format_local
 
 PROMPT_BUDGET = 12000
 
-# A number not glued to a word (SpO2, HN-1A2B…) or a decimal point.
 _NUMBER = re.compile(r"(?<![\w.\-])\d+(?:[.,]\d+)?(?![\w])")
 _TIME = re.compile(r"\b\d{1,2}:\d{2}\b")
 
@@ -56,7 +55,7 @@ def _values(text: str) -> list[float]:
 
 def unsupported(answer: str, evidence: list[str]) -> list[str]:
     """Numbers in the answer that no evidence text supports (allowing for rounding and 12-hour clocks)."""
-    allowed: set[float] = {108.0}  # the emergency number in the disclaimer
+    allowed: set[float] = {108.0}
     for text in evidence:
         for v in _values(text):
             allowed.update({v, round(v), round(v, 1), round(v, 2)})

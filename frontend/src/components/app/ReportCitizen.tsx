@@ -9,7 +9,6 @@ import { Btn, Card, Labelled, Loading, cx, inputCls } from "./ui";
 
 type Kind = "citizen_missed_visits" | "citizen_conduct";
 
-/** A worker's complaint about a citizen. Missed visits can only be reported once the record supports it. */
 export function ReportCitizen({ citizenId, name, onClose }: { citizenId: string; name: string; onClose: () => void }) {
   const evidence = useResource((s) => getMissedVisits(citizenId, s), `missed-${citizenId}`);
   const [kind, setKind] = useState<Kind>("citizen_missed_visits");

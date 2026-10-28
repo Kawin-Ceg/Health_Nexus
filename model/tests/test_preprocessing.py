@@ -34,7 +34,7 @@ def test_nonwear_day_is_dropped():
 
 def test_fully_sedentary_day_with_signal_is_kept():
     df = make_days(3)
-    df.loc[1, "sedentary_minutes"] = 1440  # still has steps and HR
+    df.loc[1, "sedentary_minutes"] = 1440
     assert len(pp.drop_nonwear_days(df)) == 3
 
 
@@ -53,7 +53,7 @@ def test_short_sleep_clears_overnight_values():
     df.loc[0, "sleep_minutes"] = 60
     out = pp.mask_invalid_values(df)
     assert out.loc[0, pp.SLEEP_COLS].isna().all()
-    assert out.loc[0, "resting_hr"] == 60  # not a sleep value, untouched
+    assert out.loc[0, "resting_hr"] == 60
     assert out.loc[1, pp.SLEEP_COLS].notna().all()
 
 

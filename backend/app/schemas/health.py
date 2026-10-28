@@ -35,7 +35,6 @@ class VitalsIn(BaseModel):
 
     vitals: dict[str, float | None]
     symptoms: Annotated[list[Symptom], Field(max_length=MAX_SYMPTOMS)] = []
-    # When it was measured, if not now. Must be aware, not in the future, at most 30 days back.
     measured_at: datetime | None = None
 
     @field_validator("vitals")
@@ -103,7 +102,7 @@ class VitalCheck(BaseModel):
 class PopulationOut(BaseModel):
     """The trained population model's check (services/population.py). It informs; it never flags."""
 
-    score: float  # 0..1; 0.5 = more unusual than 97 % of the training days
+    score: float
     percentile: float
     features: list[str]
     version: str
@@ -134,8 +133,8 @@ class VitalsResult(BaseModel):
     flagged: bool
     anomaly_score: float
     severity: Severity | None
-    driver: str | None  # the vital key that contributed most
-    signal: str | None  # "Blood pressure 167/103 mmHg — well above the normal range"
+    driver: str | None
+    signal: str | None
     features: dict[str, float]
     basis: str
     earlier_readings: int
@@ -143,7 +142,6 @@ class VitalsResult(BaseModel):
     reviewed_by_someone: bool
     model_version: str
     checks: list[VitalCheck]
-    # Unusual for this person but waiting for a second reading before it flags.
     watch: list[str]
     population: PopulationOut | None = None
 
@@ -162,6 +160,13 @@ class ReadingOut(BaseModel):
     watch_slot: str | None = None
     recorded_by: str | None = None
     location: str | None = None
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+
+
+class ReviewerOption(BaseModel):
+    id: uuid.UUID
+    name: str
 
 
 class HistoryOut(BaseModel):
@@ -169,6 +174,7 @@ class HistoryOut(BaseModel):
     total: int
     page: int
     page_size: int
+    reviewers: list[ReviewerOption] = []
 
 
 class BaselineOut(BaseModel):
@@ -183,8 +189,8 @@ class LatestVital(BaseModel):
     key: str
     value: float
     measured_at: datetime
-    position: str  # below / normal / above the published range
-    baseline: BaselineOut | None  # None until there are enough earlier readings
+    position: str
+    baseline: BaselineOut | None
 
 
 class TrendPoint(BaseModel):
@@ -220,15 +226,18 @@ class VisitOut(BaseModel):
     status: VisitStatus
     state: VisitState
     case_id: uuid.UUID | None
-    citizen: VisitPerson | None = None  # set for the worker's view
-    worker_name: str | None = None  # set for the citizen's view
-    missed_reason: str | None = None  # the citizen's explanation for a missed visit
+    citizen: VisitPerson | None = None
+    worker_name: str | None = None
+    missed_reason: str | None = None
     visit_type: str = "home"
     duration_minutes: int = 30
-    notes: str | None = None  # the worker's view only
+    notes: str | None = None
     cancelled_by: str | None = None
     cancel_reason: str | None = None
     worker_phone: str | None = None
+    booked_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    missed_reason_at: datetime | None = None
 
 
 class FacilitySummary(BaseModel):
@@ -243,7 +252,6 @@ class SummaryOut(BaseModel):
     readings_last_7_days: int
     open_flags: int
     unread_alerts: int
-    # Below MIN_BASELINE_READINGS there is no personal baseline; cards compare with published ranges.
     readings_until_baseline: int
     baseline_window_days: int
     latest: list[LatestVital]
@@ -287,7 +295,6 @@ class UnreadCount(BaseModel):
 
 
 class MarkRead(BaseModel):
-    # Omit to mark everything read.
     ids: Annotated[list[uuid.UUID], Field(max_length=200)] | None = None
 
 
@@ -304,8 +311,8 @@ class VitalBaseline(BaseModel):
     weight: float
     baseline: float | None
     spread: float | None
-    readings_to_start: int  # until the personal baseline starts to count
-    readings_to_full: int  # until it is used on its own
+    readings_to_start: int
+    readings_to_full: int
 
 
 class BaselineStatusOut(BaseModel):

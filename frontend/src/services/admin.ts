@@ -217,7 +217,6 @@ export const updateConcern = (id: string, body: { status: ConcernStatus; admin_n
 export const getAudit = (source: "" | "account" | "verification", signal?: AbortSignal) =>
   get<AuditItem[]>("/admin/audit", clean({ source }), signal);
 
-/** De-identified readings of citizens who allowed research use, saved as a CSV file. */
 export async function downloadResearchExport(days: number): Promise<void> {
   const response = await api.get<Blob>("/admin/research-export", { params: { days }, responseType: "blob" });
   const url = URL.createObjectURL(response.data);

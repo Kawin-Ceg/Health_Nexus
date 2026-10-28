@@ -6,7 +6,6 @@ import { useAuth } from "../context/AuthContext";
 import { fmtDate, fmtDateTime } from "../lib/format";
 import { oneOf, useQueryState } from "../lib/params";
 import { paths } from "../lib/routes";
-import { LANGUAGES, setLanguage, useT, type Lang } from "../i18n";
 import { setTheme } from "../lib/theme";
 import { useResource } from "../lib/useResource";
 import { errorMessage } from "../services/api";
@@ -32,7 +31,6 @@ function Toggle({ checked, onChange, label, hint, disabled }: { checked: boolean
   );
 }
 
-// --- Account & security -----------------------------------------------------
 
 function AccountTab() {
   const { logout } = useAuth();
@@ -101,7 +99,6 @@ function AccountTab() {
   );
 }
 
-// --- Preferences ------------------------------------------------------------
 
 const MIN_SEVERITY: { value: account.FlagSeverity; label: string }[] = [
   { value: "low", label: "Every flag" },
@@ -113,7 +110,6 @@ const MIN_SEVERITY: { value: account.FlagSeverity; label: string }[] = [
 function PreferencesTab() {
   const { user } = useAuth();
   const citizen = user?.role === "user";
-  const t = useT();
   const prefs = useResource(() => account.getPreferences(), "prefs");
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -126,7 +122,6 @@ function PreferencesTab() {
       const saved = await account.updatePreferences(patch);
       setLocal(saved);
       setTheme(saved.theme);
-      if (citizen) setLanguage(saved.language);
       setMsg("Saved.");
     } catch (e) {
       setErr(errorMessage(e));
@@ -148,22 +143,9 @@ function PreferencesTab() {
           ))}
         </div>
       </Card>
-      {citizen && (
-        <Card title={t("settings.language")}>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("settings.language")}>
-            {LANGUAGES.map((l) => (
-              <button key={l.value} type="button" role="radio" aria-checked={local.language === l.value} onClick={() => void save({ language: l.value as Lang })}
-                className={cx("min-h-11 rounded-2xl border px-4 text-sm", local.language === l.value ? "border-brand bg-brand-soft text-brand" : "border-line text-ink")}>
-                {l.label}
-              </button>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-ink-muted">{t("settings.languageHint")}</p>
-        </Card>
-      )}
       <Card title="Email">
         <p className="text-sm text-ink-soft">
-          Everything always shows in the app, under {citizen ? "Alerts & visits" : "Notifications"}. Choose what is also
+          Everything always shows in the app, under {citizen ? "Alerts" : "Notifications"}. Choose what is also
           emailed to {user?.email}. Emails never include your readings{citizen ? "" : " or citizens' names"}.
         </p>
         <div className="mt-2 flex flex-col">
@@ -210,7 +192,6 @@ function PreferencesTab() {
   );
 }
 
-// --- Privacy ----------------------------------------------------------------
 
 const CONSENT_TEXT: Record<ConsentType, { label: string; hint: string }> = {
   health_tracking: { label: "Health tracking", hint: "Store and score the readings you log. Turning this off stops new readings being saved." },
@@ -287,7 +268,6 @@ function PrivacyTab() {
   );
 }
 
-// --- Support ----------------------------------------------------------------
 
 const CATEGORIES: Record<string, { value: account.Concern["category"]; label: string }[]> = {
   user: [
@@ -375,7 +355,6 @@ function SupportTab() {
   );
 }
 
-// --- Role tabs --------------------------------------------------------------
 
 function CentreTab() {
   const { refreshUser } = useAuth();

@@ -14,7 +14,6 @@ ML_ROOT = Path(__file__).resolve().parent.parent
 RAW_DAILY = ML_ROOT / "data" / "rais_anonymized" / "csv_rais_anonymized" / "daily_fitbit_sema_df_unprocessed.csv"
 PROCESSED_DIR = ML_ROOT / "data" / "processed"
 
-# signals we use for anomaly detection (raw column -> our name)
 FEATURES = {
     "resting_hr": "resting_hr",
     "rmssd": "hrv_rmssd",
@@ -28,10 +27,8 @@ FEATURES = {
     "sedentary_minutes": "sedentary_minutes",
 }
 
-# self-reported mood columns, kept only for sanity checking the model later
 MOOD_COLS = ["ALERT", "HAPPY", "NEUTRAL", "RESTED/RELAXED", "SAD", "TENSE/ANXIOUS", "TIRED"]
 
-# physiologically plausible ranges, anything outside is treated as a sensor error
 VALID_RANGES = {
     "resting_hr": (30, 120),
     "hrv_rmssd": (5, 200),
@@ -74,11 +71,8 @@ def mask_invalid_values(df):
     df = df.copy()
     for col, (lo, hi) in VALID_RANGES.items():
         df.loc[(df[col] < lo) | (df[col] > hi), col] = np.nan
-    # a "sleep" shorter than 2h is usually a nap or a bad recording,
-    # so the overnight readings from it aren't comparable to a real night
     short_sleep = df["sleep_minutes"].isna()
     df.loc[short_sleep, SLEEP_COLS] = np.nan
-    # 1440 sedentary minutes on a day we kept = no data, not a lazy day
     df.loc[df["sedentary_minutes"] >= 1440, "sedentary_minutes"] = np.nan
     return df
 

@@ -4,14 +4,10 @@ import styles from "./Field.module.css";
 
 interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   label: string;
-  /** One clear message, shown after the field has been touched. */
   error?: string;
   hint?: ReactNode;
-  /** Adds a show/hide toggle. Only meaningful with type="password". */
   revealable?: boolean;
-  /** A control beside the label, such as a "Forgot password?" link. */
   labelAside?: ReactNode;
-  /** Shown in green once the value is valid, e.g. "Looks good". */
   success?: string;
 }
 

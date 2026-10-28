@@ -1,7 +1,7 @@
 import { useToast } from "../../components/app/Toaster";
 import { useEffect, useState, type ReactNode } from "react";
 import { BadgeCheck, Clock, MailCheck, Building2, IdCard, Mail, X } from "lucide-react";
-import { Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls } from "../../components/app/ui";
+import { Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls, Status, type StatusTone } from "../../components/app/ui";
 import { fmtAgo, fmtDateTime } from "../../lib/format";
 import { useDebounced } from "../../lib/useDebounced";
 import { useResource } from "../../lib/useResource";
@@ -133,9 +133,9 @@ export function Applications() {
                   </span>
                   <span className="text-right">
                     <span className="block text-xs text-ink-muted">Status</span>
-                    <span className={cx("inline-block rounded-full px-3 py-1 text-xs font-semibold", PILL[a.status].cls)}>
+                    <Status tone={PILL[a.status].tone}>
                       {FILTERS.find((f) => f.id === a.status)!.label}
-                    </span>
+                    </Status>
                   </span>
                 </span>
               </button>
@@ -211,7 +211,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** Mounted with key={id}, so switching applications starts from fresh state. */
 function Review({ id, onChanged }: { id: string; onChanged: () => void }) {
   const res = useResource((s) => getApplication(id, s), id);
   const [decided, setDecided] = useState<ApplicationDetail | null>(null);
@@ -313,7 +312,7 @@ function Review({ id, onChanged }: { id: string; onChanged: () => void }) {
                 type="button"
                 onClick={approve}
                 disabled={!facility || !a.applicant.is_verified || !!busy}
-                className="inline-flex min-h-11 items-center rounded-full bg-green-200 px-5 font-semibold text-green-950 hover:bg-green-300 disabled:opacity-50"
+                className="inline-flex min-h-11 items-center rounded-full bg-green-600 text-white hover:bg-green-700 px-5 font-semibold disabled:opacity-50"
               >
                 {busy === "approve" ? "Approving…" : "Approve"}
               </button>
@@ -323,7 +322,7 @@ function Review({ id, onChanged }: { id: string; onChanged: () => void }) {
                 type="button"
                 onClick={decline}
                 disabled={note.trim().length < 3 || !!busy}
-                className="inline-flex min-h-11 items-center rounded-full bg-red-200 px-5 font-semibold text-red-950 hover:bg-red-300 disabled:opacity-50"
+                className="inline-flex min-h-11 items-center rounded-full bg-red-600 text-white hover:bg-red-700 px-5 font-semibold disabled:opacity-50"
               >
                 {busy === "reject" || busy === "revoke" ? "Saving…" : a.status === "approved" ? "Revoke access" : "Reject"}
               </button>
@@ -356,17 +355,17 @@ function Row({ icon: Icon, label, value }: { icon: typeof Mail; label: string; v
   );
 }
 
-const PILL: Record<ApplicationStatus, { label: string; cls: string }> = {
-  pending: { label: "Pending review", cls: "bg-amber-100 text-amber-900" },
-  approved: { label: "Approved", cls: "bg-green-100 text-green-900" },
-  rejected: { label: "Rejected", cls: "bg-red-100 text-red-900" },
+const PILL: Record<ApplicationStatus, { label: string; tone: StatusTone }> = {
+  pending: { label: "Pending review", tone: "warn" },
+  approved: { label: "Approved", tone: "success" },
+  rejected: { label: "Rejected", tone: "danger" },
 };
 
 function StatusPill({ status }: { status: ApplicationStatus }) {
   return (
-    <span className={cx("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", PILL[status].cls)}>
+    <Status tone={PILL[status].tone}>
       {PILL[status].label}
-    </span>
+    </Status>
   );
 }
 

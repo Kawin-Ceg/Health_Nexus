@@ -18,7 +18,6 @@ from app.models.enums import UserRole
 
 _bearer = HTTPBearer(auto_error=False)
 
-# Roles that may use the app proper. pending_phc may not until approved.
 APP_ROLES = frozenset({UserRole.user, UserRole.phc_worker, UserRole.admin})
 
 
@@ -38,8 +37,6 @@ async def get_current_user(
     except InvalidAccessToken:
         raise _unauthenticated("Invalid or expired access token.") from None
 
-    # Role and status are read fresh, so an approval or a deactivation applies
-    # at once instead of after the token's 15 minutes.
     user = await session.get(User, uuid.UUID(claims["sub"]))
     if user is None or not user.is_active:
         raise _unauthenticated("Invalid or expired access token.")

@@ -32,7 +32,7 @@ def test_weight_ramps_from_published_to_personal():
 
 def test_new_person_is_compared_with_published_ranges():
     result = score_reading(USER, {"heart_rate": 48}, [])
-    assert result.is_anomaly  # well below 60 bpm, and nothing else to go on
+    assert result.is_anomaly
     assert result.basis == "published_ranges"
     assert result.details["heart_rate"].stage == "learning"
     assert result.model_version == MODEL_VERSION
@@ -48,11 +48,10 @@ def test_low_resting_heart_rate_is_normal_for_someone_whose_usual_is_low():
 def test_controlled_hypertension_is_judged_against_the_persons_own_baseline():
     earlier = history(25, systolic=145, diastolic=92)
     assert not score_reading(USER, {"systolic": 147, "diastolic": 93}, earlier).is_anomaly
-    assert score_reading(USER, {"systolic": 163, "diastolic": 95}, earlier).is_anomaly  # past the safety limit
+    assert score_reading(USER, {"systolic": 163, "diastolic": 95}, earlier).is_anomaly
 
 
 def test_just_outside_a_band_is_not_a_flag():
-    # 1 mmHg over 120 is within measurement noise: below FLAG_THRESHOLD
     assert not score_reading(USER, {"systolic": 121}, []).is_anomaly
     assert score_reading(USER, {"systolic": 131}, []).is_anomaly
 
@@ -71,7 +70,7 @@ def test_safety_limits_flag_whatever_the_baseline():
 
 def test_in_range_change_needs_a_second_reading_to_flag():
     earlier = history(25, heart_rate=55)
-    first = score_reading(USER, {"heart_rate": 75}, earlier)  # inside 60-100, far above their 55
+    first = score_reading(USER, {"heart_rate": 75}, earlier)
     assert not first.is_anomaly
     assert first.watch == ["heart_rate"]
     assert first.features["heart_rate"] == 0
@@ -96,7 +95,7 @@ def test_weight_is_scored_only_against_a_personal_baseline():
 def test_one_odd_reading_barely_moves_the_baseline():
     values = [70.0] * 20 + [140.0]
     median, spread = robust_baseline("heart_rate", values)
-    assert median == 70 and spread == 4.0  # floored at MIN_SPREAD, not blown up by the outlier
+    assert median == 70 and spread == 4.0
 
 
 def test_details_are_json_ready_for_storage():
@@ -113,8 +112,6 @@ def test_the_trained_population_model_checks_every_heart_and_breathing_reading()
 
     odd = score_reading(USER, {"heart_rate": 99, "respiratory_rate": 20}, [])
     assert odd.population.unusual and odd.population.percentile > 0.97
-    # It informs; it never flags on its own. Both values are inside the published ranges.
     assert not odd.is_anomaly
 
-    # Nothing to compare without heart rate or breathing rate.
     assert score_reading(USER, {"systolic": 118, "diastolic": 76}, []).population is None

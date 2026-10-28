@@ -42,7 +42,6 @@ async def test_a_flag_emails_the_citizen_and_their_workers(client, world, sent):
     out = {to: (subject, body) for to, subject, body in await emails(sent)}
     assert set(out) == {priya.email, worker.email}
     assert "flagged" in out[priya.email][0]
-    # The worker's email names nobody and carries no values.
     assert "Priya" not in out[worker.email][1] and "167" not in out[worker.email][1]
     assert other.email not in out
 
@@ -109,13 +108,11 @@ async def test_reading_reminders_come_once_per_quiet_stretch(client, db, world, 
     await db.execute(update(HealthRecord).values(timestamp=four_days_ago))
     await db.commit()
 
-    # Priya, and the foreign citizen, who joined 4 days ago and never logged. Ravi turned reminders off.
     assert await reminders.send_due(db) == 2
     reminded = {to for to, _, _ in await emails(sent)}
     assert priya.email in reminded and world["foreign"][0].email in reminded and ravi.email not in reminded
-    assert await reminders.send_due(db) == 0  # not again for the same quiet stretch
+    assert await reminders.send_due(db) == 0
     assert any("since your last reading" in m for m in await db.scalars(select(Alert.message).where(Alert.user_id == priya.id)))
 
-    # A new reading starts a new stretch.
     await submit(client, ph, NORMAL)
     assert await reminders.send_due(db) == 0

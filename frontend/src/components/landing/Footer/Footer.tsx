@@ -7,7 +7,6 @@ import styles from "./Footer.module.css";
 
 function FooterLink({ href, label }: { href: string; label: string }) {
   const onHome = useLocation().pathname === routes.home;
-  // In-page anchors stay plain links; routes go through the router.
   return href.startsWith("#") ? (
     <a href={onHome ? href : routes.home + href} className={styles.link}>
       {label}

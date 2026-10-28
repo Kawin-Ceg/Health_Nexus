@@ -36,9 +36,6 @@ def payload(phc_id: str, **overrides):
     return {**body, **overrides}
 
 
-# --- Guards -------------------------------------------------------------------
-
-
 async def test_onboarding_needs_a_session(client):
     assert (await client.get(f"{BASE}/onboarding/districts", params={"state": STATE})).status_code == 401
 
@@ -56,14 +53,10 @@ async def test_onboarding_is_closed_to_other_roles(client):
     assert (await client.get(f"{BASE}/onboarding/profile", headers=headers)).status_code == 403
 
 
-# --- Registry lookups ---------------------------------------------------------
-
-
 async def test_dropdowns_load_from_the_registry(client, db, outbox):
     headers = await register_and_login(client, outbox)
     assert (await client.get(f"{BASE}/onboarding/states", headers=headers)).json() == [STATE]
 
-    # Expected values come from the same data the registry seed loads.
     registry = tamil_nadu.facilities()
 
     districts = (await client.get(f"{BASE}/onboarding/districts", params={"state": "tamil nadu"}, headers=headers)).json()
@@ -84,9 +77,6 @@ async def test_inactive_facilities_are_hidden(client, db, outbox):
     finally:
         await db.execute(text("UPDATE valid_phc_facilities SET is_active = true"))
         await db.commit()
-
-
-# --- Creating the profile -----------------------------------------------------
 
 
 async def test_completing_onboarding_writes_everything_in_one_go(client, db, outbox):
@@ -131,7 +121,7 @@ async def test_get_profile_is_404_before_onboarding(client, outbox):
 
 async def test_a_facility_from_another_district_is_rejected(client, db, outbox):
     headers = await register_and_login(client, outbox)
-    tambaram = await facility_id(db, "Tambaram PHC")  # Chengalpattu, not Chennai
+    tambaram = await facility_id(db, "Tambaram PHC")
     r = await client.post(f"{BASE}/onboarding/profile", json=payload(tambaram), headers=headers)
     assert r.status_code == 422 and "does not serve" in r.json()["detail"]
     assert (await db.scalar(select(UserProfile))) is None
@@ -184,7 +174,7 @@ async def test_invalid_profiles_are_rejected(client, db, outbox, override):
 async def test_ten_tags_is_the_limit_and_duplicates_collapse(client, db, outbox):
     headers = await register_and_login(client, outbox)
     phc = await facility_id(db, "Mylapore PHC")
-    tags = [f"condition {i}" for i in range(8)] + ["Asthma", "asthma "]  # ten entries, nine distinct
+    tags = [f"condition {i}" for i in range(8)] + ["Asthma", "asthma "]
     r = await client.post(f"{BASE}/onboarding/profile", json=payload(phc, existing_conditions=tags), headers=headers)
     assert r.status_code == 201 and len(r.json()["existing_conditions"]) == 9
 
@@ -211,9 +201,6 @@ async def test_identity_and_role_cannot_be_smuggled_in_the_body(client, db, outb
     assert r.status_code == 201
     assert (await db.scalar(select(User))).role.value == "user"
     assert (await client.patch(f"{BASE}/onboarding/profile", json={"role": "admin"}, headers=headers)).status_code == 422
-
-
-# --- Updating -----------------------------------------------------------------
 
 
 async def test_patch_updates_only_what_is_sent(client, db, outbox):

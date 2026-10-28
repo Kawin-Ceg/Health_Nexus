@@ -19,7 +19,6 @@ def _clean_email(value: str) -> str:
 
 
 def _check_password(value: str) -> str:
-    # bcrypt reads only the first 72 bytes; refuse rather than silently truncate.
     if len(value.encode("utf-8")) > 72:
         raise ValueError("Password must be at most 72 bytes")
     return value
@@ -52,8 +51,6 @@ class PhcWorkerRegister(CitizenRegister):
 
 
 class LoginRequest(BaseModel):
-    # Deliberately unvalidated beyond presence: a malformed address gets the
-    # same answer as an unknown one.
     email: Annotated[str, StringConstraints(strip_whitespace=True, to_lower=True, min_length=1, max_length=254)]
     password: Annotated[str, Field(min_length=1, max_length=1024)]
 
@@ -75,8 +72,6 @@ class ConsentChoice(BaseModel):
     granted: bool
 
 
-# Still a valid value for old consent_records rows, but no longer asked:
-# HealthNexus sends no product or marketing news.
 RETIRED_CONSENTS = frozenset({ConsentType.marketing_updates})
 
 
@@ -125,7 +120,6 @@ class UserOut(BaseModel):
     state: str | None
     district: str | None
     created_at: datetime
-    # Only for pending_phc: what they applied with.
     application: ApplicationOut | None = None
 
 

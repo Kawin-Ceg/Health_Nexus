@@ -14,7 +14,6 @@ _url = os.environ.get("TEST_DATABASE_URL", "")
 if not _url.rsplit("/", 1)[-1].endswith("_test"):
     pytest.exit("Set TEST_DATABASE_URL to a migrated database whose name ends in '_test'.", returncode=2)
 
-# Before any app import, so Settings and the module-level engine see them.
 os.environ["DATABASE_URL"] = _url
 os.environ["JWT_SECRET_KEY"] = "test-only-secret-key-that-is-long-enough-0123456789"
 os.environ["SMTP_HOST"] = ""
@@ -38,7 +37,7 @@ PASSWORD = "correct horse battery"
 class Outbox:
     """Raw tokens the app 'emailed', in order. The database only ever holds their hashes."""
 
-    verification: list[tuple[str, str]] = field(default_factory=list)  # (to, token)
+    verification: list[tuple[str, str]] = field(default_factory=list)
     reset: list[tuple[str, str]] = field(default_factory=list)
 
 

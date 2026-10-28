@@ -9,11 +9,9 @@ type Status = "loading" | "authenticated" | "unauthenticated";
 interface AuthContextValue {
   user: User | null;
   status: Status;
-  /** Set when a session died on its own (idle for 48h, expired), so the login page can say why. Cleared by the next login. */
   sessionEndReason: SessionEndReason | null;
   login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
-  /** Re-reads /auth/me, e.g. after verifying an email or finishing onboarding. */
   refreshUser: () => Promise<User | null>;
 }
 
@@ -37,8 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionEndReason(reason);
       },
     });
-    // Restore the session once, from the httpOnly cookie. refreshSession is
-    // single-flight, so StrictMode's second effect run shares this request.
     authApi.restoreSession().catch(() => setStatus((s) => (s === "loading" ? "unauthenticated" : s)));
     return () => registerAuthHandlers(null);
   }, []);
@@ -55,10 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.logout();
     } catch {
-      // Signing out locally must work even if the request fails.
     }
     setAccessToken(null);
-    clearDrafts(); // health answers must not outlive the session on a shared device
+    clearDrafts();
     setUser(null);
     setStatus("unauthenticated");
     setSessionEndReason(null);

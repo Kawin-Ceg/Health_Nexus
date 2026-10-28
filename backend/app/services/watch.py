@@ -20,15 +20,24 @@ from app.models import HealthRecord
 
 from .visit_state import LOCAL_TZ
 
-WATCH_VITALS = ("heart_rate", "spo2", "respiratory_rate", "temperature_c")
+WATCH_VITALS = (
+    "heart_rate",
+    "spo2",
+    "respiratory_rate",
+    "temperature_c",
+    "systolic",
+    "diastolic",
+    "glucose_mg_dl",
+    "weight_kg",
+)
 
 
 @dataclass(frozen=True)
 class Slot:
     key: str
     label: str
-    start: int  # local hour, inclusive
-    end: int  # local hour, exclusive (wraps past midnight for night)
+    start: int
+    end: int
 
 
 SLOTS = (
@@ -38,16 +47,52 @@ SLOTS = (
     Slot("night", "Night", 21, 5),
 )
 
-TYPICAL = {"heart_rate": 74.0, "spo2": 97.6, "respiratory_rate": 15.0, "temperature_c": 36.6}
-SPREAD = {"heart_rate": 3.5, "spo2": 0.6, "respiratory_rate": 0.9, "temperature_c": 0.12}
-SHIFT = {
-    "morning": {"heart_rate": -1.0, "temperature_c": -0.1},
-    "afternoon": {"heart_rate": 3.0, "temperature_c": 0.15},
-    "evening": {"heart_rate": 1.0, "temperature_c": 0.1},
-    "night": {"heart_rate": -7.0, "respiratory_rate": -1.0, "temperature_c": -0.2},
+TYPICAL = {
+    "heart_rate": 74.0,
+    "spo2": 97.6,
+    "respiratory_rate": 15.0,
+    "temperature_c": 36.6,
+    "systolic": 118.0,
+    "diastolic": 77.0,
+    "glucose_mg_dl": 92.0,
+    "weight_kg": 64.0,
 }
-DECIMALS = {"heart_rate": 0, "spo2": 0, "respiratory_rate": 0, "temperature_c": 1}
-LIMITS = {"heart_rate": (40, 180), "spo2": (85, 100), "respiratory_rate": (8, 35), "temperature_c": (34.5, 41.0)}
+SPREAD = {
+    "heart_rate": 3.5,
+    "spo2": 0.6,
+    "respiratory_rate": 0.9,
+    "temperature_c": 0.12,
+    "systolic": 4.0,
+    "diastolic": 3.0,
+    "glucose_mg_dl": 6.0,
+    "weight_kg": 0.3,
+}
+SHIFT = {
+    "morning": {"heart_rate": -1.0, "temperature_c": -0.1, "systolic": 3.0, "diastolic": 2.0, "glucose_mg_dl": -4.0},
+    "afternoon": {"heart_rate": 3.0, "temperature_c": 0.15, "glucose_mg_dl": 12.0, "weight_kg": 0.4},
+    "evening": {"heart_rate": 1.0, "temperature_c": 0.1, "glucose_mg_dl": 8.0, "weight_kg": 0.6},
+    "night": {"heart_rate": -7.0, "respiratory_rate": -1.0, "temperature_c": -0.2, "systolic": -6.0, "diastolic": -4.0},
+}
+DECIMALS = {
+    "heart_rate": 0,
+    "spo2": 0,
+    "respiratory_rate": 0,
+    "temperature_c": 1,
+    "systolic": 0,
+    "diastolic": 0,
+    "glucose_mg_dl": 0,
+    "weight_kg": 1,
+}
+LIMITS = {
+    "heart_rate": (40, 180),
+    "spo2": (85, 100),
+    "respiratory_rate": (8, 35),
+    "temperature_c": (34.5, 41.0),
+    "systolic": (80, 200),
+    "diastolic": (45, 130),
+    "glucose_mg_dl": (50, 300),
+    "weight_kg": (20, 200),
+}
 
 
 def slot_at(moment: datetime) -> tuple[Slot, date]:
@@ -88,4 +133,5 @@ async def simulate(session: AsyncSession, user_id: uuid.UUID, slot: Slot, day: d
         low, high = LIMITS[key]
         out[key] = round(min(high, max(low, value)), DECIMALS[key])
     out["spo2"] = min(out["spo2"], 100.0)
+    out["diastolic"] = min(out["diastolic"], out["systolic"] - 20)
     return out

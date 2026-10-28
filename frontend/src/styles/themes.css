@@ -1,4 +1,3 @@
-/* Light values live in tokens.css. Dark mode redefines the colour tokens. */
 
 .dark {
   --hn-ink: 240 239 232;
@@ -30,7 +29,6 @@
   --hn-info-soft: 22 30 56;
   --hn-chart-normal: 160 159 150;
 
-  /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
   --hn-sev-critical: 240 138 110;
   --hn-sev-high: 236 150 96;
   --hn-sev-moderate: 227 163 59;

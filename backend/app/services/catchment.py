@@ -18,7 +18,6 @@ from app.models.enums import ConsentType, UserRole
 
 from .consent import allows_worker_access, current_consents
 
-# One body for "no such citizen" and "not yours": a different answer would let ids be probed.
 CITIZEN_NOT_FOUND = "Citizen not found."
 NO_FACILITY = (
     "Your account is not linked to a health centre, so there is no catchment to show. "

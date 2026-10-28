@@ -16,8 +16,6 @@ class ValidPhcFacility(UUIDPk, CreatedAt, Base):
 
     facility_code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     name: Mapped[str] = mapped_column(String)
-    # Lowercase, with "P.H.C." / "Primary Health Centre" folded to "phc".
-    # See services/phc_registry.normalise_facility_name.
     normalised_name: Mapped[str] = mapped_column(String, index=True)
     district: Mapped[str] = mapped_column(String, index=True)
     state: Mapped[str] = mapped_column(String, index=True)
@@ -26,7 +24,6 @@ class ValidPhcFacility(UUIDPk, CreatedAt, Base):
     latitude: Mapped[float | None]
     longitude: Mapped[float | None]
     is_active: Mapped[bool] = mapped_column(default=True, server_default=true())
-    # Seeded, non-authoritative rows
     is_placeholder: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     users: Mapped[list["User"]] = relationship(back_populates="facility")

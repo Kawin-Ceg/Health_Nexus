@@ -13,28 +13,28 @@ import {
   type VerificationDocument,
 } from "../../services/documents";
 import { useToast } from "./Toaster";
-import { Btn, cx, inputCls } from "./ui";
+import { Btn, cx, inputCls, Status, type StatusTone } from "./ui";
 
-const STATUS: Record<DocumentStatus, { label: string; cls: string }> = {
-  pending: { label: "Waiting for review", cls: "bg-paper text-ink-soft" },
-  auto_passed: { label: "Checks passed", cls: "bg-success-soft text-success" },
-  flagged: { label: "Needs a closer look", cls: "bg-warn/15 text-warn" },
-  accepted: { label: "Accepted", cls: "bg-success-soft text-success" },
-  rejected: { label: "Rejected", cls: "bg-danger-soft text-danger" },
+const STATUS: Record<DocumentStatus, { label: string; tone: StatusTone }> = {
+  pending: { label: "Waiting for review", tone: "neutral" },
+  auto_passed: { label: "Checks passed", tone: "success" },
+  flagged: { label: "Needs a closer look", tone: "warn" },
+  accepted: { label: "Accepted", tone: "success" },
+  rejected: { label: "Rejected", tone: "danger" },
 };
 
 const typeLabel = (t: DocumentType) => DOCUMENT_TYPES.find((d) => d.value === t)?.label ?? t;
 
 export function DocumentStatusChip({ status }: { status: DocumentStatus }) {
-  return <span className={cx("rounded-full px-2 py-0.5 text-xs font-semibold", STATUS[status].cls)}>{STATUS[status].label}</span>;
+  return <Status tone={STATUS[status].tone}>{STATUS[status].label}</Status>;
 }
 
 function ReviewChip({ doc }: { doc: VerificationDocument }) {
   if (doc.status === "accepted" || doc.status === "rejected") return <DocumentStatusChip status={doc.status} />;
   return doc.opened ? (
-    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">Opened</span>
+    <Status tone="info">Opened</Status>
   ) : (
-    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">Not opened</span>
+    <Status tone="warn">Not opened</Status>
   );
 }
 
@@ -167,12 +167,12 @@ function ReviewItem({ applicationId, doc, onDecided }: { applicationId: string; 
       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
         <Btn tone="ghost" onClick={view}>View</Btn>
         {doc.status !== "accepted" && (
-          <button type="button" disabled={busy} onClick={() => void decide(true)} className="inline-flex min-h-10 items-center rounded-full bg-green-200 px-4 text-sm font-semibold text-green-950 hover:bg-green-300 disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => void decide(true)} className="inline-flex min-h-10 items-center rounded-full bg-green-600 text-white hover:bg-green-700 px-4 text-sm font-semibold disabled:opacity-50">
             Accept
           </button>
         )}
         {doc.status !== "rejected" && !rejecting && (
-          <button type="button" onClick={() => setRejecting(true)} className="inline-flex min-h-10 items-center rounded-full border border-red-300 bg-red-50 px-4 text-sm font-semibold text-red-800 hover:bg-red-100">
+          <button type="button" onClick={() => setRejecting(true)} className="inline-flex min-h-10 items-center rounded-full bg-red-600 text-white hover:bg-red-700 px-4 text-sm font-semibold">
             Reject
           </button>
         )}
@@ -180,7 +180,7 @@ function ReviewItem({ applicationId, doc, onDecided }: { applicationId: string; 
       {rejecting && (
         <div className="mt-2 flex flex-wrap gap-2">
           <input className={cx(inputCls, "flex-1")} autoFocus placeholder="Why?" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
-          <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => void decide(false)} className="inline-flex min-h-10 items-center rounded-full bg-red-200 px-4 text-sm font-semibold text-red-950 hover:bg-red-300 disabled:opacity-50">
+          <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => void decide(false)} className="inline-flex min-h-10 items-center rounded-full bg-red-600 text-white hover:bg-red-700 px-4 text-sm font-semibold disabled:opacity-50">
             Confirm reject
           </button>
           <Btn tone="ghost" onClick={() => setRejecting(false)}>Cancel</Btn>

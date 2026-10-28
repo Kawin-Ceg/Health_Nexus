@@ -37,7 +37,6 @@ Pincode = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^[0-
 Area = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
 Tag = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
 Tags = Annotated[list[Tag], Field(max_length=MAX_TAGS), AfterValidator(_dedupe)]
-# Constraints sit on the inner str: applied to `str | None` they would run on None.
 OptionalText = Annotated[
     Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)] | None, BeforeValidator(_blank_to_none)
 ]
@@ -51,22 +50,18 @@ class ProfileFields(BaseModel):
     """Everything onboarding collects except the consent answers. Also the target
     that a PATCH is merged into and re-validated against."""
 
-    # Step 1
     age: Age
     gender: Gender
     height_cm: HeightCm
     weight_kg: WeightKg
     blood_group: BloodGroup | None = None
-    # Step 2. The facility is chosen, and must serve the district given.
     state: Place
     district: Place
     phc_id: uuid.UUID
     pincode: Pincode
     area: Area
-    # Step 3
     existing_conditions: Tags = []
     current_medications: Tags = []
-    # Step 4
     has_smartwatch: bool = False
     smartwatch_brand: OptionalText = None
     emergency_contact_name: OptionalText = None

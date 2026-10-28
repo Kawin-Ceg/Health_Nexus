@@ -8,7 +8,6 @@ FRONTEND_PATTERNS = Path(__file__).resolve().parents[2] / "frontend" / "src" / "
 
 
 def test_frontend_uses_the_same_employee_id_string():
-    # String.raw keeps the source text identical to the Python raw string.
     assert f"String.raw`{EMPLOYEE_ID_PATTERN}`" in FRONTEND_PATTERNS.read_text(encoding="utf-8")
 
 

@@ -73,7 +73,6 @@ def in_research(user_id: ColumnElement[uuid.UUID]) -> ColumnElement[bool]:
     return func.coalesce(latest_consent(ConsentType.research_analytics, user_id), false())
 
 
-# Raw-SQL twins of the helpers above, for the assistant's catalog. `u` is the users alias.
 def _latest_sql(consent_type: ConsentType) -> str:
     return (
         "(SELECT cr.granted FROM consent_records cr WHERE cr.user_id = u.id "

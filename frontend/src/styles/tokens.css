@@ -1,28 +1,11 @@
-/* Design tokens. Colours are RGB triplets so they work with alpha:
-   color: rgb(var(--hn-ink));  background: rgb(var(--hn-brand) / 0.08); */
 
 :root {
-  /* Colour (light is the default; themes.css swaps these under .dark).
-     Cream paper, near-black ink and buttons, lime for highlights and selection. */
   --hn-ink: 17 17 17;
-  --hn-ink-soft: 74 70 56; /* 7:1 on milk honey */
-  --hn-ink-muted: 98 92 72; /* 4.8:1 on milk honey */
-  --hn-paper: 241 232 199; /* #F1E8C7 milk honey */
-  --hn-paper-raised: 232 221 182; /* #E8DDB6 sunken bands */
-  --hn-surface: 251 247 234; /* #FBF7EA cards */
-  --hn-matcha: 156 167 99; /* #9CA763 sidebar and highlights */
-  --hn-forest: 52 78 52; /* #344E34 deep green buttons */
-  --hn-line: 224 212 168; /* #E0D4A8 */
-  --hn-line-strong: 140 139 128;
+  --hn-ink-soft: 74 70 56;  --hn-ink-muted: 98 92 72;  --hn-paper: 241 232 199;  --hn-paper-raised: 232 221 182;  --hn-surface: 251 247 234;  --hn-matcha: 156 167 99;  --hn-forest: 52 78 52;  --hn-line: 224 212 168;  --hn-line-strong: 140 139 128;
 
-  --hn-brand: 17 17 17; /* buttons, links, active states */
-  --hn-brand-strong: 0 0 0;
-  --hn-brand-soft: 156 167 99; /* matcha fill, with ink or olive text */
-  --hn-on-brand: 250 249 243;
-  --hn-lime: 156 167 99; /* matcha */
-  --hn-olive: 28 32 8; /* text on matcha, 7:1 */
-  --hn-glow: 255 245 198; /* #FFF5C6 hover glow */
-  --hn-accent: 178 106 0;
+  --hn-brand: 17 17 17;  --hn-brand-strong: 0 0 0;
+  --hn-brand-soft: 156 167 99;  --hn-on-brand: 250 249 243;
+  --hn-lime: 156 167 99;  --hn-olive: 28 32 8;  --hn-glow: 255 245 198;  --hn-accent: 178 106 0;
   --hn-accent-ink: 122 79 0;
   --hn-warn: 122 79 0;
   --hn-warn-soft: 255 244 214;
@@ -31,11 +14,9 @@
   --hn-danger-soft: 253 237 235;
   --hn-success: 43 98 54;
   --hn-success-soft: 232 243 234;
-  --hn-info: 58 79 160; /* #3A4FA0, the illustration blue */
-  --hn-info-soft: 232 240 250;
+  --hn-info: 58 79 160;  --hn-info-soft: 232 240 250;
   --hn-chart-normal: 140 139 128;
 
-  /* Severity: defined once, used by every page (lib/severity.ts). Always shown with a label. */
   --hn-sev-critical: 176 53 43;
   --hn-sev-high: 166 64 16;
   --hn-sev-moderate: 140 92 10;
@@ -47,9 +28,7 @@
   --hn-on-panel-soft: 196 195 186;
   --hn-on-panel-error: 240 164 128;
 
-  --hn-focus: 31 79 168; /* #1F4FA8, never mistaken for selection */
-
-  /* Buttons: pills with a soft glow on hover */
+  --hn-focus: 31 79 168;
   --hn-button-radius: 999px;
   --hn-button-border: 1.5px;
   --hn-button-outline: 17 17 17;
@@ -58,7 +37,6 @@
   --hn-button-weight: 450;
   --hn-button-lg-size: 1.0625rem;
 
-  /* Type */
   --hn-font-sans: "Inter Variable", "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Tamil", "Noto Sans Devanagari", sans-serif;
   --hn-font-display: "Newsreader Variable", Georgia, "Times New Roman", "Noto Sans Tamil", "Noto Sans Devanagari", serif;
 
@@ -75,7 +53,6 @@
   --hn-leading-snug: 1.3;
   --hn-leading-body: 1.6;
 
-  /* Spacing: 4px scale */
   --hn-space-1: 4px;
   --hn-space-2: 8px;
   --hn-space-3: 12px;
@@ -89,30 +66,25 @@
   --hn-space-20: 80px;
   --hn-space-24: 96px;
 
-  /* Radii: badges and inputs 6, buttons 8, panels 12, feature hub 16 */
   --hn-radius-sm: 6px;
   --hn-radius-md: 8px;
   --hn-radius-lg: 12px;
   --hn-radius-xl: 16px;
   --hn-radius-pill: 999px;
 
-  /* Shadows are tinted with ink, never pure black */
   --hn-shadow-sm: 0 1px 2px rgb(var(--hn-ink) / 0.06), 0 1px 1px rgb(var(--hn-ink) / 0.04);
   --hn-shadow-md: 0 8px 24px -8px rgb(var(--hn-ink) / 0.14), 0 2px 6px rgb(var(--hn-ink) / 0.05);
   --hn-shadow-lg: 0 24px 60px -20px rgb(var(--hn-ink) / 0.28);
 
-  /* Motion */
   --hn-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --hn-duration-hover: 180ms;
   --hn-duration-reveal: 700ms;
 
-  /* Layout */
   --hn-container: 1200px;
   --hn-gutter: var(--hn-space-4);
   --hn-nav-height: 68px;
   --hn-tap: 44px;
 
-  /* Layers */
   --hn-z-nav: 100;
   --hn-z-menu: 200;
 }

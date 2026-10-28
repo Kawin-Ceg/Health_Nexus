@@ -45,7 +45,6 @@ ENUMS: dict[str, tuple[str, ...]] = {
     "alert_severity": ("low", "medium", "high"),
     "flag_resolution": ("reviewed", "dismissed"),
     "flag_dismiss_reason": ("false_positive", "already_treated", "contacted", "other"),
-    # 'missed' is added by migration 0008.
     "visit_status": ("scheduled", "completed", "cancelled"),
     "concern_category": ("data_misuse", "incorrect_diagnosis_flag", "harassment", "access_request", "other"),
     "concern_status": ("open", "in_review", "resolved", "rejected"),
@@ -78,12 +77,10 @@ TZ = sa.DateTime(timezone=True)
 
 
 def upgrade() -> None:
-    # Step 1: enum types
     bind = op.get_bind()
     for name, values in ENUMS.items():
         postgresql.ENUM(*values, name=name).create(bind, checkfirst=False)
 
-    # Step 2: tables
     op.create_table(
         "users",
         sa.Column("id", UUID, nullable=False),

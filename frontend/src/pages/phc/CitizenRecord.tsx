@@ -5,13 +5,17 @@ import { BasisTag, PopulationNote, ScoreBreakdown } from "../../components/app/M
 import { BookVisitForm, NoFacility, ResolveControls } from "../../components/app/phc";
 import { ReportCitizen } from "../../components/app/ReportCitizen";
 import { TrendChart } from "../../components/app/TrendChart";
-import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, Stat, VisitBadge, cx } from "../../components/app/ui";
-import { fmtDate, fmtDateTime, fmtVisit, plural } from "../../lib/format";
+import { CalendarCheck, CircleAlert, FileHeart, ShieldAlert } from "lucide-react";
+import { StatTile } from "../../components/app/charts";
+import { AlertLevel, Btn, Card, Empty, ErrorNote, Loading, PageHeader, SeverityBadge, VisitBadge, cx } from "../../components/app/ui";
+import { fmtDate, fmtStamp, fmtVisit, plural } from "../../lib/format";
 import { oneOf, useQueryState } from "../../lib/params";
 import { examPath, paths } from "../../lib/routes";
 import { useResource } from "../../lib/useResource";
 import { getMetrics } from "../../services/health";
-import { getRecord, resolveCitizen } from "../../services/phc";
+import { getRecord, markSeen, resolveCitizen } from "../../services/phc";
+import { CompactList, CompactRow, FlagActions, ResolutionPill, alertTopic, shortSignal } from "../../components/app/compact";
+import { Detail, Modal } from "../../components/app/visits";
 
 const WINDOWS = ["30", "90", "180", "365"] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,6 +32,8 @@ export function CitizenRecord() {
   const [chosen, setChosen] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [readingId, setReading] = useState<string | null>(null);
+  const [alertId, setAlertId] = useState<string | null>(null);
 
   const [r, info] = record.data ?? [null, null];
   const metrics = useMemo(() => new Map((info?.metrics ?? []).map((m) => [m.key, m])), [info]);
@@ -44,6 +50,8 @@ export function CitizenRecord() {
   if (!r || !info) return <Loading label="Loading record" />;
 
   const id = r.identity;
+  const openReading = r.timeline.find((t) => t.reading_id === readingId) ?? null;
+  const openAlert = r.alerts.find((a) => a.id === alertId) ?? null;
   const charted = r.vitals.map((v) => metrics.get(v.key)).filter((m) => m !== undefined);
   const metric = charted.find((m) => m.key === chosen) ?? charted[0];
   const points = metric
@@ -80,7 +88,7 @@ export function CitizenRecord() {
               Record examination
             </Link>
             <Btn tone="ghost" onClick={() => setReporting((v) => !v)}>Report a problem</Btn>
-            <Btn tone="primary" onClick={() => setBooking((b) => !b)}>Book visit</Btn>
+            <Btn tone="info" onClick={() => setBooking((b) => !b)}>Book visit</Btn>
           </>
         }
       />
@@ -107,11 +115,11 @@ export function CitizenRecord() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Readings" value={r.counts.readings} />
-        <Stat label="Flagged" value={r.counts.flags} />
-        <Stat label="Still open" value={r.counts.open_flags} tone={r.counts.open_flags ? "danger" : undefined} />
-        <Stat label="Visits" value={r.counts.visits} />
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile icon={FileHeart} label="Readings" value={r.counts.readings} />
+        <StatTile icon={ShieldAlert} tone="warn" label="Flagged" value={r.counts.flags} />
+        <StatTile icon={CircleAlert} tone={r.counts.open_flags ? "danger" : "success"} label="Still open" value={r.counts.open_flags} />
+        <StatTile icon={CalendarCheck} tone="info" label="Visits" value={r.counts.visits} />
       </div>
 
       {r.counts.open_flags + before.open_flags > 0 && (
@@ -121,14 +129,14 @@ export function CitizenRecord() {
       )}
 
       <div className="mb-6 grid gap-6 lg:grid-cols-5">
-        <Card className="lg:col-span-3" title="Latest against their own baseline">
+        <Card className="lg:col-span-3" title="Latest against their usual">
           {r.vitals.length === 0 ? (
             <Empty title="No readings in this period" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[420px] text-left text-sm">
                 <thead className="text-xs uppercase tracking-wide text-ink-soft">
-                  <tr><th className="py-2 font-medium">Vital</th><th className="py-2 font-medium">Latest</th><th className="py-2 font-medium">Their usual (model baseline)</th><th className="py-2 font-medium">Deviation</th></tr>
+                  <tr><th className="py-2 font-medium">Vital</th><th className="py-2 font-medium">Latest</th><th className="py-2 font-medium">Their usual</th><th className="py-2 font-medium">Deviation</th></tr>
                 </thead>
                 <tbody className="divide-y divide-line">
                   {r.vitals.map((v) => {
@@ -184,33 +192,18 @@ export function CitizenRecord() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Submissions" aside={r.timeline_truncated && <span className="text-xs text-warn">Newest {r.timeline_limit} of {r.counts.readings} shown</span>}>
           {r.timeline.length === 0 ? <Empty title="No readings in this period" /> : (
-            <ul className="flex max-h-[32rem] flex-col divide-y divide-line overflow-y-auto">
+            <CompactList className="max-h-[32rem] overflow-y-auto">
               {r.timeline.map((t) => (
-                <li key={t.reading_id} className="py-2 text-sm">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-ink">{fmtDateTime(t.measured_at)}</span>
-                    {t.severity && <SeverityBadge severity={t.severity} />}
-                    {t.flagged && <span className="text-xs text-ink-soft">{t.resolution ? t.resolution : "open"}</span>}
-                    {t.flagged && <BasisTag basis={t.basis} />}
-                  </div>
-                  {t.signal && <p className="text-sev-high">{t.signal}</p>}
-                  {t.flagged && t.checks.length > 0 && (
-                    <details className="mt-1">
-                      <summary className="cursor-pointer text-xs font-semibold text-brand">Why it was flagged</summary>
-                      <div className="mt-2 flex flex-col gap-2">
-                        <ScoreBreakdown checks={t.checks} metrics={metrics} who="worker" />
-                        <PopulationNote check={t.population} />
-                      </div>
-                    </details>
-                  )}
-                  {!t.flagged && t.population?.unusual && <PopulationNote check={t.population} className="mt-1" />}
-                  <p className="text-xs text-ink-soft">
-                    {Object.entries(t.vitals).map(([k, v]) => `${metrics.get(k)?.label ?? k} ${v.toFixed(metrics.get(k)?.decimals ?? 0)}`).join(" · ")}
-                    {t.symptoms.length > 0 && ` · ${t.symptoms.join(", ")}`}
-                  </p>
-                </li>
+                <CompactRow
+                  key={t.reading_id}
+                  topic={t.flagged ? shortSignal(t.signal) : "Normal reading"}
+                  muted={!t.flagged}
+                  at={t.measured_at}
+                  onOpen={() => setReading(t.reading_id)}
+                  right={t.flagged && t.severity ? <><SeverityBadge severity={t.severity} /><ResolutionPill status={t.resolution ?? "open"} /></> : null}
+                />
               ))}
-            </ul>
+            </CompactList>
           )}
         </Card>
         <div className="flex flex-col gap-6">
@@ -228,16 +221,71 @@ export function CitizenRecord() {
           </Card>
           <Card title={`Alerts sent (${r.counts.alerts})`}>
             {r.alerts.length === 0 ? <p className="text-sm text-ink-soft">None in this period.</p> : (
-              <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto text-sm">
+              <CompactList className="max-h-72 overflow-y-auto">
                 {r.alerts.map((a) => (
-                  <li key={a.id}><p className="text-ink">{a.message}</p><p className="text-xs text-ink-soft">{fmtDateTime(a.created_at)}</p></li>
+                  <CompactRow
+                    key={a.id}
+                    topic={alertTopic(a.message)}
+                    at={a.created_at}
+                    onOpen={() => setAlertId(a.id)}
+                    right={<AlertLevel level={a.severity} />}
+                  />
                 ))}
-              </ul>
+              </CompactList>
             )}
             {r.counts.alerts > r.alerts.length && <p className="mt-2 text-xs text-ink-soft">Newest {r.alerts.length} of {r.counts.alerts} shown.</p>}
           </Card>
         </div>
       </div>
+      {openReading && (
+        <Modal title={openReading.flagged ? shortSignal(openReading.signal) : "Normal reading"} onClose={() => setReading(null)} wide>
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-center gap-2">
+              {openReading.severity && <SeverityBadge severity={openReading.severity} />}
+              {openReading.flagged && <ResolutionPill status={openReading.resolution ?? "open"} />}
+              {openReading.flagged && <BasisTag basis={openReading.basis} />}
+              <span className="text-ink-soft">{fmtStamp(openReading.measured_at)}</span>
+            </div>
+            {openReading.signal && <p className="text-base text-ink">{openReading.signal}</p>}
+            <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {Object.entries(openReading.vitals).map(([k, v]) => (
+                <Detail key={k} label={metrics.get(k)?.label ?? k}>
+                  {v.toFixed(metrics.get(k)?.decimals ?? 0)} {metrics.get(k)?.unit ?? ""}
+                </Detail>
+              ))}
+            </dl>
+            <Detail label="Symptoms">{openReading.symptoms.length ? openReading.symptoms.join(", ") : "None reported"}</Detail>
+            {openReading.flagged && openReading.checks.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-base font-bold text-ink">Why it was flagged</h3>
+                <ScoreBreakdown checks={openReading.checks} metrics={metrics} who="worker" />
+                <PopulationNote check={openReading.population} />
+              </div>
+            )}
+            {!openReading.flagged && openReading.population?.unusual && <PopulationNote check={openReading.population} />}
+            {openReading.flagged && !openReading.resolution && openReading.processed_id && (
+              <FlagActions
+                onResolve={async (body) => {
+                  await markSeen(openReading.processed_id!, body);
+                  setReading(null);
+                  record.reload();
+                }}
+              />
+            )}
+          </div>
+        </Modal>
+      )}
+      {openAlert && (
+        <Modal title={alertTopic(openAlert.message)} onClose={() => setAlertId(null)}>
+          <div className="flex flex-col gap-4">
+            <p className="whitespace-pre-line text-base text-ink">{openAlert.message}</p>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <Detail label="Sent">{fmtStamp(openAlert.created_at)}</Detail>
+              <Detail label="Seen by the citizen">{openAlert.is_read ? "Yes" : "Not yet"}</Detail>
+            </dl>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

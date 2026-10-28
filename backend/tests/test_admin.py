@@ -55,7 +55,6 @@ async def test_approve_links_the_worker_to_the_facility(client, outbox, db):
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "approved"
     assert r.json()["history"][0]["action"] == "application_approved"
-    # Role is re-read on every request, so the same token now opens the worker area.
     assert (await client.get(f"{BASE}/phc/dashboard", headers=wh)).status_code == 200
     again = await client.post(f"{BASE}/admin/applications/{app_id}/approve", json={"facility_id": str(mylapore.id)}, headers=ah)
     assert again.status_code == 409

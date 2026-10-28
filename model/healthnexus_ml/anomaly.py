@@ -12,17 +12,15 @@ from sklearn.ensemble import IsolationForest
 from .preprocessing import FEATURES
 
 FEATS = list(FEATURES.values())
-# body signals used for the personal score. Activity (steps etc.) depends on what
-# someone chose to do that day, so it is too noisy to alert on by itself.
 PHYSIO = ["resting_hr", "hrv_rmssd", "sleep_hr", "breathing_rate", "skin_temp"]
 
-MIN_DAYS = 7  # personal baseline starts counting after this many valid days
-FULL_DAYS = 21  # fully personal from here
-WINDOW = 60  # baseline looks at the user's last 60 valid days
+MIN_DAYS = 7
+FULL_DAYS = 21
+WINDOW = 60
 FLAG_THRESHOLD = 0.5
-ALERT_DAYS = 2  # only alert the user after this many flagged days in a row
+ALERT_DAYS = 2
 
-MAD_SCALE = 1.4826  # makes MAD comparable to a standard deviation
+MAD_SCALE = 1.4826
 
 
 def _mad(x):
@@ -54,12 +52,10 @@ class GlobalModel:
         self.forest_ = IsolationForest(
             n_estimators=300, contamination=self.contamination, random_state=self.random_state
         ).fit(Xs)
-        # reference distribution of raw scores, used to turn a score into a percentile
         self.train_scores_ = np.sort(-self.forest_.score_samples(Xs))
         return self
 
     def _standardise(self, X):
-        # missing values -> population median, i.e. "nothing unusual"
         return ((X - self.median_) / self.mad_).fillna(0).to_numpy()
 
     def population_z(self, df):
@@ -71,7 +67,6 @@ class GlobalModel:
         return np.searchsorted(self.train_scores_, raw) / len(self.train_scores_)
 
     def score(self, df):
-        # top 3% of training days -> 0.5, top 0.5% -> 1
         lo, hi = 1 - 2 * self.contamination, 1 - self.contamination / 6
         return np.clip((self.percentile(df) - lo) / (hi - lo), 0, 1)
 
@@ -108,7 +103,6 @@ def personal_baselines(df, pop_mad):
         med = roll.median().reset_index(level=0, drop=True)
         mad = roll.apply(_mad, raw=True).reset_index(level=0, drop=True) * MAD_SCALE
         out[f"{f}_base"] = med
-        # floor so a very regular user doesn't get infinite z-scores
         out[f"{f}_spread"] = mad.clip(lower=0.25 * pop_mad[f])
         out[f"{f}_n_prev"] = g.transform(lambda s: s.notna().cumsum().shift(1, fill_value=0))
     return out
@@ -126,22 +120,18 @@ def score_days(df, model):
 
     z_personal = pd.DataFrame({f: (df[f] - base[f"{f}_base"]) / base[f"{f}_spread"] for f in FEATS})
     weights = pd.DataFrame({f: personal_weight(base[f"{f}_n_prev"]) for f in FEATS})
-    weights = weights.where(df[FEATS].notna())  # only features measured today count
+    weights = weights.where(df[FEATS].notna())
 
-    # per feature: global z early on, personal z once there is history
     z_blend = (1 - weights) * pop_z + weights * z_personal.fillna(0)
 
     out = df[["user_id", "date"]].copy()
     out["global_score"] = model.score(df)
-    # root-mean-square over the body signals measured today: one signal slightly off
-    # doesn't flag, several off together (like getting sick) does
     rms = np.sqrt((z_personal[PHYSIO] ** 2).mean(axis=1, skipna=True))
     out["personal_score"] = z_to_score(rms).fillna(0)
     out["personal_weight"] = weights[PHYSIO].mean(axis=1).fillna(0)
     out["score"] = (1 - out["personal_weight"]) * out["global_score"] + out["personal_weight"] * out["personal_score"]
     out["flag"] = out["score"] >= FLAG_THRESHOLD
 
-    # which signal is most off, so the app can say *why* a day was flagged
     top = z_blend.abs().fillna(0)
     out["reason"] = top.idxmax(axis=1).where(top.max(axis=1) > 0)
     out["reason_z"] = z_blend.to_numpy()[np.arange(len(df)), top.to_numpy().argmax(axis=1)]

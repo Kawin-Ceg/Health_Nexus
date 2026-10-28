@@ -23,9 +23,9 @@ DEFAULT_PATH = Path(__file__).resolve().parents[3] / "model" / "artifacts" / "vi
 
 @dataclass(frozen=True)
 class PopulationCheck:
-    score: float  # 0..1; 0.5 = more unusual than 97 % of training days, 1 = more than 99.5 %
-    percentile: float  # share of training days less unusual than this reading, 0..1
-    features: tuple[str, ...]  # the vitals the model looked at
+    score: float
+    percentile: float
+    features: tuple[str, ...]
     version: str
 
     @property
@@ -36,7 +36,7 @@ class PopulationCheck:
 def _configured_path() -> Path:
     try:
         from app.core.config import get_settings
-    except ImportError:  # model/healthnexus_ml/evaluate.py imports the scorer without the API's dependencies
+    except ImportError:
         return DEFAULT_PATH
     return Path(get_settings().POPULATION_MODEL_PATH or DEFAULT_PATH)
 
@@ -45,7 +45,7 @@ def _configured_path() -> Path:
 def _bundle() -> dict[str, Any] | None:
     path = _configured_path()
     try:
-        import joblib  # heavy; only needed once
+        import joblib
 
         bundle = joblib.load(path)
     except FileNotFoundError:
@@ -75,7 +75,6 @@ def check(vitals: dict[str, float]) -> PopulationCheck | None:
     used = tuple(f for f in features if vitals.get(f) is not None)
     if not used:
         return None
-    # Missing vitals sit at the population median (0 after standardising): "nothing unusual".
     row = [
         (float(vitals[f]) - m) / s if vitals.get(f) is not None and s > 0 else 0.0
         for f, m, s in zip(features, b["median"], b["scale"], strict=True)

@@ -4,17 +4,11 @@ import { ApiError, errorMessage } from "../services/api";
 export interface Resource<T> {
   data: T | null;
   error: string | null;
-  /** The HTTP status of the last failure (0 for network), so a page can react to 404 or 409. */
   status: number | null;
   loading: boolean;
   reload: () => void;
 }
 
-/**
- * Loads `fetcher` whenever `key` changes. Guards against stale responses: when
- * filters change quickly two requests are in flight, and only the latest one may
- * land. Earlier ones are aborted and, if they answer anyway, ignored.
- */
 export function useResource<T>(fetcher: (signal: AbortSignal) => Promise<T>, key: string): Resource<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);

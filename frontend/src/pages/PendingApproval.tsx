@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Check, X } from "lucide-react";
 import { AppHeader } from "../components/AppHeader";
-import { Doodle } from "../components/landing/Doodle/Doodle";
 import { Button } from "../components/ui/Button/Button";
 import { useAuth } from "../context/AuthContext";
 import { fmtDate } from "../lib/format";
@@ -22,7 +21,6 @@ export function PendingApproval() {
   const docs = useResource((s) => myDocuments(s), "my-documents");
 
   if (!user) return <Navigate to={paths.login} replace />;
-  // Approved since the page loaded: this screen no longer applies.
   if (user.role !== "pending_phc") return <Navigate to={destinationFor(user)} replace />;
 
   const application = user.application;
@@ -54,9 +52,6 @@ export function PendingApproval() {
     <>
       <AppHeader />
       <main className={styles.main}>
-        <Doodle piece="ecg" className={styles.ecg} />
-        <Doodle piece="tree" className={styles.tree} delay={1} />
-        <Doodle piece="capsules" className={styles.capsules} delay={2} />
 
         <p className={styles.eyebrow}>PHC worker application</p>
         <h1 className={styles.title}>

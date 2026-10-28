@@ -14,7 +14,6 @@ order they were seeded with originally, so their facility codes do not move.
 
 STATE = "Tamil Nadu"
 
-# district -> health centre towns/blocks, in code order
 DISTRICTS: dict[str, tuple[str, ...]] = {
     "Ariyalur": ("Ariyalur", "Jayankondam", "Sendurai", "Andimadam"),
     "Chengalpattu": ("Tambaram", "Kattankulathur", "Chengalpattu", "Maraimalai Nagar", "Thiruporur", "Cheyyur"),
@@ -56,9 +55,6 @@ DISTRICTS: dict[str, tuple[str, ...]] = {
     "Virudhunagar": ("Virudhunagar", "Sivakasi", "Rajapalayam", "Srivilliputhur", "Aruppukottai"),
 }
 
-# Explicit district codes: several districts share their first three letters
-# (Tiruppur, Tirunelveli, Tiruvarur, Tiruvannamalai, Tirupathur), and the four
-# districts seeded before this dataset existed keep their original prefixes.
 CODES: dict[str, str] = {
     "Ariyalur": "ARY",
     "Chengalpattu": "CGL",
@@ -100,8 +96,6 @@ CODES: dict[str, str] = {
     "Virudhunagar": "VNR",
 }
 
-# Coordinates are only recorded where they are known; the rest stay NULL rather
-# than being invented, since the risk map draws real positions.
 COORDS: dict[str, tuple[float, float]] = {
     "Mylapore": (13.0339, 80.2619),
     "Adyar": (13.0012, 80.2565),

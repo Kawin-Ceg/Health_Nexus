@@ -1,13 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, Moon, RefreshCw, Sun, Sunrise, Sunset, Watch as WatchIcon } from "lucide-react";
-import { PopulationNote } from "../../components/app/ModelInsights";
 import { Btn, Card, ErrorNote, Loading, PageHeader, SeverityBadge, cx, inputCls } from "../../components/app/ui";
 import { useToast } from "../../components/app/Toaster";
 import { useLabel } from "../../i18n";
 import { fmtDateTime } from "../../lib/format";
 import { paths } from "../../lib/routes";
-import { play } from "../../lib/sound";
 import { useResource } from "../../lib/useResource";
 import { errorMessage } from "../../services/api";
 import {
@@ -20,6 +18,10 @@ import {
   type WatchSlotKey,
   type WatchState,
 } from "../../services/health";
+
+const ORDER = ["heart_rate", "spo2", "respiratory_rate", "temperature_c", "systolic", "diastolic", "glucose_mg_dl", "weight_kg"];
+const order = (vitals: Record<string, number>) =>
+  Object.entries(vitals).sort(([a], [b]) => (ORDER.indexOf(a) + 99) % 99 - (ORDER.indexOf(b) + 99) % 99);
 
 const SLOT_ICON: Record<WatchSlotKey, typeof Sun> = { morning: Sunrise, afternoon: Sun, evening: Sunset, night: Moon };
 
@@ -43,7 +45,6 @@ export function Watch() {
     try {
       const out = await syncWatch();
       setLast({ reading: out.reading, already: out.already_synced });
-      if (!out.already_synced) play(out.reading.flagged ? "alert" : "clear");
       setState(await getWatch());
     } catch (e) {
       setError(errorMessage(e));
@@ -92,7 +93,7 @@ export function Watch() {
       {last && <Result reading={last.reading} already={last.already} units={units} label={label} />}
 
       <h2 className="mb-3 text-xl text-ink">Today</h2>
-      <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {watch.slots.map((s) => {
           const Icon = SLOT_ICON[s.key];
           const now = s.key === watch.current_slot;
@@ -104,7 +105,7 @@ export function Watch() {
               </p>
               {s.vitals ? (
                 <ul className="mt-3 flex flex-col gap-1 text-ink-soft">
-                  {Object.entries(s.vitals).map(([k, v]) => (
+                  {order(s.vitals).map(([k, v]) => (
                     <li key={k} className="flex justify-between gap-2">
                       <span>{label("vital", k, units.get(k)?.label)}</span>
                       <span className="tabular-nums text-ink">{v} {units.get(k)?.unit}</span>
@@ -118,10 +119,17 @@ export function Watch() {
           );
         })}
       </ol>
-      <p className="mt-6 text-xs text-ink-muted">
-        Watch readings are simulated in this version. Blood pressure and blood sugar are taken by your health worker when they
-        examine you, and show in your <Link to={paths.history} className="underline">history</Link>.
-      </p>
+      <div role="note" className="mt-8 flex gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+        <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
+        <div className="flex flex-col gap-1">
+          <p className="font-semibold">Please note</p>
+          <ul className="list-disc space-y-1 pl-4">
+            <li>A watch reading is not a diagnosis. If you feel unwell, see a doctor. In an emergency, call 108.</li>
+            <li>Blood pressure, blood sugar and weight from a watch are estimates. Your health worker's examination is more accurate.</li>
+            <li>Every reading is kept in your <Link to={paths.history} className="font-semibold underline">history</Link>.</li>
+          </ul>
+        </div>
+      </div>
     </>
   );
 }
@@ -143,13 +151,12 @@ function Result({ reading: r, already, units, label }: {
           </p>
           {r.signal && <p className="text-ink">{r.signal}</p>}
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-ink-soft">
-            {Object.entries(r.vitals).map(([k, v]) => (
+            {order(r.vitals).map(([k, v]) => (
               <span key={k}>
                 {label("vital", k, units.get(k)?.label)}: <span className="tabular-nums text-ink">{v} {units.get(k)?.unit}</span>
               </span>
             ))}
           </p>
-          <PopulationNote check={r.population} />
           <p className="text-xs text-ink-muted">Measured {fmtDateTime(r.measured_at)}</p>
         </div>
       </div>

@@ -29,9 +29,7 @@ CITIZEN = frozenset({UserRole.user})
 WORKER = frozenset({UserRole.phc_worker})
 ADMIN = frozenset({UserRole.admin})
 
-# A worker's catchment, as everywhere else in the app (services/catchment.py).
 _CATCHMENT = f"u.phc_id = :phc_id AND u.role = 'user' AND {WORKER_ACCESS_SQL}"
-# Area-level figures count only citizens who allowed community health monitoring.
 _COMMUNITY = COMMUNITY_SQL
 _OPEN = "pd.is_anomaly AND pd.resolution IS NULL"
 _SINCE = "now() - make_interval(days => :days)"
@@ -42,7 +40,6 @@ def _in_district(column: str) -> str:
     return f"(CAST(:district AS text) IS NULL OR lower({column}) = lower(CAST(:district AS text)))"
 
 
-# The advisories one citizen is shown, mirroring api/routes/advisories.targeting.
 _FOR_ME = """(
   (a.scope = 'centre' AND a.phc_id = me.phc_id)
   OR (a.scope = 'centre' AND a.radius_km IS NOT NULL AND me.geo_lat IS NOT NULL
@@ -56,7 +53,7 @@ _FOR_ME = """(
 
 @dataclass(frozen=True)
 class Param:
-    kind: str  # "int" | "enum" | "text"
+    kind: str
     description: str
     default: Any = None
     lo: int = 1
@@ -88,10 +85,8 @@ class Tool:
     description: str
     sql: str
     params: dict[str, Param] = field(default_factory=dict)
-    # Rule-based router: (regex, weight). The best total wins.
     patterns: tuple[tuple[str, float], ...] = ()
     needs_facility: bool = False
-    # Extra binds derived from the cleaned params, e.g. a severity's score floor.
     derive: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     post: Callable[[list[dict[str, Any]], dict[str, Any]], list[dict[str, Any]]] | None = None
 
@@ -155,7 +150,6 @@ def _citizen_match(args: dict[str, Any]) -> dict[str, Any]:
 
 
 TOOLS: tuple[Tool, ...] = (
-    # --- Citizens: only their own rows -----------------------------------------------
     Tool(
         name="my_latest_reading",
         roles=CITIZEN,
@@ -301,7 +295,6 @@ WHERE p.user_id = :me""",
             (r"\bwhat (medicines|medications)\b.*\b(on|taking|listed)\b", 2),
         ),
     ),
-    # --- PHC workers: only their catchment --------------------------------------------
     Tool(
         name="catchment_overview",
         roles=WORKER,
@@ -498,7 +491,6 @@ LIMIT 10""",
             (r"\b(symptom|symptoms|fever|cough|headache|outbreak|going around|common complaints?)\b", 4),
         ),
     ),
-    # --- Admins: aggregates and account metadata, never readings -----------------------
     Tool(
         name="platform_overview",
         roles=ADMIN,
@@ -650,7 +642,6 @@ GROUP BY u.role""",
             (r"\b(assistant|chatbot|chat bot|questions asked|usage)\b", 4),
         ),
     ),
-    # --- Newer features -------------------------------------------------------------
     Tool(
         name="my_examinations",
         roles=CITIZEN,

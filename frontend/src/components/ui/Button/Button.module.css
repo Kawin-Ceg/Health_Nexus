@@ -70,7 +70,6 @@
   background: rgb(var(--hn-ink) / 0.06);
 }
 
-/* For dark panels: light fill, panel-coloured text */
 .inverse {
   background: rgb(var(--hn-on-panel));
   color: rgb(var(--hn-panel));

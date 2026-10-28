@@ -14,7 +14,6 @@ from app.services import onboarding as svc
 from app.services.consent import record_consents
 from app.services.sessions import client_ip
 
-# Every route here is for a verified citizen, so the guard sits on the router.
 router = APIRouter(prefix="/onboarding", tags=["onboarding"], dependencies=[Depends(require_onboarding_user)])
 
 _ALREADY_DONE = "Your profile is already set up. Use PATCH to change it."
@@ -58,8 +57,6 @@ async def create_profile(
 
     facility = await svc.resolve_facility(db, data.state, data.district, data.phc_id)
 
-    # One transaction: profile, catchment link, completed flag and consent rows
-    # commit together or not at all.
     profile = UserProfile(user_id=user.id, permission_health_tracking=data.consents.health_tracking)
     svc.apply_fields(user, profile, data, facility)
     user.profile_completed = True
@@ -80,7 +77,7 @@ async def create_profile(
     )
     try:
         await db.commit()
-    except IntegrityError:  # a second submit raced this one past the check above
+    except IntegrityError:
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, _ALREADY_DONE) from None
     return await svc.build_profile_out(db, user, profile)
@@ -103,8 +100,6 @@ async def update_profile(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Profile not set up yet.")
 
     sent = data.model_dump(exclude_unset=True)
-    # Merge onto what is saved and validate the result as a whole, so a patch
-    # cannot leave the record in a state that creating it would have refused.
     merged = {
         **{column: getattr(profile, column) for column in svc.PROFILE_COLUMNS},
         "state": user.state,
@@ -124,7 +119,7 @@ async def update_profile(
     facility = await svc.resolve_facility(db, fields.state, fields.district, fields.phc_id)
     changed = set(sent)
     if sent.get("has_smartwatch") is False:
-        changed.add("smartwatch_brand")  # cleared above
+        changed.add("smartwatch_brand")
     svc.apply_fields(user, profile, fields, facility, only=changed)
     await db.commit()
     return await svc.build_profile_out(db, user, profile)

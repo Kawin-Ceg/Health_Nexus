@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { illustrationSound } from "../../../lib/sound";
 import { BlurIn } from "../BlurIn/BlurIn";
 import styles from "./Doodle.module.css";
 
@@ -35,9 +34,8 @@ function Beads({ id }: { id: string }) {
     <svg viewBox="0 0 170 160">
       <defs>
         <radialGradient id={id} cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="60%" stopColor="#e4e3dc" />
-          <stop offset="100%" stopColor="#b9b8ae" />
+          <stop offset="0%" stopColor="#e4e3dc" />
+          <stop offset="100%" stopColor="#e4e3dc" />
         </radialGradient>
       </defs>
       {BEADS.map(([x, y, r]) => (
@@ -79,7 +77,7 @@ function Tree() {
 
 function Ecg({ id }: { id: string }) {
   return (
-    <svg viewBox="0 0 220 170" className={styles.paper}>
+    <svg viewBox="0 0 220 170">
       <defs>
         <pattern id={id} width="10" height="10" patternUnits="userSpaceOnUse">
           <path d="M10 0 L0 0 0 10" fill="none" stroke="#e7b9b0" strokeWidth="0.6" />
@@ -168,7 +166,6 @@ function Capsules() {
   );
 }
 
-// Deterministic pseudo-random, so the drawings are identical on every render.
 const rand = (seed: number) => {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
   return x - Math.floor(x);
@@ -191,8 +188,8 @@ function Network({ id }: { id: string }) {
     <svg viewBox="0 0 400 400">
       <defs>
         <radialGradient id={id} cx="45%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#dfe7f3" />
-          <stop offset="100%" stopColor="#b8c6dc" />
+          <stop offset="0%" stopColor="#cdd8ea" />
+          <stop offset="100%" stopColor="#cdd8ea" />
         </radialGradient>
       </defs>
       {NET_NODES.map(([x, y], i) => (
@@ -285,9 +282,8 @@ function Coral({ id }: { id: string }) {
     <svg viewBox="0 0 240 260">
       <defs>
         <radialGradient id={id} cx="40%" cy="35%" r="75%">
-          <stop offset="0%" stopColor="#d9b6f0" />
-          <stop offset="55%" stopColor="#9b5cc7" />
-          <stop offset="100%" stopColor="#5b2a85" />
+          <stop offset="0%" stopColor="#9b5cc7" />
+          <stop offset="100%" stopColor="#9b5cc7" />
         </radialGradient>
       </defs>
       <path
@@ -335,54 +331,18 @@ function render(piece: Piece, id: string): ReactNode {
   }
 }
 
-/** How far each illustration drifts with the cursor, in px: bigger moves read as closer. */
-const DEPTH: Record<Piece, number> = {
-  beads: 34,
-  tissue: 22,
-  tree: 18,
-  ecg: 38,
-  honeycomb: 14,
-  radial: 20,
-  helix: 30,
-  capsules: 42,
-  network: 10,
-  botanical: 16,
-  flask: 26,
-  speckle: 24,
-  microbe: 32,
-  coral: 36,
-};
-
 const live = new Set<HTMLDivElement>();
 let frame = 0;
 let pointer: { x: number; y: number } | null = null;
 
-/**
- * One pointer listener for every illustration on the page. Each one tilts towards the
- * cursor and drifts by a depth of its own; the one under the cursor lifts and animates.
- * Hover is worked out from positions, so the illustrations never sit above the text.
- */
 function update() {
   frame = 0;
   if (!pointer) return;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
   for (const el of live) {
-    const r = el.getBoundingClientRect();
-    if (!r.width || r.bottom < 0 || r.top > vh) continue;
-    const dx = (pointer.x - (r.left + r.width / 2)) / vw;
-    const dy = (pointer.y - (r.top + r.height / 2)) / vh;
-    const depth = Number(el.dataset.depth);
-    el.style.setProperty("--ry", `${(dx * 28).toFixed(2)}deg`);
-    el.style.setProperty("--rx", `${(-dy * 28).toFixed(2)}deg`);
-    el.style.setProperty("--tx", `${(dx * depth).toFixed(1)}px`);
-    el.style.setProperty("--ty", `${(dy * depth).toFixed(1)}px`);
     if (el.dataset.ambient === "true") continue;
-    const over = pointer.x >= r.left && pointer.x <= r.right && pointer.y >= r.top && pointer.y <= r.bottom;
-    if (over !== (el.dataset.hover === "true")) {
-      el.dataset.hover = String(over);
-      if (over) illustrationSound(el.dataset.piece ?? "");
-    }
+    const r = el.getBoundingClientRect();
+    const over = !!r.width && pointer.x >= r.left && pointer.x <= r.right && pointer.y >= r.top && pointer.y <= r.bottom;
+    if (over !== (el.dataset.hover === "true")) el.dataset.hover = String(over);
   }
 }
 
@@ -402,7 +362,6 @@ function register(el: HTMLDivElement) {
   };
 }
 
-/** `ambient`: a large faint background piece. It tilts with the cursor but never reacts to hover. */
 export function Doodle({
   piece,
   className,
@@ -419,7 +378,7 @@ export function Doodle({
   useEffect(() => (ref.current ? register(ref.current) : undefined), []);
   return (
     <BlurIn delay={delay} className={[styles.doodle, className].filter(Boolean).join(" ")}>
-      <div ref={ref} aria-hidden="true" data-piece={piece} data-ambient={ambient} data-depth={DEPTH[piece]} className={styles.art}>
+      <div ref={ref} aria-hidden="true" data-piece={piece} data-ambient={ambient} className={styles.art}>
         {render(piece, id)}
       </div>
     </BlurIn>

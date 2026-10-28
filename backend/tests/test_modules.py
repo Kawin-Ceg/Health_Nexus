@@ -98,15 +98,12 @@ async def submit(client, headers, vitals, symptoms=(), measured_at=None):
         return Stored(201, jsonable_encoder(vitals_result(recorded)))
 
 
-# --- Phase 1 -------------------------------------------------------------------
-
-
 async def test_citizen_logs_normal_and_flagged_readings(client, world):
     _, ph = world["priya"]
     r = await submit(client, ph, NORMAL)
     assert r.status_code == 201, r.text
     assert r.json()["flagged"] is False
-    assert "published normal ranges" in r.json()["basis_note"]  # cold start says so
+    assert "published normal ranges" in r.json()["basis_note"]
 
     r = await submit(client, ph, HIGH_BP, symptoms=["Headache", "headache"])
     body = r.json()
@@ -117,13 +114,13 @@ async def test_citizen_logs_normal_and_flagged_readings(client, world):
 
     history = (await client.get(f"{BASE}/health/history", headers=ph)).json()
     assert history["total"] == 2
-    assert [i["flagged"] for i in history["items"]] == [True, False]  # newest first
+    assert [i["flagged"] for i in history["items"]] == [True, False]
     assert history["items"][0]["symptoms"] == ["headache"]
 
     summary = (await client.get(f"{BASE}/health/summary", headers=ph)).json()
     assert summary["readings_total"] == 2 and summary["open_flags"] == 1
     assert {v["key"] for v in summary["latest"]} >= {"systolic", "spo2"}
-    assert all(v["baseline"] is None for v in summary["latest"])  # 2 readings: no baseline yet
+    assert all(v["baseline"] is None for v in summary["latest"])
 
     alerts = (await client.get(f"{BASE}/alerts", headers=ph)).json()
     assert alerts["unread"] == 1 and "flagged" in alerts["alerts"][0]["message"]
@@ -161,7 +158,6 @@ async def test_mark_read_touches_only_own_alerts(client, db, world):
 
 
 async def test_citizen_without_a_worker_is_told_nobody_is_reviewing(client, db, world):
-    # Adyar has a worker in this fixture; take them away.
     other, _ = world["other_worker"]
     await db.execute(update(User).where(User.id == other.id).values(is_active=False))
     await db.commit()
@@ -171,9 +167,6 @@ async def test_citizen_without_a_worker_is_told_nobody_is_reviewing(client, db, 
     centre = (await client.get(f"{BASE}/settings/health-centre", headers=fh)).json()
     assert centre["current"]["workers_assigned"] == 0
     assert any(o["name"] == "Mylapore PHC" and o["workers_assigned"] == 1 for o in centre["options"])
-
-
-# --- Phase 2 -------------------------------------------------------------------
 
 
 async def test_worker_sees_only_their_catchment(client, world):
@@ -239,7 +232,7 @@ async def test_clear_one_case_and_resolve_a_citizen(client, db, world):
     queue = (await client.get(f"{BASE}/phc/queue", headers=wh)).json()
     assert queue["total"] == 3
     scores = [i["anomaly_score"] for i in queue["items"]]
-    assert scores == sorted(scores, reverse=True)  # worst first
+    assert scores == sorted(scores, reverse=True)
 
     first = queue["items"][0]["processed_id"]
     assert (await client.post(f"{BASE}/phc/queue/{first}/seen", headers=wh)).json()["cleared"] == 1
@@ -285,7 +278,7 @@ async def test_record_page_describes_one_window(client, db, world):
     assert body["window"]["days"] == 7
     assert body["counts"]["readings"] == 1 and len(body["timeline"]) == 1
     assert body["counts"]["flags"] == 0
-    assert body["unresolved_before_window"]["open_flags"] == 1  # reported beside the window, not in it
+    assert body["unresolved_before_window"]["open_flags"] == 1
     assert (await client.get(f"{BASE}/phc/citizens/{priya.id}/record", params={"days": "abc"}, headers=wh)).status_code == 422
 
 
@@ -297,15 +290,11 @@ async def test_aggregate_pages_carry_no_names(client, world):
         r = await client.get(BASE + path, headers=wh)
         assert r.status_code == 200, (path, r.text)
         assert "Priya" not in r.text and "Ravi" not in r.text
-    # Two citizens in two localities: both below the minimum cell size, so neither is shown on its own.
     risk = (await client.get(f"{BASE}/phc/locality-risk", headers=wh)).json()
     assert all(i["locality"] not in ("Luz", "Mandaveli") for i in risk["items"])
     overview = (await client.get(f"{BASE}/phc/overview", headers=wh)).json()
     assert len(overview["kpis"]) == 4 and all(len(k["weeks"]) == 8 for k in overview["kpis"])
     assert overview["kpis"][0]["weeks"][-1]["partial"] is True
-
-
-# --- Phase 3 -------------------------------------------------------------------
 
 
 async def test_the_scheduling_loop(client, db, world):
@@ -325,7 +314,6 @@ async def test_the_scheduling_loop(client, db, world):
     assert r.json()["state"] == "upcoming"
     assert case["flagged"] and (await client.get(f"{BASE}/phc/queue", headers=wh)).json()["total"] == 0
 
-    # Both sides told, each in their own words.
     citizen_msgs = [a.message for a in await db.scalars(select(Alert).where(Alert.user_id == priya.id))]
     worker_msgs = [a.message for a in await db.scalars(select(Alert).where(Alert.user_id == worker.id))]
     assert any("will visit you" in m for m in citizen_msgs)
@@ -336,7 +324,6 @@ async def test_the_scheduling_loop(client, db, world):
     assert [(v["state"], v["worker_name"]) for v in mine] == [("upcoming", "Kavitha Raman")]
     assert (await client.patch(f"{BASE}/schedule/{visit_id}", json={"action": "miss"}, headers=wh)).status_code == 409
 
-    # Time passes beyond the grace window with no outcome.
     await db.execute(
         update(ScheduledVisit).where(ScheduledVisit.id == uuid.UUID(visit_id)).values(scheduled_for=utcnow() - timedelta(hours=5))
     )
@@ -351,7 +338,7 @@ async def test_the_scheduling_loop(client, db, world):
             m for m in await db.scalars(select(Alert.message).where(Alert.user_id == user_id)) if "outcome" in m
         ]
 
-    await client.get(f"{BASE}/schedule", headers=wh)  # loading again must not send it twice
+    await client.get(f"{BASE}/schedule", headers=wh)
     assert len(await missed_alerts(priya.id)) == 1 and len(await missed_alerts(worker.id)) == 1
 
     r = await client.patch(f"{BASE}/schedule/{visit_id}", json={"action": "complete"}, headers=wh)
@@ -384,7 +371,7 @@ async def test_switching_centre_moves_the_citizen_out_of_the_old_catchment(clien
     assert (await client.get(f"{BASE}/phc/citizens/{priya.id}/record", headers=wh)).status_code == 404
     assert (await client.get(f"{BASE}/phc/citizens/{priya.id}/record", headers=owh)).status_code == 200
     assert (await client.get(f"{BASE}/schedule/mine", headers=ph)).json()["visits"][0]["state"] == "cancelled"
-    tambaram = await facility(db, "Tambaram PHC")  # another district
+    tambaram = await facility(db, "Tambaram PHC")
     r = await client.patch(f"{BASE}/settings/health-centre", json={"phc_id": str(tambaram.id)}, headers=ph)
     assert r.status_code == 422
 
@@ -395,13 +382,12 @@ async def test_settings_and_support(client, world):
     r = await client.patch(f"{BASE}/settings/preferences", json={"theme": "dark", "notifications": {"visits": {"email": False}}}, headers=ph)
     assert r.status_code == 200 and r.json()["theme"] == "dark" and r.json()["notifications"]["visits"]["email"] is False
     assert r.json()["notifications"]["alerts"]["email"] is True
-    # Retired settings are refused rather than silently stored.
     r = await client.patch(f"{BASE}/settings/preferences", json={"notifications": {"alerts": {"sms": True}}}, headers=ph)
     assert r.status_code == 422
     assert (await client.patch(f"{BASE}/settings/preferences", json={"language": "ta"}, headers=ph)).json()["language"] == "ta"
     assert (await client.patch(f"{BASE}/settings/preferences", json={"language": "fr"}, headers=ph)).status_code == 422
     kept = (await client.get(f"{BASE}/settings/preferences", headers=ph)).json()
-    assert kept["theme"] == "dark" and kept["notifications"]["visits"]["email"] is False  # earlier choices kept
+    assert kept["theme"] == "dark" and kept["notifications"]["visits"]["email"] is False
     r = await client.patch(f"{BASE}/settings/preferences", json={"working_hours": {"start": "18:00", "end": "09:00"}}, headers=ph)
     assert r.status_code == 422
 
@@ -409,7 +395,7 @@ async def test_settings_and_support(client, world):
         f"{BASE}/settings/consents", json={"consents": [{"consent_type": "health_tracking", "granted": False}]}, headers=ph
     )
     assert r.json()["consents"]["health_tracking"] is False
-    assert (await submit(client, ph, NORMAL)).status_code == 403  # tracking off: nothing is stored
+    assert (await submit(client, ph, NORMAL)).status_code == 403
     assert len((await client.get(f"{BASE}/settings/consents/history", headers=ph)).json()) == 1
 
     concern = (
@@ -438,9 +424,6 @@ async def test_password_change_and_profile(client, world):
     assert r.json()["bio"] == "Teacher"
     r = await client.post(f"{BASE}/profile/avatar", files={"file": ("a.png", b"not an image", "image/png")}, headers=ph)
     assert r.status_code == 415
-
-
-# --- Anomaly model: score breakdown and baselines -------------------------------
 
 
 async def test_scores_explain_themselves_and_baselines_build_up(client, world):
@@ -484,5 +467,4 @@ async def test_each_reading_carries_the_population_check(client, world):
     assert history[0]["population"] == result["population"]
     case = (await client.get(f"{BASE}/phc/queue", headers=wh)).json()["items"][0]
     assert case["population"]["score"] == result["population"]["score"]
-    # A reading without heart rate or breathing rate has nothing for the model to look at.
     assert (await submit(client, ph, {"systolic": 118, "diastolic": 76})).json()["population"] is None

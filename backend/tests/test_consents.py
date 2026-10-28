@@ -44,11 +44,9 @@ async def test_turning_off_worker_access_hides_the_citizen(client, db, world):
     directory = (await client.get(f"{BASE}/phc/citizens", params={"q": "Priya"}, headers=wh)).json()
     assert directory["items"] == []
     assert (await client.get(f"{BASE}/phc/citizens/{priya.id}/record", headers=wh)).status_code == 404
-    # The booked visit is cancelled, and both sides are told.
     visit = await db.scalar(select(ScheduledVisit).where(ScheduledVisit.citizen_id == priya.id))
     await db.refresh(visit)
     assert visit.status == VisitStatus.cancelled
-    # A new flag says honestly that nobody at the centre will see it.
     flagged = (await submit(client, ph, HIGH_BP)).json()
     assert flagged["flagged"] and flagged["reviewed_by_someone"] is False
     newest = await db.scalar(select(Alert).where(Alert.user_id == priya.id).order_by(Alert.created_at.desc()))
@@ -56,7 +54,6 @@ async def test_turning_off_worker_access_hides_the_citizen(client, db, world):
     about = (await client.get(f"{BASE}/settings/about", headers=ph)).json()
     assert about["who_can_see"].startswith("Nobody at")
 
-    # The assistant follows the same rule.
     out = await assistant_answer(client, wh, "Which citizens need attention?")
     assert "Priya B" not in out
 
@@ -91,7 +88,6 @@ async def test_area_figures_count_only_community_consent(client, db, world):
     luz = next(i for i in risk if i["locality"] == "Luz")
     assert (luz["citizens"], luz["flagged"]) == (3, 3)
 
-    # One of the three withdraws: Luz drops below the minimum cell and is no longer shown.
     await set_consent(client, people[0][1], "community_surveillance", False)
     risk = (await client.get(f"{BASE}/phc/locality-risk", headers=wh)).json()["items"]
     assert all(i["locality"] != "Luz" for i in risk)
@@ -113,7 +109,6 @@ async def test_research_export_holds_only_consenting_people(client, db, world):
     assert len(rows) == 1
     row = rows[0]
     assert float(row["systolic"]) == 112 and row["age_band"] == "40-49" and row["flagged"] == "0"
-    # Below the minimum cell, the district is not given.
     assert row["district"] == "Other"
     assert "Priya" not in r.text and str(priya.id) not in r.text
     assert (await client.get(f"{BASE}/admin/research-export", headers=ph)).status_code == 403

@@ -1,5 +1,3 @@
-// Each rule returns one message, or undefined when the value is fine. They mirror the API's rules
-// so most mistakes are caught on blur; the server stays the authority.
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -12,12 +10,10 @@ export function emailError(value: string): string | undefined {
   return v.length > 254 || !EMAIL_RE.test(v) ? "Enter a valid email address" : undefined;
 }
 
-/** Shown as a live checklist while a new password is typed. The API itself only enforces 8 to 72 bytes. */
 export const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
   { label: "At least 8 characters", test: (v) => v.length >= 8 },
   { label: "At least one letter", test: (v) => /\p{L}/u.test(v) },
   { label: "At least one number", test: (v) => /\d/.test(v) },
-  // bcrypt only reads 72 bytes; the API refuses longer passwords rather than truncate.
   { label: "No more than 72 characters", test: (v) => new TextEncoder().encode(v).length <= 72 },
 ];
 

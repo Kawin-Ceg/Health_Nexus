@@ -52,7 +52,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["citizen_id"], ["users.id"], name="fk_scheduled_visits_citizen_id_users", ondelete="CASCADE"
         ),
-        # SET NULL: losing the flag must not cancel the visit.
         sa.ForeignKeyConstraint(
             ["case_id"], ["processed_data.id"], name="fk_scheduled_visits_case_id_processed_data", ondelete="SET NULL"
         ),

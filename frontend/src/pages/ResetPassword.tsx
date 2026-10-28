@@ -14,7 +14,6 @@ import styles from "../components/auth/Auth.module.css";
 export function ResetPassword() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  // Read once into state: the link's token should not stay in the address bar or history.
   const [token] = useState(() => params.get("token"));
   useEffect(() => setParams({}, { replace: true }), [setParams]);
 

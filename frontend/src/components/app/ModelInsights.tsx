@@ -24,11 +24,6 @@ function verdict(c: VitalCheck, who: Audience): { text: string; cls: string } {
   return { text: "As expected", cls: "text-success" };
 }
 
-/**
- * How the anomaly model judged each vital of one reading: what it was compared
- * with (published range, the person's own baseline, or a blend of both) and the
- * outcome. Shared by the citizen's result screen and the worker's record page.
- */
 export function ScoreBreakdown({ checks, metrics, who }: { checks: VitalCheck[]; metrics: Map<string, Metric>; who: Audience }) {
   if (checks.length === 0) return null;
   return (
@@ -64,24 +59,18 @@ export function ScoreBreakdown({ checks, metrics, who }: { checks: VitalCheck[];
   );
 }
 
-/** "Compared with their baseline" or "normal ranges", for a flag. Null for flags scored before the model stored it. */
 export function BasisTag({ basis }: { basis: string | null }) {
   if (!basis) return null;
   const personal = basis === "personal_baseline";
   return (
     <span
-      className={cx("rounded-full px-2 py-0.5 text-xs font-medium", personal ? "bg-paper-raised text-brand" : "bg-paper-raised text-ink-soft")}
-      title={personal ? "Judged against this person's own usual readings" : "Judged against published normal ranges"}
+      className={cx("text-xs font-medium", personal ? "text-brand" : "text-ink-soft")}
     >
       {personal ? "vs their baseline" : "vs normal range"}
     </span>
   );
 }
 
-/**
- * The trained population model's check: how this heart rate and breathing rate compare with 71 people's data.
- * Shown next to the flag decision, never instead of it.
- */
 export function PopulationNote({ check, className }: { check: PopulationCheck | null; className?: string }) {
   if (!check) return null;
   return (
@@ -90,10 +79,6 @@ export function PopulationNote({ check, className }: { check: PopulationCheck | 
       <div>
         <p className="font-semibold text-ink">Population check</p>
         <p className="text-ink">{check.note}</p>
-        <p className="mt-1 text-xs text-ink-muted">
-          An Isolation Forest trained on 4,400 days from the LifeSnaps study. It adds context and never flags a reading by
-          itself. ({check.version})
-        </p>
       </div>
     </div>
   );

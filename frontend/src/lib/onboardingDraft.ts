@@ -1,7 +1,3 @@
-/**
- * Onboarding answers survive a reload in sessionStorage: per tab, gone when the tab
- * closes, and cleared on sign-out. Auth tokens never go here (see services/api.ts).
- */
 
 export type OnboardingValues = {
   age: string;
@@ -54,7 +50,6 @@ export function loadDraft(userId: string): OnboardingValues {
   try {
     const saved = JSON.parse(sessionStorage.getItem(keyFor(userId)) ?? "null") as Partial<OnboardingValues> | null;
     if (!saved || typeof saved !== "object") return EMPTY_ONBOARDING;
-    // Keep only known keys whose type matches, so a stale or edited draft cannot break the form.
     const merged = { ...EMPTY_ONBOARDING };
     for (const key of Object.keys(EMPTY_ONBOARDING) as (keyof OnboardingValues)[]) {
       const value = saved[key];
@@ -74,7 +69,6 @@ export function saveDraft(userId: string, values: OnboardingValues): void {
   try {
     sessionStorage.setItem(keyFor(userId), JSON.stringify(values));
   } catch {
-    // Storage full or blocked: the form still works, it just will not survive a reload.
   }
 }
 
@@ -84,6 +78,5 @@ export function clearDrafts(): void {
       .filter((k) => k.startsWith(PREFIX))
       .forEach((k) => sessionStorage.removeItem(k));
   } catch {
-    // Nothing to clear.
   }
 }

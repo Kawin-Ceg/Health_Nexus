@@ -2,8 +2,8 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Circle, MapContainer, TileLayer, Tooltip as MapTooltip } from "react-leaflet";
-import { CheckCircle2, Eye, HelpCircle, Megaphone, RefreshCw, X, XCircle } from "lucide-react";
-import { Btn, Card, Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls } from "../components/app/ui";
+import { Activity, CheckCircle2, CircleStop, Eye, HelpCircle, Megaphone, RefreshCw, Siren, X, XCircle } from "lucide-react";
+import { Btn, Card, Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls, Status, type StatusTone } from "../components/app/ui";
 import { useToast } from "../components/app/Toaster";
 import { useAuth } from "../context/AuthContext";
 import { fmtAgo, fmtDate, fmtDateTime } from "../lib/format";
@@ -28,39 +28,27 @@ const PERIODS = [
   { days: 180, label: "Last 6 months" },
     ];
 
-const VERDICT: Record<Verdict, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
-  confirmed: { label: "Real outbreak", cls: "bg-red-50 text-red-800", icon: CheckCircle2 },
-  false_alarm: { label: "False alarm", cls: "bg-green-50 text-green-800", icon: XCircle },
-  unsure: { label: "Unsure", cls: "bg-paper-raised text-ink-soft", icon: HelpCircle },
+const VERDICT: Record<Verdict, { label: string; tone: StatusTone; icon: typeof CheckCircle2 }> = {
+  confirmed: { label: "Real outbreak", tone: "danger", icon: CheckCircle2 },
+  false_alarm: { label: "False alarm", tone: "success", icon: XCircle },
+  unsure: { label: "Unsure", tone: "neutral", icon: HelpCircle },
 };
-
-function Pill({ className, children }: { className: string; children: ReactNode }) {
-  return <span className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold", className)}>{children}</span>;
-}
 
 function SeverityPill({ c }: { c: Cluster }) {
   return c.outbreak ? (
-    <Pill className="bg-red-50 text-red-800">
-      Possible outbreak
-    </Pill>
+    <Status tone="danger" icon={Siren}>Possible outbreak</Status>
   ) : (
-    <Pill className="bg-amber-50 text-amber-800">
-      Watch
-    </Pill>
+    <Status tone="warn" icon={Eye}>Watch</Status>
   );
 }
 
 function StatusPills({ c }: { c: Cluster }) {
   const v = c.feedback ? VERDICT[c.feedback] : null;
   return (
-    <span className="flex flex-col items-start gap-1">
-      {c.current ? <Pill className="bg-sky-50 text-sky-800">Active</Pill> : <Pill className="bg-paper-raised text-ink-soft">Ended</Pill>}
-      {c.acknowledged_at && <Pill className="bg-violet-50 text-violet-800">Seen</Pill>}
-      {v && (
-        <Pill className={v.cls}>
-          <v.icon size={12} aria-hidden="true" /> {v.label}
-        </Pill>
-      )}
+    <span className="flex flex-col items-start gap-2">
+      {c.current ? <Status tone="info" icon={Activity}>Active</Status> : <Status tone="neutral" icon={CircleStop}>Ended</Status>}
+      {c.acknowledged_at && <Status tone="success" icon={Eye}>Seen</Status>}
+      {v && <Status tone={v.tone} icon={v.icon}>{v.label}</Status>}
     </span>
   );
 }
@@ -290,7 +278,7 @@ function Details({ cluster: c, onClose, onChanged }: { cluster: Cluster; onClose
             </h2>
             <div className="mt-2 flex flex-wrap gap-2">
               <SeverityPill c={c} />
-              {c.current ? <Pill className="bg-sky-50 text-sky-800">Active</Pill> : <Pill className="bg-paper-raised text-ink-soft">Ended</Pill>}
+              {c.current ? <Status tone="info" icon={Activity}>Active</Status> : <Status tone="neutral" icon={CircleStop}>Ended</Status>}
             </div>
           </div>
           <button type="button" onClick={onClose} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-paper" aria-label="Close">
@@ -327,7 +315,7 @@ function Details({ cluster: c, onClose, onChanged }: { cluster: Cluster; onClose
                 <h3 className="mb-2 text-sm font-semibold text-ink">Symptoms</h3>
                 <div className="flex flex-wrap gap-2">
                   {symptoms.map(([s, n]) => (
-                    <Pill key={s} className="bg-paper text-ink">{s} · {n}</Pill>
+                    <span key={s} className="rounded-md border border-line px-2 py-0.5 text-xs text-ink">{s} · {n}</span>
                   ))}
                 </div>
               </div>

@@ -13,10 +13,6 @@
   text-align: center;
 }
 
-
-
-
-
 .title {
   max-width: 14ch;
   font-size: clamp(2.5rem, 1.4rem + 4.6vw, 4.75rem);
@@ -57,7 +53,6 @@
     transform: translateY(10px);
   }
 }
-
 
 .ctas {
   display: flex;

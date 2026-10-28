@@ -1,15 +1,25 @@
-/** Dates are shown in India time, matching the server's day boundaries. */
 export const TIME_ZONE = "Asia/Kolkata";
 
-const dateTime = new Intl.DateTimeFormat("en-IN", { timeZone: TIME_ZONE, dateStyle: "medium", timeStyle: "short" });
 const dateOnly = new Intl.DateTimeFormat("en-IN", { timeZone: TIME_ZONE, day: "numeric", month: "short", year: "numeric" });
 const shortDay = new Intl.DateTimeFormat("en-IN", { timeZone: TIME_ZONE, day: "numeric", month: "short" });
-const weekday = new Intl.DateTimeFormat("en-IN", { timeZone: TIME_ZONE, weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-export const fmtDateTime = (iso: string) => dateTime.format(new Date(iso));
+export const fmtDateTime = (iso: string) => fmtStamp(iso);
 export const fmtDate = (iso: string) => dateOnly.format(new Date(iso));
 export const fmtShortDay = (iso: string) => shortDay.format(new Date(iso));
-export const fmtVisit = (iso: string) => weekday.format(new Date(iso));
+export const fmtVisit = (iso: string) => fmtStamp(iso);
+
+const stampDay = new Intl.DateTimeFormat("en-IN", { timeZone: TIME_ZONE, weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const stampTime = new Intl.DateTimeFormat("en-IN", { timeZone: TIME_ZONE, hour: "numeric", minute: "2-digit" });
+export const fmtStamp = (iso: string) => `${stampDay.format(new Date(iso))} · ${stampTime.format(new Date(iso))}`;
+
+export function fmtSpan(fromIso: string, to: number = Date.now()): string {
+  const mins = Math.max(0, Math.round((to - new Date(fromIso).getTime()) / 60000));
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  const days = Math.round(hours / 24);
+  return `${days} days`;
+}
 
 export function fmtAgo(iso: string | null): string {
   if (!iso) return "never";
@@ -28,7 +38,6 @@ export function fmtValue(value: number, decimals: number): string {
   return value.toFixed(decimals);
 }
 
-/** A local date-time string ("2026-09-24T10:30") for <input type="datetime-local">, in India time. */
 export function toLocalInput(date: Date): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
@@ -37,5 +46,4 @@ export function toLocalInput(date: Date): string {
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
-/** The datetime-local value, read as India time, to an ISO string with an offset. */
 export const fromLocalInput = (value: string) => `${value}:00+05:30`;

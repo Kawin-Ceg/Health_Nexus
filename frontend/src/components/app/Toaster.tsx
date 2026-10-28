@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { BellRing, CircleCheck, Info, X } from "lucide-react";
-import { play } from "../../lib/sound";
 import { cx } from "./ui";
 
 export type ToastTone = "alert" | "success" | "info";
@@ -13,13 +12,11 @@ interface Toast {
 }
 
 interface ToastApi {
-  /** Shows a message and plays its sound: alert → alert chime, success → clear, info → message. */
   notify: (toast: Omit<Toast, "id">) => void;
 }
 
 const ToastContext = createContext<ToastApi>({ notify: () => undefined });
 
-const SOUND = { alert: "alert", success: "clear", info: "message" } as const;
 const ICON = { alert: BellRing, success: CircleCheck, info: Info };
 const TONE = {
   alert: "bg-danger-soft text-danger",
@@ -38,7 +35,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (toast: Omit<Toast, "id">) => {
       const id = ++next.current;
       setToasts((list) => [...list.slice(-2), { ...toast, id }]);
-      play(SOUND[toast.tone]);
       window.setTimeout(() => dismiss(id), LIFETIME_MS);
     },
     [dismiss],

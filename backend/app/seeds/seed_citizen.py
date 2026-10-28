@@ -102,8 +102,6 @@ async def seed(session: AsyncSession) -> None:
         joined,
     )
 
-    # 90 days, one or two readings a day. Blood pressure runs high in two
-    # stretches (days 30-34 and the last 4 days); weight drifts down slowly.
     flags: list[ProcessedData] = []
     for day in range(DAYS):
         for slot in range(1 if day % 3 else 2):
@@ -129,7 +127,6 @@ async def seed(session: AsyncSession) -> None:
             if processed.is_anomaly:
                 flags.append(processed)
 
-    # The earlier episode was reviewed by the worker; the recent one is still open.
     earlier = [f for f in flags if f.processed_at < now - timedelta(days=30)]
     for flag in earlier:
         flag.resolution = FlagResolution.reviewed
@@ -151,7 +148,6 @@ async def seed(session: AsyncSession) -> None:
         )
     )
 
-    # Visits: one completed after the first episode, one upcoming for the open flag.
     session.add(
         ScheduledVisit(
             worker_id=worker.id,
@@ -169,7 +165,7 @@ async def seed(session: AsyncSession) -> None:
             worker_id=worker.id,
             citizen_id=citizen.id,
             case_id=open_flags[-1].id if open_flags else None,
-            scheduled_for=(now + timedelta(days=1)).replace(hour=4, minute=30),  # 10:00 IST
+            scheduled_for=(now + timedelta(days=1)).replace(hour=4, minute=30),
             reason="Blood pressure above normal for 4 days",
             status=VisitStatus.scheduled,
             location="Mylapore PHC",

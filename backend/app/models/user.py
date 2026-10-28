@@ -15,8 +15,6 @@ if TYPE_CHECKING:
     from .user_profile import UserProfile
     from .valid_phc_facility import ValidPhcFacility
 
-# Shape and meaning: services/preferences.py. Stored rows may still carry retired
-# keys (language, sms, in_app...); they are ignored when read.
 DEFAULT_PREFERENCES: dict[str, Any] = {
     "theme": "light",
     "language": "en",
@@ -38,7 +36,7 @@ class User(UUIDPk, CreatedAt, Base):
     __tablename__ = "users"
 
     name: Mapped[str] = mapped_column(String)
-    email: Mapped[str] = mapped_column(String, unique=True, index=True)  # always stored lowercase
+    email: Mapped[str] = mapped_column(String, unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String)
     role: Mapped[UserRole] = mapped_column(
         pg_enum(UserRole, "user_role"), default=UserRole.user, server_default=text("'user'")
@@ -55,7 +53,6 @@ class User(UUIDPk, CreatedAt, Base):
     department: Mapped[str | None] = mapped_column(String)
     date_of_birth: Mapped[date | None] = mapped_column(Date)
 
-    # The catchment link: a worker sees citizens with the same phc_id.
     phc_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("valid_phc_facilities.id"), index=True)
     district: Mapped[str | None] = mapped_column(String, index=True)
     state: Mapped[str | None] = mapped_column(String, index=True)
@@ -64,7 +61,6 @@ class User(UUIDPk, CreatedAt, Base):
     geo_lat: Mapped[float | None]
     geo_lng: Mapped[float | None]
 
-    # Email verification. Tokens are stored only as SHA-256 hex digests.
     is_verified: Mapped[bool] = mapped_column(default=False, server_default=false())
     verified_at: Mapped[datetime | None]
     verification_token_hash: Mapped[str | None] = mapped_column(String, index=True)
@@ -72,13 +68,10 @@ class User(UUIDPk, CreatedAt, Base):
     verification_sent_at: Mapped[datetime | None]
     verification_deadline: Mapped[datetime | None]
 
-    # Password reset lives in its own columns so a reset never consumes a
-    # pending address verification.
     password_reset_token_hash: Mapped[str | None] = mapped_column(String, index=True)
     password_reset_expires_at: Mapped[datetime | None]
     password_reset_sent_at: Mapped[datetime | None]
 
-    # Email change
     email_verified: Mapped[bool] = mapped_column(default=False, server_default=false())
     pending_email: Mapped[str | None] = mapped_column(String)
     email_token_hash: Mapped[str | None] = mapped_column(String)
@@ -88,7 +81,6 @@ class User(UUIDPk, CreatedAt, Base):
         JSON, default=default_preferences, server_default=text(f"'{json.dumps(DEFAULT_PREFERENCES)}'")
     )
     deactivated_at: Mapped[datetime | None]
-    # The last reading reminder (services/reminders.py): at most one per quiet stretch.
     reading_reminder_at: Mapped[datetime | None]
 
     facility: Mapped["ValidPhcFacility | None"] = relationship(back_populates="users")

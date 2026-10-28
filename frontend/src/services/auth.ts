@@ -33,7 +33,6 @@ export interface User {
   state: string | null;
   district: string | null;
   created_at: string;
-  /** Only for pending_phc accounts. */
   application?: Application | null;
 }
 
@@ -87,7 +86,6 @@ export async function login(email: string, password: string): Promise<AuthPayloa
   return data;
 }
 
-/** Restores a session from the httpOnly cookie. Deduplicated; see refreshSession. */
 export const restoreSession = refreshSession;
 
 export async function logout(): Promise<void> {

@@ -4,8 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import get_settings
 
-# The schema is owned by Alembic. Nothing here (or at app startup) may call
-# Base.metadata.create_all.
 engine = create_async_engine(get_settings().DATABASE_URL, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 

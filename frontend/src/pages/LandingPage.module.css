@@ -1,5 +1,3 @@
-/* The page only composes sections. This file holds the chart placeholder,
-   sized to match the insights section so nothing shifts when it loads. */
 
 .chartFallback {
   min-height: 760px;

@@ -49,7 +49,7 @@ class DashboardOut(BaseModel):
 class WeekValue(BaseModel):
     week_start: date
     value: int
-    partial: bool  # the current week, still in progress
+    partial: bool
 
 
 class Kpi(BaseModel):
@@ -74,7 +74,7 @@ class CaseOut(BaseModel):
     vitals: dict[str, float]
     symptoms: list[str]
     measured_at: datetime
-    basis: str | None  # NULL: scored before score details were stored
+    basis: str | None
     population: PopulationOut | None = None
 
 
@@ -119,7 +119,7 @@ class WorkItem(BaseModel):
     worst_signal: str | None
     first_flagged_at: datetime
     last_flagged_at: datetime
-    flags: list[FlagBrief]  # worst first, capped
+    flags: list[FlagBrief]
     flags_shown: int
     next_visit: VisitOut | None
 
@@ -149,10 +149,10 @@ class LocalityCount(BaseModel):
 
 class DirectoryOut(BaseModel):
     items: list[DirectoryItem]
-    total: int  # matching the filters
+    total: int
     limit: int
     offset: int
-    counts: EngagementCounts  # the whole catchment, never the filtered page
+    counts: EngagementCounts
     catchment_total: int
     localities: list[LocalityCount]
     silent_after_days: int
@@ -182,7 +182,6 @@ class RecordVital(BaseModel):
     latest_at: datetime
     position: str
     readings: int
-    # The scorer's baseline for this person, from the readings before the latest one.
     baseline: BaselineOut | None
     z_score: float | None
 
@@ -199,7 +198,7 @@ class TimelineEntry(BaseModel):
     resolution: FlagResolution | None
     reviewed_at: datetime | None
     basis: str | None
-    checks: list[VitalCheck]  # empty for readings scored before score details were stored
+    checks: list[VitalCheck]
     population: PopulationOut | None = None
 
 
@@ -233,7 +232,7 @@ class RecordOut(BaseModel):
     timeline_limit: int
     alerts: list[AlertOut]
     visits: list[VisitOut]
-    upcoming_visits: list[VisitOut]  # after the window's end, reported separately
+    upcoming_visits: list[VisitOut]
     unresolved_before_window: Unresolved
     min_baseline_readings: int
 

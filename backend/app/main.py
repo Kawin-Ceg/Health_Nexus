@@ -49,6 +49,5 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
-# Uploaded profile images. File names are random, so a URL cannot be guessed from an id.
 media_root().mkdir(parents=True, exist_ok=True)
 app.mount(MEDIA_URL, StaticFiles(directory=media_root()), name="media")

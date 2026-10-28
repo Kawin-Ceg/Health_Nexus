@@ -77,7 +77,7 @@ async def _create(
             )
             await session.flush()
         await session.commit()
-    except IntegrityError:  # lost a race with a concurrent signup for the same address
+    except IntegrityError:
         await session.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, EMAIL_TAKEN) from None
     return user, raw_token

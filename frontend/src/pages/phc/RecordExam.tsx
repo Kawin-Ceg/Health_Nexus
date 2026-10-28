@@ -12,8 +12,6 @@ import { getMetrics, type Metric, type VitalsResult } from "../../services/healt
 import { getRecord, recordExam } from "../../services/phc";
 import { useAuth } from "../../context/AuthContext";
 import { citizenRecordPath } from "../../lib/routes";
-import { play } from "../../lib/sound";
-import { Doodle } from "../../components/landing/Doodle/Doodle";
 import { useLabel, useT, type MessageKey } from "../../i18n";
 
 const TIPS: MessageKey[] = ["log.tip1", "log.tip2", "log.tip3", "log.tip4"];
@@ -117,7 +115,6 @@ export function RecordExam() {
         location: location.trim(),
         measured_at: earlier ? new Date(fromLocalInput(measuredAt)).toISOString() : undefined,
       });
-      play(saved.flagged ? "alert" : "clear");
       setResult(saved);
     } catch (err) {
       setFormError(errorMessage(err));
@@ -126,7 +123,6 @@ export function RecordExam() {
     }
   };
 
-  // Success replaces the form: a form still on screen invites a second, duplicate entry.
   if (result) {
     const driver = result.driver ? byKey.get(result.driver) : undefined;
     return (
@@ -159,7 +155,6 @@ export function RecordExam() {
                   {t("result.watch", { vitals: result.watch.map((k) => label("vital", k, byKey.get(k)?.label)).join(", "), count: result.watch.length })}
                 </p>
               )}
-              <p className="text-ink-soft">{result.basis_note}</p>
               <PopulationNote check={result.population} className="mt-1" />
               <p className="text-xs text-ink-soft">{t("result.measured", { when: fmtDateTime(result.measured_at) })}</p>
             </div>
@@ -299,7 +294,6 @@ export function RecordExam() {
         </div>
 
         <aside className="relative isolate flex flex-col gap-4 overflow-clip rounded-3xl border border-line bg-surface p-6 lg:sticky lg:top-8">
-          <Doodle piece="capsules" className="-right-4 -bottom-6 w-28 rotate-[-12deg] [--doodle-opacity:0.8]" />
           <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">This examination</p>
           <p className="font-display text-3xl leading-tight text-ink">
             {entered === 0 ? t("log.nothing") : t("log.entered", { n: entered })}

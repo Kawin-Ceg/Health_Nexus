@@ -19,7 +19,6 @@ from .scoring import BASELINE_WINDOW, MIN_BASELINE_READINGS, ScoreResult, robust
 from .triage import alert_severity, describe_signal, severity_of
 from .visit_state import format_local
 
-# How many earlier readings the scorer sees.
 SCORING_HISTORY = 120
 
 
@@ -35,8 +34,8 @@ class Recorded:
 
 @dataclass(frozen=True)
 class Baseline:
-    usual: float  # the model's personal median
-    spread: float  # its robust SD
+    usual: float
+    spread: float
     n: int
 
 

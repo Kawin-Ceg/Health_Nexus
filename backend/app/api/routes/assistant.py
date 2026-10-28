@@ -56,7 +56,6 @@ class SessionDetail(SessionOut):
 
 class AskIn(BaseModel):
     content: Question
-    # None starts a new conversation.
     session_id: uuid.UUID | None = None
 
 

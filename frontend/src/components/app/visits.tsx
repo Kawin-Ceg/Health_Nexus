@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type { Visit, VisitType } from "../../services/health";
-import { Btn, Labelled, cx, inputCls } from "./ui";
+import { Btn, CloseButton, Labelled, VisitBadge, cx, inputCls } from "./ui";
 
 export const CUTOFF_HOURS = 8;
 
@@ -14,22 +14,10 @@ export const VISIT_TYPE: Record<VisitType, string> = {
   screening: "Health screening",
 };
 
-/** Booked visits more than 8 hours away can still be cancelled or moved. */
 export const changeable = (v: Visit) => v.status === "scheduled" && new Date(v.scheduled_for).getTime() - Date.now() >= CUTOFF_HOURS * 3600_000;
 
-export const STATE_PILL: Record<Visit["state"], { label: string; cls: string }> = {
-  upcoming: { label: "Upcoming", cls: "bg-sky-100 text-sky-900" },
-  today: { label: "Today", cls: "bg-violet-100 text-violet-900" },
-  due_now: { label: "Happening now", cls: "bg-amber-100 text-amber-900" },
-  overdue: { label: "Needs outcome", cls: "bg-orange-100 text-orange-900" },
-  completed: { label: "Done", cls: "bg-green-100 text-green-900" },
-  cancelled: { label: "Cancelled", cls: "bg-paper-raised text-ink-soft" },
-  missed: { label: "Missed", cls: "bg-red-100 text-red-900" },
-};
-
 export function StatePill({ visit }: { visit: Visit }) {
-  const s = STATE_PILL[visit.state];
-  return <span className={cx("inline-block rounded-full px-3 py-1 text-xs font-semibold", s.cls)}>{s.label}</span>;
+  return <VisitBadge state={visit.state} />;
 }
 
 export function Modal({ title, onClose, children, wide }: { title: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean }) {
@@ -53,9 +41,7 @@ export function Modal({ title, onClose, children, wide }: { title: ReactNode; on
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
           <h2 className="text-xl text-ink">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-paper text-ink hover:bg-paper-raised">
-            <X size={18} aria-hidden="true" />
-          </button>
+          <CloseButton onClick={onClose} />
         </header>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
       </article>
@@ -63,7 +49,6 @@ export function Modal({ title, onClose, children, wide }: { title: ReactNode; on
   );
 }
 
-/** Cancelling needs a real reason; the other person sees it. */
 export function CancelForm({ onCancel, onBack, who }: { onCancel: (reason: string) => Promise<void>; onBack: () => void; who: string }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -106,4 +91,76 @@ export function Detail({ label, children }: { label: string; children: ReactNode
       <dd className="mt-0.5 text-sm text-ink-soft">{children}</dd>
     </div>
   );
+}
+
+export type StepState = "done" | "current" | "todo" | "failed";
+
+export interface Step {
+  title: string;
+  state: StepState;
+  at?: ReactNode;
+  detail?: ReactNode;
+}
+
+export function ProcessSteps({ steps, title }: { steps: Step[]; title?: string }) {
+  return (
+    <section className="rounded-2xl border border-line">
+      {title && <h3 className="border-b border-line px-5 py-3.5 text-base font-semibold text-ink">{title}</h3>}
+      <ol>
+        {steps.map((s, i) => {
+          const last = i === steps.length - 1;
+          const nextDone = !last && steps[i + 1].state !== "todo";
+          return (
+            <li key={s.title} className={cx("relative grid grid-cols-[28px_1fr] gap-x-3 px-5 py-4", !last && "border-b border-line")}>
+              {!last && (
+                <span
+                  aria-hidden="true"
+                  className={cx("absolute top-[38px] -bottom-[18px] left-[33px] w-0.5", s.state === "done" && nextDone ? "bg-green-600" : "bg-line")}
+                />
+              )}
+              <span className="relative z-10 mt-0.5 grid h-7 place-items-start justify-center">
+                <StepMark state={s.state} />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+                  <p className={cx("text-[15px] font-semibold", s.state === "todo" ? "text-ink-soft" : "text-ink")}>{s.title}</p>
+                  {s.at && <p className={cx("text-sm", s.state === "current" ? "italic text-ink-muted" : "tabular-nums text-ink-muted")}>{s.at}</p>}
+                </div>
+                {s.detail && <div className="mt-1 text-sm text-ink-soft">{s.detail}</div>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function StepMark({ state }: { state: StepState }) {
+  if (state === "done") {
+    return (
+      <span className="grid h-5 w-5 place-items-center rounded-full bg-green-600 text-white">
+        <Check size={13} strokeWidth={3} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (state === "failed") {
+    return (
+      <span className="grid h-5 w-5 place-items-center rounded-full bg-red-600 text-white">
+        <X size={13} strokeWidth={3} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (state === "current") {
+    return (
+      <span className="grid h-5 w-5 place-items-center rounded-full bg-blue-600/15">
+        <span className="h-3 w-3 rounded-full bg-blue-600" />
+      </span>
+    );
+  }
+  return <span className="h-5 w-5 rounded-full border-2 border-line-strong/50 bg-surface" />;
+}
+
+export function Mention({ children }: { children: ReactNode }) {
+  return <span className="rounded-md bg-blue-600/10 px-1.5 py-0.5 font-medium text-blue-700">{children}</span>;
 }

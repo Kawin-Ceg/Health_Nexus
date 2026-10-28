@@ -23,7 +23,6 @@ LOCAL_TZ = ZoneInfo("Asia/Kolkata")
 GRACE = timedelta(hours=4)
 
 VisitState = Literal["upcoming", "today", "due_now", "overdue", "completed", "cancelled", "missed"]
-# The visit time has passed: "nobody there" may be recorded.
 PASSED: frozenset[str] = frozenset({"due_now", "overdue"})
 
 

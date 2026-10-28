@@ -7,7 +7,6 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
-/* Tokens exposed to Tailwind: `text-ink`, `bg-brand/10`, `border-line`... One palette for both systems. */
 @theme inline {
   --color-ink: rgb(var(--hn-ink));
   --color-ink-soft: rgb(var(--hn-ink-soft));
@@ -45,8 +44,6 @@
   --font-display: var(--hn-font-display);
 }
 
-
-/* Arial sized to Inter's metrics, so swapping in the web font causes no layout shift. */
 @font-face {
   font-family: "Inter Fallback";
   src: local("Arial"), local("ArialMT"), local("Helvetica"), local("Roboto");
@@ -56,9 +53,7 @@
   line-gap-override: 0%;
 }
 
-/* In the base layer, so a utility class always beats the reset. */
 @layer base {
-/* Reset */
 *,
 *::before,
 *::after {
@@ -94,6 +89,10 @@ svg {
   max-width: 100%;
 }
 
+svg.lucide {
+  flex-shrink: 0;
+}
+
 input,
 button,
 textarea,
@@ -120,7 +119,6 @@ ol {
   padding: 0;
 }
 
-/* Base typography */
 h1,
 h2,
 h3,
@@ -156,14 +154,12 @@ p {
 }
 }
 
-/* Motion: only transform and opacity, 150–200ms. Never transition-all. */
 .hn-fade {
   transition-property: opacity, transform;
   transition-duration: 180ms;
   transition-timing-function: var(--hn-ease-out);
 }
 
-/* Reduced motion: every animation and transition jumps to its end state. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -181,7 +177,6 @@ p {
   }
 }
 
-/* Public pages (landing, privacy, terms, sign-in) paint their own page background. */
 .landing {
   background: rgb(var(--hn-paper));
   color: rgb(var(--hn-ink));
@@ -220,8 +215,26 @@ h3 {
   }
 }
 
-/* An input whose wrapper already shows focus (border change), so it needs no ring of its own. */
 .hn-bare-input:focus,
 .hn-bare-input:focus-visible {
   outline: none;
+}
+
+button[aria-label="Close"],
+button[aria-label^="Close "],
+button[aria-label="Dismiss"],
+button[aria-label^="Remove "],
+button[aria-expanded="true"][aria-controls="app-nav"],
+.hn-close {
+  transition: background-color 150ms, color 150ms;
+}
+
+button[aria-label="Close"]:hover,
+button[aria-label^="Close "]:hover,
+button[aria-label="Dismiss"]:hover,
+button[aria-label^="Remove "]:hover,
+button[aria-expanded="true"][aria-controls="app-nav"]:hover,
+.hn-close:hover {
+  background-color: #dc2626 !important;
+  color: #fff !important;
 }

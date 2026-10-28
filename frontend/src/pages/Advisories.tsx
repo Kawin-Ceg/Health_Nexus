@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Building2, CheckCircle2, Eye, Trash2, Lock, MapPin, Megaphone, ThumbsDown, ThumbsUp, Users, X, XCircle } from "lucide-react";
-import { Btn, Card, Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls } from "../components/app/ui";
+import { Building2, CheckCircle2, CircleStop, Eye, Lock, MapPin, Megaphone, Radio, ThumbsDown, ThumbsUp, Trash2, Undo2, Users, X, XCircle } from "lucide-react";
+import { Btn, Card, Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls, Status, type StatusTone } from "../components/app/ui";
 import { useToast } from "../components/app/Toaster";
 import { useAuth } from "../context/AuthContext";
 import { fmtDate, fmtDateTime } from "../lib/format";
@@ -23,28 +23,28 @@ import { errorMessage } from "../services/api";
 
 type Level = Advisory["severity"];
 
-const LEVELS: Record<Level, { name: string; meaning: string; dot: string; pill: string; ring: string; bar: string }> = {
+const LEVELS: Record<Level, { name: string; meaning: string; dot: string; tone: StatusTone; ring: string; bar: string }> = {
   low: {
     name: "Green",
     meaning: "For information",
     dot: "bg-green-600",
-    pill: "bg-green-50 text-green-800",
+    tone: "success",
     ring: "border-green-600 bg-green-50",
     bar: "border-l-green-600",
   },
   medium: {
     name: "Yellow",
     meaning: "Take precautions",
-    dot: "bg-amber-500",
-    pill: "bg-amber-50 text-amber-800",
-    ring: "border-amber-500 bg-amber-50",
-    bar: "border-l-amber-500",
+    dot: "bg-yellow-400",
+    tone: "warn",
+    ring: "border-yellow-400 bg-yellow-50",
+    bar: "border-l-yellow-400",
   },
   high: {
     name: "Red",
     meaning: "Emergency, act now",
     dot: "bg-red-600",
-    pill: "bg-red-50 text-red-800",
+    tone: "danger",
     ring: "border-red-600 bg-red-50",
     bar: "border-l-red-600",
   },
@@ -61,20 +61,13 @@ const PERIODS = [
 function LevelPill({ level }: { level: Level }) {
   const l = LEVELS[level];
   return (
-    <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold", l.pill)}>
-
-      {l.name}
-    </span>
+    <Status tone={l.tone}>{l.name}</Status>
   );
 }
 
 function StatePill({ a }: { a: Advisory }) {
-  const [label, cls] = a.withdrawn_at
-    ? ["Withdrawn", "bg-paper-raised text-ink-soft"]
-    : a.active
-      ? ["Running", "bg-sky-50 text-sky-800"]
-      : ["Ended", "bg-paper-raised text-ink-soft"];
-  return <span className={cx("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", cls)}>{label}</span>;
+  if (a.withdrawn_at) return <Status tone="neutral" icon={Undo2}>Withdrawn</Status>;
+  return a.active ? <Status tone="progress" icon={Radio}>Running</Status> : <Status tone="neutral" icon={CircleStop}>Ended</Status>;
 }
 
 export function Advisories() {
@@ -444,13 +437,12 @@ function History({ list, error, reload, onOpen }: { list: Advisory[] | null | un
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="flex flex-col items-start gap-1">
+                    <span className="flex flex-col items-start gap-2">
                       <StatePill a={a} />
                       {a.feedback && (
-                        <span className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold", a.feedback === "good" ? "bg-green-50 text-green-800" : "bg-rose-50 text-rose-800")}>
-                          {a.feedback === "good" ? <ThumbsUp size={12} aria-hidden="true" /> : <ThumbsDown size={12} aria-hidden="true" />}
+                        <Status tone={a.feedback === "good" ? "success" : "danger"} icon={a.feedback === "good" ? ThumbsUp : ThumbsDown}>
                           {a.feedback === "good" ? "Helpful" : "Not helpful"}
-                        </span>
+                        </Status>
                       )}
                     </span>
                   </td>
@@ -607,7 +599,7 @@ function Details({ advisory: a, onClose, onChanged }: { advisory: Advisory; onCl
             <div className="flex flex-wrap gap-2">
               <Btn tone="primary" busy={busy === "save"} disabled={!rating} onClick={() => void save()}>Save feedback</Btn>
               {a.active && a.can_withdraw && (
-                <Btn tone="ghost" busy={busy === "withdraw"} onClick={() => void withdraw()}>Withdraw</Btn>
+                <Btn tone="danger" busy={busy === "withdraw"} onClick={() => void withdraw()}>Withdraw</Btn>
               )}
             </div>
           </div>

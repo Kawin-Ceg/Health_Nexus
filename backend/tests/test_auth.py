@@ -23,9 +23,6 @@ def sha(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-# --- Registration -------------------------------------------------------------
-
-
 async def test_citizen_registration_stores_lowercase_email_and_a_hash(client, db, outbox):
     r = await client.post(f"{BASE}/auth/register/citizen", json={"name": "Asha", "email": " Asha@Example.COM ", "password": PASSWORD})
     assert r.status_code == 201
@@ -62,9 +59,6 @@ async def test_phc_registration_rejects_a_bad_employee_id_and_creates_nothing(cl
     r = await client.post(f"{BASE}/auth/register/phc-worker", json={**WORKER, "employee_id": "tnphc-chn-2847"})
     assert r.status_code == 422
     assert await db.scalar(select(User)) is None
-
-
-# --- Login and tokens ---------------------------------------------------------
 
 
 async def test_login_sets_an_httponly_scoped_cookie_and_stores_only_a_hash(client, db, outbox):
@@ -126,7 +120,7 @@ async def test_a_reused_refresh_token_is_rejected(client, anon, outbox):
 async def test_late_reuse_revokes_the_whole_chain(client, anon, db, outbox):
     await register_and_login(client, outbox)
     stolen = client.cookies.get("hn_refresh", path="/api/v1/auth")
-    await client.post(f"{BASE}/auth/refresh")  # the victim rotates; the thief still holds `stolen`
+    await client.post(f"{BASE}/auth/refresh")
     await db.execute(text("UPDATE refresh_tokens SET revoked_at = now() - interval '1 minute' WHERE revoked_reason = 'rotated'"))
     await db.commit()
 
@@ -134,7 +128,7 @@ async def test_late_reuse_revokes_the_whole_chain(client, anon, db, outbox):
     assert replay.status_code == 401 and "reuse" in replay.json()["detail"].lower()
     live = (await db.scalars(select(RefreshToken).where(RefreshToken.revoked.is_(False)))).all()
     assert live == []
-    assert (await client.post(f"{BASE}/auth/refresh")).status_code == 401  # the victim's newest token died too
+    assert (await client.post(f"{BASE}/auth/refresh")).status_code == 401
 
 
 async def test_a_racing_second_refresh_is_rejected_without_killing_the_session(client, anon, outbox):
@@ -144,7 +138,7 @@ async def test_a_racing_second_refresh_is_rejected_without_killing_the_session(c
 
     racer = await anon.post(f"{BASE}/auth/refresh", cookies={"hn_refresh": old_raw})
     assert racer.status_code == 401
-    assert "set-cookie" not in racer.headers  # must not clobber the winner's fresh cookie
+    assert "set-cookie" not in racer.headers
     assert (await client.post(f"{BASE}/auth/refresh")).status_code == 200
 
 
@@ -181,9 +175,6 @@ async def test_logout_revokes_the_session_and_clears_the_cookie(client, db, outb
     assert (await client.post(f"{BASE}/auth/refresh", cookies={"hn_refresh": stale})).status_code == 401
 
 
-# --- Sessions -----------------------------------------------------------------
-
-
 async def test_sessions_list_flags_current_and_revoke_others_keeps_it(client, anon, outbox):
     headers = await register_and_login(client, outbox)
     other = await anon.post(f"{BASE}/auth/login", json={"email": "asha@example.com", "password": PASSWORD}, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) Firefox/120.0"})
@@ -210,13 +201,9 @@ async def test_delete_one_session_and_never_someone_elses(client, anon, outbox):
     assert (await client.delete(f"{BASE}/auth/sessions/{other['id']}", headers=headers)).status_code == 204
     assert (await client.delete(f"{BASE}/auth/sessions/{other['id']}", headers=headers)).status_code == 404
 
-    # A different user cannot reach it (or even learn it exists).
     intruder = await register_and_login(anon, outbox, "eve@example.com")
     mine = next(s for s in listing if s["is_current"])
     assert (await anon.delete(f"{BASE}/auth/sessions/{mine['id']}", headers=intruder)).status_code == 404
-
-
-# --- Email verification -------------------------------------------------------
 
 
 async def test_verification_link_works_on_a_device_with_no_session_and_only_once(client, anon, db, outbox):
@@ -254,9 +241,6 @@ async def test_resend_is_rate_limited_and_replaces_the_old_link(client, db, outb
 
 async def test_send_verification_requires_a_session(anon):
     assert (await anon.post(f"{BASE}/auth/email/send-verification")).status_code == 401
-
-
-# --- Password reset -----------------------------------------------------------
 
 
 async def test_forgot_password_answers_identically_for_known_and_unknown(client, outbox):
@@ -300,9 +284,6 @@ async def test_reset_link_expires(client, db, outbox):
     await db.commit()
     r = await client.post(f"{BASE}/auth/password/reset", json={"token": outbox.reset[-1][1], "new_password": "brand new secret"})
     assert r.status_code == 400
-
-
-# --- Consent and guards -------------------------------------------------------
 
 
 async def test_consent_appends_only_when_the_answer_changes(client, db, outbox):

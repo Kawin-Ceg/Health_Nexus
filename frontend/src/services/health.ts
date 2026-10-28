@@ -35,14 +35,11 @@ export interface VitalsResult {
   reviewed_by_someone: boolean;
   model_version: string;
   checks: VitalCheck[];
-  /** Unusual for this person, but waiting for a second reading before it flags. */
   watch: string[];
   population: PopulationCheck | null;
 }
 
-/** The trained population model's view of a reading (backend services/population.py). It never flags. */
 export interface PopulationCheck {
-  /** 0..1; 0.5 = more unusual than 97% of the training days. */
   score: number;
   percentile: number;
   features: string[];
@@ -53,25 +50,19 @@ export interface PopulationCheck {
 
 export type BaselineStage = "learning" | "blending" | "personal";
 
-/** How one vital of a reading was judged by the anomaly model (backend services/scoring.py). */
 export interface VitalCheck {
   key: string;
   value: number;
   stage: BaselineStage;
-  /** Earlier readings of this vital the baseline could use. */
   readings: number;
-  /** 0 = published normal range only, 1 = this person's baseline only. */
   weight: number;
-  /** How far outside the published normal range, in half-band widths (0 inside). */
   published: number;
-  /** Past a safety limit: counts whatever the person's usual is. */
   safety: boolean;
   baseline: number | null;
   spread: number | null;
   z: number | null;
   personal: number | null;
   confirmed: boolean;
-  /** What it added to the score. Above 0 means it counted toward the flag. */
   contribution: number;
 }
 
@@ -108,6 +99,8 @@ export interface Reading {
   watch_slot: WatchSlotKey | null;
   recorded_by: string | null;
   location: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
 }
 
 export type ReadingSource = "watch" | "phc" | "self";
@@ -119,7 +112,6 @@ export interface Page<T> {
   page_size: number;
 }
 
-/** The model's personal baseline: the median and robust spread of the last n readings. */
 export interface Baseline {
   usual: number;
   spread: number;
@@ -160,6 +152,9 @@ export interface Visit {
   cancelled_by?: "citizen" | "worker" | null;
   cancel_reason?: string | null;
   worker_phone?: string | null;
+  booked_at?: string | null;
+  cancelled_at?: string | null;
+  missed_reason_at?: string | null;
   state: VisitState;
   case_id: string | null;
   citizen: VisitPerson | null;
@@ -187,11 +182,13 @@ export interface HistoryQuery {
   metric?: string | null;
   days?: number | null;
   flagged_only?: boolean;
+  state?: "normal" | "awaiting" | "reviewed" | null;
+  reviewer?: string | null;
+  q?: string | null;
 }
 
 let metricsCache: Promise<MetricsInfo> | null = null;
 
-/** The vitals vocabulary never changes during a session: fetch it once. */
 export function getMetrics(): Promise<MetricsInfo> {
   metricsCache ??= api
     .get<MetricsInfo>("/health/metrics")
@@ -221,8 +218,17 @@ export const syncWatch = () =>
 
 export const getHistory = (q: HistoryQuery, signal?: AbortSignal) =>
   api
-    .get<Page<Reading>>("/health/history", {
-      params: { page: q.page, page_size: q.page_size, metric: q.metric || undefined, days: q.days || undefined, flagged_only: q.flagged_only || undefined },
+    .get<Page<Reading> & { reviewers: { id: string; name: string }[] }>("/health/history", {
+      params: {
+        page: q.page,
+        page_size: q.page_size,
+        metric: q.metric || undefined,
+        days: q.days || undefined,
+        flagged_only: q.flagged_only || undefined,
+        state: q.state || undefined,
+        reviewer: q.reviewer || undefined,
+        q: q.q || undefined,
+      },
       signal,
     })
     .then((r) => r.data);

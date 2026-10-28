@@ -1,0 +1,35 @@
+{
+  "measured_on": "2026-10-27",
+  "machine_note": "a developer laptop running Windows, one request at a time, scikit-learn 1.9.1",
+  "sklearn_import_s": 3.3,
+  "model_load_s": 0.38,
+  "model_file_kb": 986,
+  "forest": {
+    "n_estimators": 300,
+    "max_samples": 256,
+    "contamination": 0.03,
+    "version": "population-iforest-v1"
+  },
+  "score_reading_with_population": {
+    "history_30": {
+      "median_ms": 27.6,
+      "p95_ms": 40.2,
+      "runs": 300
+    },
+    "history_120": {
+      "median_ms": 28.9,
+      "p95_ms": 43.7,
+      "runs": 300
+    }
+  },
+  "population_check": {
+    "median_ms": 29.3,
+    "p95_ms": 45.2,
+    "runs": 300
+  },
+  "score_reading_rules_only": {
+    "median_ms": 0.1,
+    "p95_ms": 0.2,
+    "runs": 300
+  }
+}

@@ -2,11 +2,12 @@
 
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, StringConstraints
-from sqlalchemy import delete, func, select
+from sqlalchemy import String, cast, delete, func, or_, select
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.views import alert_out, visit_for_citizen, vitals_result
@@ -21,6 +22,7 @@ from app.schemas.health import (
     PopulationOut,
     FacilitySummary,
     HistoryOut,
+    ReviewerOption,
     LatestVital,
     MetricOut,
     MetricsOut,
@@ -222,6 +224,8 @@ def _reading_out(record: HealthRecord, processed: ProcessedData | None, recorder
         signal=describe_signal(processed.features, record.vitals) if flagged and processed else None,
         reviewed=bool(processed and processed.resolution is not None),
         population=PopulationOut.of(processed.population) if processed else None,
+        reviewed_by=recorders[processed.reviewed_by][0] if processed and processed.reviewed_by in recorders else None,
+        reviewed_at=processed.reviewed_at if processed else None,
     )
 
 
@@ -276,14 +280,21 @@ async def history(
     metric: str | None = Query(None, max_length=40),
     days: int | None = Query(None, ge=1, le=365),
     flagged_only: bool = False,
+    state: Literal["normal", "awaiting", "reviewed"] | None = None,
+    reviewer: uuid.UUID | None = None,
+    q: str | None = Query(None, max_length=80),
     user: User = Depends(require_onboarding_user),
     db: AsyncSession = Depends(get_session),
 ) -> HistoryOut:
     if metric is not None and metric not in VITALS:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown metric: {metric}")
+    recorder = aliased(User)
+    checker = aliased(User)
     query = (
         select(HealthRecord, ProcessedData)
         .outerjoin(ProcessedData, ProcessedData.health_record_id == HealthRecord.id)
+        .outerjoin(recorder, recorder.id == HealthRecord.recorded_by)
+        .outerjoin(checker, checker.id == ProcessedData.reviewed_by)
         .where(HealthRecord.user_id == user.id)
     )
     if metric:
@@ -292,18 +303,51 @@ async def history(
         query = query.where(HealthRecord.timestamp >= now_utc() - timedelta(days=days))
     if flagged_only:
         query = query.where(ProcessedData.is_anomaly.is_(True))
+    if state == "normal":
+        query = query.where(or_(ProcessedData.id.is_(None), ProcessedData.is_anomaly.is_(False)))
+    elif state == "awaiting":
+        query = query.where(ProcessedData.is_anomaly.is_(True), ProcessedData.resolution.is_(None))
+    elif state == "reviewed":
+        query = query.where(ProcessedData.is_anomaly.is_(True), ProcessedData.resolution.is_not(None))
+    if reviewer:
+        query = query.where(ProcessedData.reviewed_by == reviewer)
+    term = (q or "").strip()
+    if term:
+        like = f"%{term}%"
+        query = query.where(
+            or_(
+                HealthRecord.source.ilike(like),
+                HealthRecord.watch_slot.ilike(like),
+                HealthRecord.location.ilike(like),
+                cast(HealthRecord.symptoms, String).ilike(like),
+                recorder.name.ilike(like),
+                checker.name.ilike(like),
+            )
+        )
 
     total = await db.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = await db.execute(
         query.order_by(HealthRecord.timestamp.desc(), HealthRecord.id).offset((page - 1) * page_size).limit(page_size)
     )
     rows = rows.all()
-    recorders = await _recorders(db, {r.recorded_by for r, _ in rows if r.recorded_by})
+    people = await _recorders(
+        db, {r.recorded_by for r, _ in rows if r.recorded_by} | {p.reviewed_by for _, p in rows if p and p.reviewed_by}
+    )
+    reviewers = (
+        await db.execute(
+            select(User.id, User.name)
+            .join(ProcessedData, ProcessedData.reviewed_by == User.id)
+            .where(ProcessedData.user_id == user.id)
+            .distinct()
+            .order_by(User.name)
+        )
+    ).all()
     return HistoryOut(
-        items=[_reading_out(record, processed, recorders) for record, processed in rows],
+        items=[_reading_out(record, processed, people) for record, processed in rows],
         total=total,
         page=page,
         page_size=page_size,
+        reviewers=[ReviewerOption(id=i, name=n) for i, n in reviewers],
     )
 
 
@@ -321,7 +365,6 @@ async def summary(user: User = Depends(require_onboarding_user), db: AsyncSessio
         )
     ).all()
 
-    # Newest value of each vital, compared with that vital's earlier values in the window.
     latest: list[LatestVital] = []
     for key in VITALS:
         series = [(record, record.vitals[key]) for record, _ in rows if record.vitals.get(key) is not None]
@@ -381,7 +424,6 @@ async def summary(user: User = Depends(require_onboarding_user), db: AsyncSessio
         readings_last_7_days=week,
         open_flags=open_flags,
         unread_alerts=unread,
-        # The cards' baseline is the earlier readings in the window, so the newest one plus 7 before it.
         readings_until_baseline=max(0, MIN_BASELINE_READINGS + 1 - len(rows)),
         baseline_window_days=BASELINE_WINDOW_DAYS,
         latest=latest,
@@ -407,7 +449,6 @@ async def delete_reading(
     user: User = Depends(require_onboarding_user),
     db: AsyncSession = Depends(get_session),
 ) -> Response:
-    # Scoped to the caller: someone else's reading is simply "not found".
     record = await db.scalar(
         select(HealthRecord).where(HealthRecord.id == reading_id, HealthRecord.user_id == user.id)
     )
@@ -415,7 +456,6 @@ async def delete_reading(
         raise HTTPException(status.HTTP_404_NOT_FOUND, READING_NOT_FOUND)
     if record.source == "phc":
         raise HTTPException(status.HTTP_409_CONFLICT, "A reading recorded by your health worker can only be changed by your health centre.")
-    # The score goes with it; a visit booked from it keeps going (case_id is SET NULL).
     await db.execute(delete(ProcessedData).where(ProcessedData.health_record_id == record.id))
     await db.delete(record)
     db.add(

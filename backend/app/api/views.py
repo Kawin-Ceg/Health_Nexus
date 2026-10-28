@@ -32,6 +32,9 @@ def _base(visit: ScheduledVisit, now: datetime) -> dict:
         "duration_minutes": visit.duration_minutes,
         "cancelled_by": visit.cancelled_by,
         "cancel_reason": visit.cancel_reason,
+        "booked_at": visit.created_at,
+        "cancelled_at": visit.cancelled_at,
+        "missed_reason_at": visit.missed_reason_at,
     }
 
 

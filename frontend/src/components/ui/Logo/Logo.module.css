@@ -14,7 +14,6 @@
   width: 32px;
 }
 
-/* Which wordmark shows follows the active theme, set as .dark on <html>. */
 .onDark {
   display: none;
 }

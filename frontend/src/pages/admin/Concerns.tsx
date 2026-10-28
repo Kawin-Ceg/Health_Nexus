@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AlertTriangle, Building2, CalendarX, Clock, Mail, MapPin, Tag, UserRound, Watch, X } from "lucide-react";
 import { useToast } from "../../components/app/Toaster";
-import { Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls } from "../../components/app/ui";
+import { Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls, Status, type StatusTone } from "../../components/app/ui";
 import { fmtAgo, fmtDateTime } from "../../lib/format";
 import { useDebounced } from "../../lib/useDebounced";
 import { useResource } from "../../lib/useResource";
@@ -33,15 +33,15 @@ const STAGES: { id: ConcernStage; label: string }[] = [
   { id: "action_taken", label: "Action taken" },
 ];
 
-const STATUS: Record<ConcernStatus, { label: string; cls: string }> = {
-  open: { label: "Not reviewed", cls: "bg-amber-100 text-amber-900" },
-  in_review: { label: "In progress", cls: "bg-sky-100 text-sky-900" },
-  resolved: { label: "Action taken", cls: "bg-green-100 text-green-900" },
-  rejected: { label: "Dismissed", cls: "bg-paper-raised text-ink-soft" },
+const STATUS: Record<ConcernStatus, { label: string; tone: StatusTone }> = {
+  open: { label: "Not reviewed", tone: "warn" },
+  in_review: { label: "In progress", tone: "info" },
+  resolved: { label: "Action taken", tone: "success" },
+  rejected: { label: "Dismissed", tone: "neutral" },
 };
 
 function StatusPill({ status }: { status: ConcernStatus }) {
-  return <span className={cx("inline-block rounded-full px-3 py-1 text-xs font-semibold", STATUS[status].cls)}>{STATUS[status].label}</span>;
+  return <Status tone={STATUS[status].tone}>{STATUS[status].label}</Status>;
 }
 
 export function Concerns() {
@@ -156,9 +156,9 @@ export function Concerns() {
                   <dd className="line-clamp-2 text-ink">{c.description}</dd>
                 </dl>
                 {c.evidence?.kind === "missed_visits" && (
-                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-800">
+                  <Status tone="danger">
                     <CalendarX size={13} aria-hidden="true" /> {c.evidence.unexplained} unexplained missed visits
-                  </span>
+                  </Status>
                 )}
                 <span className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
                   <span>
@@ -232,9 +232,9 @@ function EvidenceBlock({ e }: { e: Evidence }) {
                 <span className="font-semibold text-ink">{v.when}</span>
                 {e.kind === "missed_visits" &&
                   (v.explanation ? (
-                    <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-800">Explained</span>
+                    <Status tone="success">Explained</Status>
                   ) : (
-                    <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-800">No reason given</span>
+                    <Status tone="danger">No reason given</Status>
                   ))}
               </span>
               <span className="text-xs text-ink-soft">

@@ -10,7 +10,7 @@ def test_mask_email_keeps_only_the_first_letter():
 
 
 async def test_console_fallback_prints_a_link_that_can_be_copied_intact(capsys):
-    token = "abcDEF123_-" * 4  # long enough that the raw MIME body would be quoted-printable encoded
+    token = "abcDEF123_-" * 4
     await send_verification_email("asha@example.com", "Asha", token)
     out = capsys.readouterr().out
     assert f"/verify-email?token={token}\n" in out

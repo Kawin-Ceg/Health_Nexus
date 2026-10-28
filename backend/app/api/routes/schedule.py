@@ -27,7 +27,6 @@ GROUP_LIMIT = 100
 CITIZEN_LIMIT = 100
 RECENT_OUTCOMES = timedelta(days=14)
 CITIZEN_PAST = timedelta(days=180)
-# Nobody may cancel or reschedule a visit less than this long before it, so plans stay reliable.
 CHANGE_CUTOFF = timedelta(hours=8)
 WORKER_PAST = timedelta(days=180)
 VisitType = Literal["home", "centre", "follow_up", "vaccination", "maternal", "screening"]
@@ -102,7 +101,6 @@ async def worker_schedule(
     now = now_utc()
     tomorrow = local_day_start(local_date(now) + timedelta(days=1))
     scheduled = ScheduledVisit.status == VisitStatus.scheduled
-    # Disjoint by construction; the same boundaries visit_state() uses.
     buckets = {
         "needs_outcome": (scheduled, ScheduledVisit.scheduled_for < overdue_before(now)),
         "happening_now": (
@@ -129,8 +127,8 @@ async def worker_schedule(
 
 class VisitUpdate(BaseModel):
     action: Literal["complete", "cancel", "miss", "move", "edit"]
-    scheduled_for: datetime | None = None  # required for "move"; optional for "edit"
-    cancel_reason: Text500 | None = None  # required for "cancel"
+    scheduled_for: datetime | None = None
+    cancel_reason: Text500 | None = None
     reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] | None = None
     location: Annotated[str, StringConstraints(strip_whitespace=True, max_length=160)] | None = None
     visit_type: VisitType | None = None
@@ -200,7 +198,7 @@ async def update_visit(
             check_cutoff(visit)
             check_booking_time(data.scheduled_for)
             visit.scheduled_for = data.scheduled_for
-            visit.missed_notified_at = None  # a new time earns a new one-time reminder
+            visit.missed_notified_at = None
             notify_changed(db, visit, citizen, worker, "moved")
     await db.commit()
     return visit_for_worker(visit, citizen, now_utc())

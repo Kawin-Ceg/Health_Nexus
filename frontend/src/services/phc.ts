@@ -123,7 +123,6 @@ export interface CitizenRecord {
     resolution: Resolution | null;
     reviewed_at: string | null;
     basis: string | null;
-    /** Empty for readings scored before the model stored its working. */
     checks: VitalCheck[];
     population: PopulationCheck | null;
   }[];
@@ -192,7 +191,7 @@ export const getQueue = (p: { severity?: Severity | null; locality?: string; q?:
 export const markSeen = (processedId: string, body?: ResolveBody) =>
   api.post<{ cleared: number }>(`/phc/queue/${processedId}/seen`, body ?? {}).then((r) => r.data);
 export const getWorklist = (p: { locality?: string; q?: string }, signal?: AbortSignal) =>
-  get<{ items: WorkItem[]; total_citizens: number; limit: number }>("/phc/worklist", { locality: p.locality || undefined, q: p.q || undefined }, signal);
+  get<{ items: WorkItem[]; total_citizens: number; limit: number }>("/phc/worklist", { locality: p.locality || undefined, q: p.q || undefined, limit: 100 }, signal);
 export const resolveCitizen = (userId: string, body?: ResolveBody) =>
   api.post<{ cleared: number }>(`/phc/worklist/citizens/${userId}/resolve`, body ?? {}).then((r) => r.data);
 export const getDirectory = (
@@ -235,7 +234,7 @@ export interface FeedItem {
   reviewed_at: string | null;
 }
 
-export const getFeed = (signal?: AbortSignal) => get<{ items: FeedItem[]; days: number; limit: number }>("/phc/alerts", undefined, signal);
+export const getFeed = (signal?: AbortSignal, days = 90) => get<{ items: FeedItem[]; days: number; limit: number }>("/phc/alerts", { days, limit: 200 }, signal);
 
 export const recordExam = (
   userId: string,

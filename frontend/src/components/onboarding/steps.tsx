@@ -44,7 +44,6 @@ interface Loaded<T> {
   error: string | null;
 }
 
-/** Loads a registry list. `load` is null while its prerequisite choice is missing; `key` changes when it should reload. */
 function useRegistryList<T>(load: (() => Promise<T[]>) | null, key: string, attempt: number): Loaded<T> {
   const [result, setResult] = useState<Loaded<T>>({ data: [], loading: false, error: null });
 
@@ -63,15 +62,13 @@ function useRegistryList<T>(load: (() => Promise<T[]>) | null, key: string, atte
         if (!cancelled) setResult({ data: [], loading: false, error: errorMessage(error) });
       });
     return () => {
-      cancelled = true; // a slower, older response must not overwrite a newer choice
+      cancelled = true;
     };
-    // `load` is rebuilt every render; `key` and `attempt` say when it actually changes.
   }, [key, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return result;
 }
 
-/** State → district → health centre. Each list loads from the choice before it. */
 export function LocationStep({ form }: { form: OnboardingForm }) {
   const { state, district, phc_id } = form.values;
   const { setValue } = form;
@@ -81,7 +78,6 @@ export function LocationStep({ form }: { form: OnboardingForm }) {
   const districts = useRegistryList(state ? () => getDistricts(state) : null, state, attempt);
   const facilities = useRegistryList(state && district ? () => getFacilities(state, district) : null, `${state}|${district}`, attempt);
 
-  // A remembered choice (restored after a reload) that the registry no longer offers must not survive.
   useEffect(() => {
     if (!states.loading && states.data.length && state && !states.data.includes(state)) setValue("state", "");
   }, [states.loading, states.data, state, setValue]);
@@ -147,9 +143,6 @@ export function LocationStep({ form }: { form: OnboardingForm }) {
         label="Health centre"
         options={facilities.data.map((f) => ({
           value: f.id,
-          // Staffing is shown in the option itself: choosing a centre with no
-          // worker means nobody reviews your readings, and finding that out on
-          // the dashboard afterwards is too late.
           label: `${f.block ? `${f.name} (${f.block})` : f.name} - ${
             f.workers_assigned > 0
               ? `${f.workers_assigned} health worker${f.workers_assigned > 1 ? "s" : ""}`
@@ -204,7 +197,7 @@ export function DeviceStep({ form }: { form: OnboardingForm }) {
           {...watch}
           onChange={(e) => {
             watch.onChange(e);
-            if (!e.target.checked) form.setValue("smartwatch_brand", ""); // never keep a brand for a watch that is not there
+            if (!e.target.checked) form.setValue("smartwatch_brand", "");
           }}
         />
       </div>

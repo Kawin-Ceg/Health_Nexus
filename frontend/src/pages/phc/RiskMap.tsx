@@ -5,7 +5,6 @@ import { Card, Empty, Loading, PageHeader, cx } from "../../components/app/ui";
 import { useResource } from "../../lib/useResource";
 import { getMap, type LocalityRisk } from "../../services/phc";
 
-// Risk is an ordinal status, reusing the severity tokens. Always shown with its label.
 const LEVEL: Record<LocalityRisk["level"], { label: string; color: string; text: string }> = {
   high: { label: "High", color: "rgb(var(--hn-sev-critical))", text: "text-sev-critical" },
   elevated: { label: "Elevated", color: "rgb(var(--hn-sev-high))", text: "text-sev-high" },
@@ -13,7 +12,6 @@ const LEVEL: Record<LocalityRisk["level"], { label: string; color: string; text:
   none: { label: "None", color: "rgb(var(--hn-success))", text: "text-success" },
 };
 
-/** Share of each locality's citizens with an open flag. Aggregate only: no names. */
 export function RiskMap() {
   const map = useResource((s) => getMap(s), "map");
   const blocked = workerState(map);

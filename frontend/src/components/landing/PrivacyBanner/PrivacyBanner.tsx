@@ -4,13 +4,11 @@ import { privacy, routes } from "../../../content/landing";
 import { Container } from "../../ui/Container/Container";
 import { Eyebrow } from "../Eyebrow/Eyebrow";
 import { BlurIn } from "../BlurIn/BlurIn";
-import { Doodle } from "../Doodle/Doodle";
 import styles from "./PrivacyBanner.module.css";
 
 export function PrivacyBanner() {
   return (
     <section id={privacy.id} className={styles.section} aria-labelledby={privacy.headingId}>
-      <Doodle piece="beads" className={styles.beads} />
       <Container>
         <BlurIn className={styles.banner}>
           <span className={styles.icon}>

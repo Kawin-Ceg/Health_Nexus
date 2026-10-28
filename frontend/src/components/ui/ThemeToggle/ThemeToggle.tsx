@@ -4,7 +4,6 @@ import { useAuth } from "../../../context/AuthContext";
 import { isDark, onThemeChange, setTheme } from "../../../lib/theme";
 import { updatePreferences } from "../../../services/account";
 
-/** Light / dark switch for any page. Signed in, the choice is also saved to the account. */
 export function ThemeToggle({
   className,
   withLabel = false,

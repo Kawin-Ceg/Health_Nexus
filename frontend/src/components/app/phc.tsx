@@ -9,12 +9,8 @@ import type { VisitPerson } from "../../services/health";
 import { bookVisit, resolveCitizen, type DismissReason, type ResolveBody, type WorkItem } from "../../services/phc";
 import { BasisTag } from "./ModelInsights";
 import { useToast } from "./Toaster";
-import { Btn, ErrorNote, Labelled, SeverityBadge, VisitBadge, inputCls } from "./ui";
+import { Btn, ErrorNote, Labelled, SeverityBadge, VisitBadge, inputCls, Status } from "./ui";
 
-/**
- * Shown instead of any worker page when the API answers 409: the account has no
- * facility. An empty dashboard would read as "a quiet day" and be acted on.
- */
 export function NoFacility({ message }: { message: string }) {
   return (
     <div role="alert" className="mx-auto mt-10 max-w-xl rounded-2xl border border-warn/40 bg-surface p-6">
@@ -32,7 +28,6 @@ export function NoFacility({ message }: { message: string }) {
   );
 }
 
-/** Loading/error/409 handling shared by the worker pages. Returns null when the page should render. */
 export function workerState(r: { error: string | null; status: number | null; data: unknown; reload: () => void }) {
   if (r.status === 409 && r.error) return <NoFacility message={r.error} />;
   if (r.error && !r.data) return <ErrorNote message={r.error} onRetry={r.reload} />;
@@ -70,7 +65,6 @@ const REASONS: { value: DismissReason; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-/** "Reviewed" in one click; "Dismiss" asks why, because a dismissal without a reason cannot be audited. */
 export function ResolveControls({
   onResolve,
   reviewLabel = "Mark seen",
@@ -135,12 +129,6 @@ export function ResolveControls({
   );
 }
 
-/**
- * One citizen, one piece of work: every open flag for that person in a single
- * card, worst first. The dashboard and the alerts page both render this, so a
- * worker sees the same unit of work wherever they look, and the same person
- * never appears as five separate rows to act on.
- */
 export function CitizenWorkCard({ item, onChanged }: { item: WorkItem; onChanged: () => void }) {
   const [booking, setBooking] = useState(false);
   const older = item.open_flags - 1;
@@ -151,9 +139,9 @@ export function CitizenWorkCard({ item, onChanged }: { item: WorkItem; onChanged
           <div className="flex flex-wrap items-center gap-2">
             <SeverityBadge severity={item.worst_severity} />
             {item.open_flags > 1 && (
-              <span className="rounded-full bg-paper-raised px-2 py-0.5 text-xs font-semibold text-ink-soft">
+              <Status tone="neutral">
                 {plural(item.open_flags, "open flag")}
-              </span>
+              </Status>
             )}
           </div>
           <div className="mt-2">
@@ -175,7 +163,7 @@ export function CitizenWorkCard({ item, onChanged }: { item: WorkItem; onChanged
               onChanged();
             }}
           />
-          {!item.next_visit && <Btn onClick={() => setBooking((b) => !b)}>Book visit</Btn>}
+          {!item.next_visit && <Btn tone="info" onClick={() => setBooking((b) => !b)}>Book visit</Btn>}
           <Link
             to={citizenRecordPath(item.citizen.id)}
             className="inline-flex min-h-11 items-center rounded-full px-4 font-display text-[15px] text-ink underline-offset-4 hover:underline"
@@ -225,7 +213,6 @@ export function CitizenWorkCard({ item, onChanged }: { item: WorkItem; onChanged
 
 let workingHours: Promise<{ start: string; end: string }> | null = null;
 
-/** The next slot at the start of the worker's working hours, tomorrow. */
 function useDefaultSlot() {
   const [slot, setSlot] = useState(() => {
     const d = new Date(Date.now() + 86400_000);

@@ -20,7 +20,7 @@ class PhcVerificationDocument(UUIDPk, Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     document_type: Mapped[PhcDocumentType] = mapped_column(pg_enum(PhcDocumentType, "phc_document_type"))
-    storage_key: Mapped[str] = mapped_column(String)  # private storage path, never a public URL
+    storage_key: Mapped[str] = mapped_column(String)
     content_type: Mapped[str] = mapped_column(String)
     size_bytes: Mapped[int]
     sha256: Mapped[str] = mapped_column(String(64), index=True)
@@ -36,6 +36,6 @@ class PhcVerificationDocument(UUIDPk, Base):
     check_notes: Mapped[str | None] = mapped_column(Text)
     checked_at: Mapped[datetime | None]
     uploaded_at: Mapped[datetime] = mapped_column(default=utcnow)
-    deleted_at: Mapped[datetime | None]  # soft delete
+    deleted_at: Mapped[datetime | None]
 
     application: Mapped["PhcApplication"] = relationship(back_populates="documents")

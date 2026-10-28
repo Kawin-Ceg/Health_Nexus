@@ -1,4 +1,3 @@
-/* All landing-page copy. Components read from here and hold no text of their own. */
 
 import type { LucideIcon } from "lucide-react";
 import {

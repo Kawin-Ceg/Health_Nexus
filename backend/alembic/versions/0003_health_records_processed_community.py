@@ -53,7 +53,6 @@ def upgrade() -> None:
             ["health_record_id"], ["health_records.id"], name="fk_processed_data_health_record_id_health_records"
         ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], name="fk_processed_data_user_id_users"),
-        # health_records 1-1 processed_data
         sa.UniqueConstraint("health_record_id", name="uq_processed_data_health_record_id"),
     )
     op.create_index("ix_processed_data_user_id", "processed_data", ["user_id"])

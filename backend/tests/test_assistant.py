@@ -101,7 +101,6 @@ async def test_admin_gets_aggregates_not_readings(client, world, db):
     out = await ask(client, ah, "Give me a platform overview")
     assert out["answer"]["retrieval"]["tool"] == "platform_overview"
     assert "citizens" in out["answer"]["content"]
-    # No admin tool reads health_records rows by person.
     readings = await ask(client, ah, "Show me Priya's latest blood pressure reading")
     assert readings["answer"]["retrieval"] is None or readings["answer"]["retrieval"]["tool"] != "my_latest_reading"
 
@@ -153,10 +152,8 @@ async def test_the_model_cannot_widen_its_scope(client, world, monkeypatch):
     _, ph = world["priya"]
     await submit(client, ph, NORMAL)
 
-    # A worker-only tool chosen for a citizen is ignored; the rules answer instead.
     first = await ask(client, ph, "Is my latest blood pressure normal?")
     assert first["answer"]["retrieval"]["tool"] == "my_latest_reading"
-    # Out-of-range and undeclared arguments are dropped or clamped; the answer falls back to the template.
     second = await ask(client, ph, "What were my average vitals?")
     assert second["answer"]["retrieval"]["args"] == {"days": 365}
     assert second["answer"]["retrieval"]["engine"] == "gemini+template"

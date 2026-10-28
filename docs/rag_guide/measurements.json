@@ -1,0 +1,405 @@
+{
+  "gemini_samples": [
+    {
+      "question": "Is my latest blood pressure normal?",
+      "plan_ms": 3397,
+      "retrieve_ms": 147,
+      "write_ms": 2642,
+      "grounded": true
+    },
+    {
+      "question": "What were my average vitals over the last 30 days?",
+      "plan_ms": 1687,
+      "retrieve_ms": 23,
+      "write_ms": 2870,
+      "grounded": true
+    },
+    {
+      "question": "Were any of my readings flagged this month?",
+      "plan_ms": 1897,
+      "retrieve_ms": 5,
+      "write_ms": 3654,
+      "grounded": true
+    }
+  ],
+  "queries": {
+    "my_latest_reading": {
+      "user": {
+        "median_ms": 3.0,
+        "max_ms": 124.9,
+        "rows": 1
+      }
+    },
+    "my_vital_stats": {
+      "user": {
+        "median_ms": 4.0,
+        "max_ms": 4.6,
+        "rows": 8
+      }
+    },
+    "my_activity": {
+      "user": {
+        "median_ms": 3.3,
+        "max_ms": 4.6,
+        "rows": 1
+      }
+    },
+    "my_flags": {
+      "user": {
+        "median_ms": 4.4,
+        "max_ms": 5.1,
+        "rows": 14
+      }
+    },
+    "my_alerts": {
+      "user": {
+        "median_ms": 2.6,
+        "max_ms": 22.3,
+        "rows": 5
+      },
+      "phc_worker": {
+        "median_ms": 2.9,
+        "max_ms": 3.8,
+        "rows": 4
+      }
+    },
+    "my_visits": {
+      "user": {
+        "median_ms": 2.7,
+        "max_ms": 19.0,
+        "rows": 1
+      }
+    },
+    "my_health_centre": {
+      "user": {
+        "median_ms": 2.4,
+        "max_ms": 9.4,
+        "rows": 1
+      }
+    },
+    "my_profile": {
+      "user": {
+        "median_ms": 2.2,
+        "max_ms": 10.5,
+        "rows": 1
+      }
+    },
+    "my_examinations": {
+      "user": {
+        "median_ms": 2.8,
+        "max_ms": 3.4,
+        "rows": 0
+      }
+    },
+    "my_readings_by_source": {
+      "user": {
+        "median_ms": 2.4,
+        "max_ms": 3.2,
+        "rows": 1
+      }
+    },
+    "my_advisories": {
+      "user": {
+        "median_ms": 2.9,
+        "max_ms": 13.6,
+        "rows": 2
+      }
+    },
+    "catchment_overview": {
+      "phc_worker": {
+        "median_ms": 5.2,
+        "max_ms": 13.4,
+        "rows": 1
+      }
+    },
+    "flagged_citizens": {
+      "phc_worker": {
+        "median_ms": 4.3,
+        "max_ms": 6.3,
+        "rows": 10
+      }
+    },
+    "citizen_summary": {
+      "phc_worker": {
+        "median_ms": 5.3,
+        "max_ms": 8.7,
+        "rows": 5
+      }
+    },
+    "silent_citizens": {
+      "phc_worker": {
+        "median_ms": 4.2,
+        "max_ms": 4.6,
+        "rows": 15
+      }
+    },
+    "my_schedule": {
+      "phc_worker": {
+        "median_ms": 3.1,
+        "max_ms": 3.8,
+        "rows": 0
+      }
+    },
+    "locality_breakdown": {
+      "phc_worker": {
+        "median_ms": 4.5,
+        "max_ms": 5.6,
+        "rows": 6
+      }
+    },
+    "catchment_trend": {
+      "phc_worker": {
+        "median_ms": 3.5,
+        "max_ms": 6.7,
+        "rows": 2
+      }
+    },
+    "symptom_counts": {
+      "phc_worker": {
+        "median_ms": 3.5,
+        "max_ms": 4.2,
+        "rows": 0
+      }
+    },
+    "advisories_overview": {
+      "phc_worker": {
+        "median_ms": 2.7,
+        "max_ms": 8.7,
+        "rows": 0
+      },
+      "admin": {
+        "median_ms": 2.8,
+        "max_ms": 3.2,
+        "rows": 1
+      }
+    },
+    "outbreak_signals": {
+      "phc_worker": {
+        "median_ms": 3.1,
+        "max_ms": 9.3,
+        "rows": 10
+      },
+      "admin": {
+        "median_ms": 2.9,
+        "max_ms": 3.5,
+        "rows": 10
+      }
+    },
+    "platform_overview": {
+      "admin": {
+        "median_ms": 6.4,
+        "max_ms": 20.5,
+        "rows": 1
+      }
+    },
+    "pending_applications": {
+      "admin": {
+        "median_ms": 3.9,
+        "max_ms": 13.6,
+        "rows": 3
+      }
+    },
+    "facility_load": {
+      "admin": {
+        "median_ms": 4.2,
+        "max_ms": 5.8,
+        "rows": 8
+      }
+    },
+    "unlinked_workers": {
+      "admin": {
+        "median_ms": 2.8,
+        "max_ms": 3.4,
+        "rows": 0
+      }
+    },
+    "concerns_summary": {
+      "admin": {
+        "median_ms": 3.2,
+        "max_ms": 8.4,
+        "rows": 5
+      }
+    },
+    "signups": {
+      "admin": {
+        "median_ms": 3.0,
+        "max_ms": 9.1,
+        "rows": 3
+      }
+    },
+    "district_activity": {
+      "admin": {
+        "median_ms": 5.4,
+        "max_ms": 6.8,
+        "rows": 1
+      }
+    },
+    "assistant_usage": {
+      "admin": {
+        "median_ms": 3.4,
+        "max_ms": 10.1,
+        "rows": 0
+      }
+    }
+  },
+  "rules_path": [
+    {
+      "role": "user",
+      "question": "Is my latest blood pressure normal?",
+      "tool": "my_latest_reading",
+      "plan_ms": 3.5,
+      "retrieve_ms": 3.8,
+      "compose_ms": 0.1,
+      "total_ms": 7.4,
+      "rows": 1
+    },
+    {
+      "role": "user",
+      "question": "What were my average vitals over the last 30 days?",
+      "tool": "my_vital_stats",
+      "plan_ms": 0.5,
+      "retrieve_ms": 3.6,
+      "compose_ms": 0.1,
+      "total_ms": 4.2,
+      "rows": 8
+    },
+    {
+      "role": "user",
+      "question": "Were any of my readings flagged this month?",
+      "tool": "my_flags",
+      "plan_ms": 0.3,
+      "retrieve_ms": 3.1,
+      "compose_ms": 0.1,
+      "total_ms": 3.5,
+      "rows": 7
+    },
+    {
+      "role": "user",
+      "question": "When is my next visit?",
+      "tool": "my_visits",
+      "plan_ms": 0.1,
+      "retrieve_ms": 3.5,
+      "compose_ms": 0.1,
+      "total_ms": 3.7,
+      "rows": 1
+    },
+    {
+      "role": "user",
+      "question": "Any advisories for my area?",
+      "tool": "my_advisories",
+      "plan_ms": 0.1,
+      "retrieve_ms": 3.7,
+      "compose_ms": 0.1,
+      "total_ms": 3.9,
+      "rows": 2
+    },
+    {
+      "role": "user",
+      "question": "Which health centre looks after me?",
+      "tool": "my_health_centre",
+      "plan_ms": 0.1,
+      "retrieve_ms": 2.9,
+      "compose_ms": 0.0,
+      "total_ms": 3.0,
+      "rows": 1
+    },
+    {
+      "role": "phc_worker",
+      "question": "Give me an overview of my catchment",
+      "tool": "catchment_overview",
+      "plan_ms": 2.5,
+      "retrieve_ms": 5.8,
+      "compose_ms": 0.0,
+      "total_ms": 8.3,
+      "rows": 1
+    },
+    {
+      "role": "phc_worker",
+      "question": "Who has critical flags right now?",
+      "tool": "flagged_citizens",
+      "plan_ms": 0.2,
+      "retrieve_ms": 4.0,
+      "compose_ms": 0.2,
+      "total_ms": 4.3,
+      "rows": 10
+    },
+    {
+      "role": "phc_worker",
+      "question": "Who hasn't logged anything in 14 days?",
+      "tool": "silent_citizens",
+      "plan_ms": 0.1,
+      "retrieve_ms": 3.8,
+      "compose_ms": 0.2,
+      "total_ms": 4.1,
+      "rows": 15
+    },
+    {
+      "role": "phc_worker",
+      "question": "What symptoms are being reported this week?",
+      "tool": "symptom_counts",
+      "plan_ms": 0.1,
+      "retrieve_ms": 4.3,
+      "compose_ms": 0.0,
+      "total_ms": 4.4,
+      "rows": 0
+    },
+    {
+      "role": "phc_worker",
+      "question": "Which localities have the most flags?",
+      "tool": "locality_breakdown",
+      "plan_ms": 0.1,
+      "retrieve_ms": 3.9,
+      "compose_ms": 0.0,
+      "total_ms": 4.0,
+      "rows": 6
+    },
+    {
+      "role": "admin",
+      "question": "Give me a platform overview",
+      "tool": "platform_overview",
+      "plan_ms": 1.5,
+      "retrieve_ms": 4.9,
+      "compose_ms": 0.0,
+      "total_ms": 6.4,
+      "rows": 1
+    },
+    {
+      "role": "admin",
+      "question": "Which PHC applications are waiting?",
+      "tool": "pending_applications",
+      "plan_ms": 0.1,
+      "retrieve_ms": 3.1,
+      "compose_ms": 0.1,
+      "total_ms": 3.3,
+      "rows": 3
+    },
+    {
+      "role": "admin",
+      "question": "Which health centres have citizens but no worker?",
+      "tool": "facility_load",
+      "plan_ms": 0.1,
+      "retrieve_ms": 3.6,
+      "compose_ms": 0.0,
+      "total_ms": 3.7,
+      "rows": 8
+    },
+    {
+      "role": "admin",
+      "question": "How many people signed up in the last 30 days?",
+      "tool": "signups",
+      "plan_ms": 0.1,
+      "retrieve_ms": 2.9,
+      "compose_ms": 0.0,
+      "total_ms": 3.0,
+      "rows": 3
+    }
+  ],
+  "rules_summary": {
+    "questions": 15,
+    "answered": 15,
+    "median_ms": 4.0,
+    "max_ms": 8.3
+  },
+  "tool_count": 29,
+  "gemini_note": "Gemini timings: 3 complete runs on 2026-10-27 on a developer machine, gemini-2.5-flash, free tier (5 requests a minute); stored answers from earlier sessions took 4.7 to 6.2 seconds end to end."
+}

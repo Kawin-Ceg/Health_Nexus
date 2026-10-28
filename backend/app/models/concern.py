@@ -30,7 +30,7 @@ class Concern(UUIDPk, CreatedAt, Base):
         server_default=text("'open'"),
         index=True,
     )
-    admin_note: Mapped[str | None] = mapped_column(Text)  # shown back to the user
+    admin_note: Mapped[str | None] = mapped_column(Text)
     handled_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
     resolved_at: Mapped[datetime | None]

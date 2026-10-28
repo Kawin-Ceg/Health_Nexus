@@ -18,7 +18,6 @@ import { integerInRange, numberInRange, phoneError } from "../lib/validation";
 import { ApiError } from "../services/api";
 import { createProfile, type Gender, type ProfilePayload } from "../services/onboarding";
 import styles from "../components/onboarding/Onboarding.module.css";
-import { Doodle } from "../components/landing/Doodle/Doodle";
 import { Check } from "lucide-react";
 
 const STEPS = [
@@ -31,7 +30,6 @@ const STEPS = [
 
 type Problems = Partial<Record<keyof OnboardingValues, string>>;
 
-// The same rules the API enforces, so most mistakes are caught before a request is made.
 function validate(v: OnboardingValues): Problems {
   const name = v.emergency_contact_name.trim();
   const phone = v.emergency_contact_phone.trim();
@@ -82,7 +80,6 @@ function toPayload(v: OnboardingValues): ProfilePayload {
   };
 }
 
-/** A finished profile has nothing to do here. Kept apart from the flow so none of its effects run. */
 export function Onboarding() {
   const { user } = useAuth();
   if (user?.profile_completed) return <Navigate to={paths.citizenHome} replace />;
@@ -99,13 +96,10 @@ function OnboardingFlow() {
   const form = useForm<OnboardingValues>(draft, validate);
   const { values, serverErrors } = form;
 
-  // Answers survive a reload. Once the profile is saved the draft must stay gone,
-  // so the refreshed user (now completed) must not write it back.
   useEffect(() => {
     if (user && !user.profile_completed) saveDraft(user.id, values);
   }, [user, values]);
 
-  // The URL holds the step, but never lets you skip past one that is not valid yet.
   const invalid = firstInvalidStep(form.problems);
   const furthest = invalid === -1 ? STEPS.length : invalid + 1;
   const requested = Number.parseInt(params.get("step") ?? "1", 10);
@@ -121,11 +115,9 @@ function OnboardingFlow() {
 
   const goTo = (n: number) => setParams({ step: String(n) });
 
-  // A 422 on a field from an earlier step: take the user to it.
   useEffect(() => {
     const bad = STEPS.findIndex((s) => s.fields.some((f) => serverErrors[f]));
     if (bad !== -1 && bad + 1 !== step) goTo(bad + 1);
-    // goTo only sets the search params
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverErrors]);
 
@@ -134,7 +126,6 @@ function OnboardingFlow() {
       await createProfile(toPayload(v));
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        // Already saved, perhaps from another tab: nothing left to do here.
       } else {
         if (error instanceof ApiError && error.status === 422 && /health centre/i.test(error.detail)) goTo(2);
         throw error;
@@ -166,8 +157,6 @@ function OnboardingFlow() {
       <AppHeader />
       <main className={styles.main}>
         <aside className={styles.aside} aria-label="Setup steps">
-          <Doodle piece="beads" className={styles.beads} />
-          <Doodle piece="helix" className={styles.helix} delay={1} />
           <p className={styles.asideTitle}>Set up your health profile</p>
           <p className={styles.asideLead}>Five short steps. Your answers are kept if you reload this tab.</p>
           <ol className={styles.steps}>

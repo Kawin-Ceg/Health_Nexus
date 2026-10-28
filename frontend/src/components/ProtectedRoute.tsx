@@ -6,17 +6,10 @@ import { FullPageSpinner } from "./ui/Spinner/Spinner";
 
 interface Props {
   allowedRoles: Role[];
-  /** For pages that make sense before the email is confirmed, such as the session list. */
   allowUnverified?: boolean;
-  /** Only the onboarding page itself: everywhere else a citizen must have a profile. */
   allowIncompleteProfile?: boolean;
 }
 
-/**
- * Signed out → /login. Wrong role → /unauthorized. Right role but not yet through
- * verification or onboarding → the step they still owe, so no page ever renders
- * for an account the API would refuse.
- */
 export function ProtectedRoute({ allowedRoles, allowUnverified = false, allowIncompleteProfile = false }: Props) {
   const { user, status } = useAuth();
   const location = useLocation();

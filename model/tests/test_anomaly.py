@@ -47,7 +47,6 @@ def test_baseline_does_not_use_todays_value(population, model):
     before = an.personal_baselines(user, model.mad_)
     user.loc[user.index[30], "resting_hr"] = 200
     after = an.personal_baselines(user, model.mad_)
-    # today's baseline is unchanged; only the following days see the new value
     assert before.loc[user.index[30], "resting_hr_base"] == after.loc[user.index[30], "resting_hr_base"]
     assert before["resting_hr_n_prev"].iloc[0] == 0
 
@@ -59,16 +58,12 @@ def test_consecutive_flags_break_on_gaps_and_users():
                                 "2021-06-07", "2021-06-08"]),
         "flag": [True, True, False, True, True, True, True],
     })
-    # a: run of 2, break, gap on 06-04 so run restarts, b: new user so it restarts
     assert an.consecutive_flags(s).tolist() == [1, 2, 0, 1, 2, 1, 2]
 
 
 def test_change_normal_for_population_is_caught_personally(population, model):
-    # u0 has a low resting HR (~52). +10 bpm is still normal for the population,
-    # but clearly off for them.
     user = population[population["user_id"] == "u0"].copy()
     clean = an.score_days(user, model)
-    # inject after a day that isn't flagged, so any alert comes from the injection
     start = next(i for i in range(40, 58) if not clean["flag"].iloc[i - 1])
     days = user.index[start:start + 2]
     user.loc[days, ["resting_hr", "sleep_hr"]] += 10
@@ -78,7 +73,7 @@ def test_change_normal_for_population_is_caught_personally(population, model):
     scored = an.score_days(user, model)
     assert scored.loc[days, "personal_weight"].eq(1).all()
     assert scored.loc[days, "flag"].all()
-    assert scored.loc[days[1], "alert"]  # second day in a row -> alert
+    assert scored.loc[days[1], "alert"]
     assert not scored.loc[days[0], "alert"]
     assert scored.loc[days, "reason"].isin(an.FEATS).all()
 

@@ -9,8 +9,6 @@ import { RedirectIfAuthenticated } from "./components/RedirectIfAuthenticated";
 import { AuthProvider } from "./context/AuthContext";
 import { paths } from "./lib/routes";
 import { initTheme } from "./lib/theme";
-/* Every page is loaded on demand. Without this the landing page pulls the whole
-   app down with it, Recharts and Leaflet included, before anyone signs in. */
 const page = <T extends string>(loader: () => Promise<Record<string, unknown>>, name: T) =>
   lazy(() => loader().then((m) => ({ default: m[name] as ComponentType })));
 
@@ -57,11 +55,8 @@ const Unauthorized = page(() => import("./pages/errors/Unauthorized"), "Unauthor
 
 import "./styles/global.css";
 
-// Follow the system theme until the signed-in user's saved preference loads (AppShell).
 initTheme();
 
-/** Shown while a route chunk loads. Deliberately quiet: on a fast connection it
- *  flashes for a few frames, and a spinner there reads as an error. */
 function RouteFallback() {
   return <div role="status" aria-live="polite" className="sr-only">Loading</div>;
 }
@@ -77,7 +72,6 @@ createRoot(root).render(
           <ToastProvider>
           <Suspense fallback={<RouteFallback />}>
           <Routes>
-            {/* Signed-out visitors only */}
             <Route element={<RedirectIfAuthenticated />}>
               <Route path={paths.home} element={<LandingPage />} />
               <Route path={paths.login} element={<LoginPage />} />
@@ -85,14 +79,12 @@ createRoot(root).render(
               <Route path={paths.phcSignup} element={<PHCSignup />} />
             </Route>
 
-            {/* Public: these links are opened on devices that have no session */}
             <Route path={paths.verifyEmail} element={<VerifyEmail />} />
             <Route path={paths.forgotPassword} element={<ForgotPassword />} />
             <Route path={paths.resetPassword} element={<ResetPassword />} />
             <Route path={paths.privacy} element={<PrivacyPolicy />} />
             <Route path={paths.terms} element={<Terms />} />
 
-            {/* Every signed-in role */}
             <Route element={<ProtectedRoute allowedRoles={["user", "pending_phc", "phc_worker", "admin"]} allowUnverified />}>
               <Route path={paths.sessions} element={<SessionsPage />} />
             </Route>

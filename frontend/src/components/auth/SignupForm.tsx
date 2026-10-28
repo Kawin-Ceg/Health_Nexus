@@ -111,7 +111,6 @@ export function SignupForm({ variant }: { variant: "citizen" | "phc" }) {
       }
       throw error;
     }
-    // Sign in straight away: the next screen ("check your inbox") needs a session to resend the email.
     try {
       const user = await login(base.email, base.password);
       navigate(destinationFor(user), { replace: true });

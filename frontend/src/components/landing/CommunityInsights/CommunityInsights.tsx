@@ -45,13 +45,11 @@ function TooltipBody({ active, label, payload }: TooltipBodyProps) {
   );
 }
 
-/** Default export so the page can load it with React.lazy (keeps Recharts out of the main chunk). */
 export default function CommunityInsights() {
   const { heading } = insights;
   return (
     <section id={insights.id} className={styles.section} aria-labelledby={insights.headingId}>
       <Doodle piece="ecg" className={styles.ecg} />
-      <Doodle piece="botanical" className={styles.botanical} delay={3} />
       <Container>
         <BlurIn className={styles.header}>
           <Eyebrow>{insights.eyebrow}</Eyebrow>

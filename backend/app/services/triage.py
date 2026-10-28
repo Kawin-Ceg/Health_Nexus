@@ -14,7 +14,6 @@ from .metrics import VITALS, position
 
 Severity = Literal["critical", "high", "moderate", "low"]
 
-# Lower bound of each band, worst first. A flag always has score > 0.
 BANDS: tuple[tuple[Severity, float], ...] = (("critical", 0.75), ("high", 0.5), ("moderate", 0.25), ("low", 0.0))
 SEVERITY_RANK: dict[str, int] = {name: rank for rank, (name, _) in enumerate(BANDS)}
 
@@ -73,7 +72,7 @@ def describe_signal(features: dict[str, float], vitals: dict[str, float]) -> str
     if key is None or key not in vitals:
         return None
     direction = position(key, vitals[key])
-    if direction == "normal":  # a model may flag an in-range value against a personal baseline
+    if direction == "normal":
         tail = "unusual for this person"
     else:
         tail = f"{_degree(features[key])}{direction} the normal range"

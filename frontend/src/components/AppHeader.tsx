@@ -6,7 +6,6 @@ import { Logo } from "./ui/Logo/Logo";
 import { ThemeToggle } from "./ui/ThemeToggle/ThemeToggle";
 import styles from "./AppHeader.module.css";
 
-/** Minimal signed-in header: who you are, your sessions, sign out. */
 export function AppHeader() {
   const { user, logout } = useAuth();
   return (

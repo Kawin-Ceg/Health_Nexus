@@ -31,7 +31,6 @@ export function ForgotPassword() {
           <span className={styles.badge}>
             <MailCheck size={28} aria-hidden="true" />
           </span>
-          {/* The same words whether or not the account exists. */}
           <p>
             If an account exists for <strong>{sentTo}</strong>, a reset link is on its way. It works once and expires in
             1 hour.

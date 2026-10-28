@@ -4,7 +4,6 @@ import { paths } from "../lib/routes";
 import { errorMessage } from "../services/api";
 import { confirmEmailChange } from "../services/account";
 
-/** Opened from the email-change link, often on a device with no session. */
 export function ConfirmEmail() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";

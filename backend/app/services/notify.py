@@ -62,9 +62,6 @@ async def drain() -> None:
         await asyncio.gather(*list(_sending), return_exceptions=True)
 
 
-# --- Flagged readings --------------------------------------------------------------------
-
-
 async def reading_flagged(
     session: AsyncSession, citizen: User, severity: Severity, signal: str | None, reviewed: bool
 ) -> None:
@@ -99,9 +96,6 @@ async def reading_flagged(
                 f"A reading from {citizen_ref(citizen.id)} was flagged as {severity}.\n"
                 f"Open the queue to review it: {_link('/phc/alerts')}",
             )
-
-
-# --- Visits ------------------------------------------------------------------------------
 
 
 def visit_email(session: AsyncSession, person: User, subject: str, line: str, path: str) -> None:

@@ -19,7 +19,6 @@ def ist(*args: int) -> datetime:
 
 
 def test_day_boundaries_are_local_not_utc():
-    # 01:30 IST on the 24th is still the 23rd in UTC.
     now = ist(2026, 9, 24, 1, 30)
     assert now.astimezone(timezone.utc).day == 23
     assert visit_state(S, ist(2026, 9, 24, 10, 0), now) == "today"
@@ -74,8 +73,8 @@ def test_describe_signal_below_range_and_nothing_flagged():
 def test_scorer_contract():
     result = score_reading(uuid.uuid4(), {"temperature_c": 38.9, "weight_kg": 70}, [{"temperature_c": 36.6}] * 3)
     assert result.is_anomaly and 0 < result.anomaly_score <= 1
-    assert set(result.features) == {"temperature_c"}  # weight: no normal band and no baseline yet
-    assert result.basis == "published_ranges"  # 3 earlier readings: below MIN_BASELINE_READINGS
+    assert set(result.features) == {"temperature_c"}
+    assert result.basis == "published_ranges"
     assert not score_reading(uuid.uuid4(), {"heart_rate": 70}, []).is_anomaly
 
 

@@ -78,9 +78,6 @@ async def _token_response(db: AsyncSession, user: User, row: RefreshToken) -> To
     )
 
 
-# --- Registration -----------------------------------------------------------
-
-
 @router.post("/register/citizen", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def register_citizen(
     data: CitizenRegister, background: BackgroundTasks, db: AsyncSession = Depends(get_session)
@@ -97,9 +94,6 @@ async def register_phc_worker(
     user, token = await accounts.register_phc_worker(db, data)
     background.add_task(send_verification_email, user.email, user.name, token)
     return await _user_out(db, user)
-
-
-# --- Sign in / out ----------------------------------------------------------
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -126,7 +120,6 @@ async def refresh(
         user, row, raw = await sessions.rotate_session(db, raw_cookie, request)
     except HTTPException as exc:
         failure = JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-        # A race between two tabs: the winner has just set a good cookie, so leave it.
         if exc.detail != sessions.ALREADY_USED:
             _clear_refresh_cookie(failure)
         return failure
@@ -150,9 +143,6 @@ async def logout(
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_session)) -> UserOut:
     return await _user_out(db, user)
-
-
-# --- Sessions ---------------------------------------------------------------
 
 
 async def _current_session(
@@ -193,7 +183,6 @@ async def revoke_other_sessions(
 ) -> Message:
     current = await _current_session(request, user, db, raw_cookie)
     if current is None:
-        # Revoking "everything but this" would sign the caller out too.
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Could not identify your current session.")
     await sessions.revoke_all_for_user(db, user.id, sessions.REASON_USER_REVOKED, except_id=current)
     await db.commit()
@@ -208,7 +197,6 @@ async def revoke_session(
     db: AsyncSession = Depends(get_session),
     raw_cookie: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
 ) -> Response:
-    # Scoped to the caller's own rows: someone else's session id is simply "not found".
     row = await db.scalar(
         select(RefreshToken).where(
             RefreshToken.id == session_id, RefreshToken.user_id == user.id, RefreshToken.revoked.is_(False)
@@ -223,9 +211,6 @@ async def revoke_session(
     if row.id == current:
         _clear_refresh_cookie(response)
     return response
-
-
-# --- Email verification -----------------------------------------------------
 
 
 @router.post("/email/send-verification", response_model=Message)
@@ -245,8 +230,6 @@ async def verify_email(data: TokenRequest, db: AsyncSession = Depends(get_sessio
     return Message(detail="Email verified.")
 
 
-# --- Password reset ---------------------------------------------------------
-
 _FORGOT_REPLY = "If an account exists for that address, we have sent a link to reset the password."
 
 
@@ -265,9 +248,6 @@ async def forgot_password(
 async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_session)) -> Message:
     await accounts.redeem_password_reset(db, data.token, data.new_password)
     return Message(detail="Password updated. Sign in with your new password.")
-
-
-# --- Consent ----------------------------------------------------------------
 
 
 @router.patch("/consent", response_model=ConsentState)

@@ -43,10 +43,6 @@ export const paths = {
 export const citizenRecordPath = (userId: string) => `/phc/citizens/${userId}`;
 export const examPath = (userId: string) => `/phc/citizens/${userId}/exam`;
 
-/**
- * Where a signed-in user belongs, decided by their state. The one place this is
- * written down: login, the redirect guards and the "Continue" buttons all use it.
- */
 export function destinationFor(user: User): string {
   if (!user.is_verified) return paths.verifyEmail;
   switch (user.role) {

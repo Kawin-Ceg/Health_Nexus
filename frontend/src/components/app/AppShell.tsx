@@ -22,29 +22,25 @@ import {
   Settings,
   UserRound,
   Users,
-  Volume2,
   Watch,
-  VolumeX,
   X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { BADGES_EVENT } from "../../lib/badges";
 import { paths } from "../../lib/routes";
-import { setSoundEnabled, soundEnabled } from "../../lib/sound";
-import { setLanguage, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { setTheme } from "../../lib/theme";
 import { getPreferences } from "../../services/account";
 import { getOverview } from "../../services/admin";
 import type { Role } from "../../services/auth";
-import { getUnreadCount } from "../../services/health";
+import { getAlerts, getUnreadCount } from "../../services/health";
 import { getPhcBadge } from "../../services/phc";
-import { Doodle } from "../landing/Doodle/Doodle";
 import { Logo } from "../ui/Logo/Logo";
-import { LanguageSwitch } from "../ui/LanguageSwitch";
 import { ThemeToggle } from "../ui/ThemeToggle/ThemeToggle";
 import { useToast } from "./Toaster";
 import { cx } from "./ui";
 
-const BADGE_POLL_MS = 60_000;
+const BADGE_POLL_MS = 30_000;
 
 interface Item {
   to: string;
@@ -64,13 +60,6 @@ interface Badges {
 
 const NONE: Badges = { citizenUnread: 0, phcUnread: 0, citizensFlagged: 0, pendingApplications: 0, openConcerns: 0 };
 
-const ROLE_LABEL: Record<Role, string> = {
-  user: "Citizen",
-  phc_worker: "PHC worker",
-  admin: "Administrator",
-  pending_phc: "Awaiting approval",
-};
-
 async function loadBadges(role: Role, signal: AbortSignal): Promise<Partial<Badges>> {
   if (role === "user") return { citizenUnread: await getUnreadCount(signal) };
   if (role === "phc_worker") {
@@ -84,7 +73,6 @@ async function loadBadges(role: Role, signal: AbortSignal): Promise<Partial<Badg
   return {};
 }
 
-/** What changed since the last check, worded for a toast. Null when nothing grew. */
 function newsBetween(before: Badges, after: Badges): { title: string; body: string } | null {
   const grew = (k: keyof Badges) => after[k] - before[k];
   if (grew("citizenUnread") > 0) return { title: "New alert", body: `You have ${after.citizenUnread} unread alert${after.citizenUnread === 1 ? "" : "s"}.` };
@@ -111,18 +99,25 @@ function useBadges(role: Role | undefined) {
         .then((partial) => {
           const next = { ...NONE, ...partial };
           const news = last.current && newsBetween(last.current, next);
-          if (news) notify({ tone: "alert", ...news });
+          if (news && role === "user") {
+            void getAlerts(controller.signal)
+              .then((r) => r.alerts.find((a) => !a.is_read))
+              .then((a) => notify({ tone: "alert", title: a && /visit/i.test(a.message) ? "Visit update" : news.title, body: a?.message ?? news.body }))
+              .catch(() => notify({ tone: "alert", ...news }));
+          } else if (news) notify({ tone: "alert", ...news });
           last.current = next;
           setBadges(next);
         })
         .catch(() => undefined);
     void load();
     const timer = window.setInterval(load, BADGE_POLL_MS);
+    const onRefresh = () => void load();
+    window.addEventListener(BADGES_EVENT, onRefresh);
     return () => {
       controller.abort();
       window.clearInterval(timer);
+      window.removeEventListener(BADGES_EVENT, onRefresh);
     };
-    // Re-read on navigation: reading the alerts page clears the badge.
   }, [role, location.pathname, notify]);
   return badges;
 }
@@ -146,11 +141,9 @@ function initials(name: string) {
     .join("");
 }
 
-/** The signed-in layout for every role: navigation, badges, sound, theme. */
 export function AppShell() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const [sound, setSound] = useState(soundEnabled);
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const hide = collapsed ? "lg:sr-only" : "";
 
@@ -159,7 +152,6 @@ export function AppShell() {
       try {
         localStorage.setItem(SIDEBAR_KEY, c ? "open" : "collapsed");
       } catch {
-        // Storage blocked: the choice lasts until the page reloads.
       }
       return !c;
     });
@@ -172,16 +164,10 @@ export function AppShell() {
     getPreferences()
       .then((p) => {
         setTheme(p.theme);
-        setLanguage(user?.role === "user" ? p.language : "en");
       })
       .catch(() => undefined);
   }, []);
   useEffect(() => setOpen(false), [location.pathname]);
-
-  const toggleSound = () => {
-    setSoundEnabled(!sound);
-    setSound(!sound);
-  };
 
   const items: Item[] =
     user?.role === "admin"
@@ -217,7 +203,6 @@ export function AppShell() {
             { to: paths.citizenVisits, label: t("nav.visits"), icon: CalendarDays },
             { to: paths.assistant, label: t("nav.assistant"), icon: Sparkles },
           ];
-  // Profile and settings are citizen and worker pages; an admin has neither.
   const account: Item[] =
     user?.role === "admin"
       ? []
@@ -230,12 +215,7 @@ export function AppShell() {
     "grid h-10 w-10 place-items-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-ink";
   const toolbar = (
     <div className="flex items-center gap-1">
-      {user?.role === "user" && <LanguageSwitch compact className={iconBtn} />}
       <ThemeToggle className={iconBtn} />
-      <button type="button" onClick={toggleSound} aria-pressed={sound} title={`${t("shell.sounds")}: ${sound ? t("shell.on") : t("shell.off")}`} className={iconBtn}>
-        {sound ? <Volume2 size={18} aria-hidden="true" /> : <VolumeX size={18} aria-hidden="true" />}
-        <span className="visually-hidden">{t("shell.sounds")}</span>
-      </button>
       {account.map((item) => (
         <NavLink
           key={item.to}
@@ -317,18 +297,10 @@ export function AppShell() {
             <span className="visually-hidden">{collapsed ? "Show the sidebar" : "Hide the sidebar"}</span>
           </button>
         </div>
-        {user && (
-          <p className={cx("mb-5 hidden px-2", !collapsed && "lg:block")}>
-            <span className="inline-flex items-center rounded-full border border-olive/20 bg-paper/60 px-3 py-1 text-xs font-semibold text-ink">
-              {ROLE_LABEL[user.role]}
-            </span>
-          </p>
-        )}
         <nav aria-label="Main" className="flex flex-col gap-1">
           {items.map(link)}
         </nav>
         <div className="mt-6 lg:mt-auto">
-          {!collapsed && <Doodle piece="beads" className="static! -mb-2! ml-auto w-20 lg:block!" />}
           <nav aria-label="Account" className="flex flex-col gap-1 border-t border-olive/20 pt-3">
             <button
               type="button"

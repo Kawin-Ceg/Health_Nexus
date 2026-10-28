@@ -13,7 +13,6 @@ interface TagInputProps {
   error?: string;
 }
 
-/** Type and press Enter (or comma) to add; Backspace on an empty box removes the last. */
 export function TagInput({ label, values, onChange, max = 10, placeholder, hint, error }: TagInputProps) {
   const id = useId();
   const [draft, setDraft] = useState("");
@@ -36,7 +35,7 @@ export function TagInput({ label, values, onChange, max = 10, placeholder, hint,
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" || event.key === ",") {
-      event.preventDefault(); // Enter must not submit the surrounding form
+      event.preventDefault();
       add();
     } else if (event.key === "Backspace" && !draft && values.length) {
       onChange(values.slice(0, -1));

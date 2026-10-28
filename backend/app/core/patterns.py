@@ -6,10 +6,8 @@ The frontend keeps a byte-for-byte copy of EMPLOYEE_ID_PATTERN in
 
 import re
 
-# e.g. TNPHC-CHN-2847
 EMPLOYEE_ID_PATTERN = r"^[A-Z]{2,6}-[A-Z]{2,6}-\d{3,6}$"
 
-# re.ASCII keeps \d to 0-9, matching JavaScript's behaviour.
 _EMPLOYEE_ID_RE = re.compile(EMPLOYEE_ID_PATTERN, re.ASCII)
 
 

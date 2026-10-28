@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Ban } from "lucide-react";
-import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SearchInput, cx, inputCls } from "../../components/app/ui";
+import { Btn, Card, Empty, ErrorNote, Loading, PageHeader, SearchInput, cx, inputCls, Status } from "../../components/app/ui";
 import { fmtAgo } from "../../lib/format";
 import { useDebounced } from "../../lib/useDebounced";
 import { useResource } from "../../lib/useResource";
@@ -127,18 +127,18 @@ function AccountRow({ n, account: a, onChanged }: { n: number; account: Account;
       <td className="px-4 py-3 text-ink-soft">{fmtAgo(a.created_at)}</td>
       <td className="px-4 py-3">
         {a.is_active ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+          <Status tone="success">
             Active
-          </span>
+          </Status>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-800">
+          <Status tone="danger">
             Deactivated
-          </span>
+          </Status>
         )}
         {!a.is_verified && (
-          <span className="mt-1 flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+          <Status tone="warn">
             Email not confirmed
-          </span>
+          </Status>
         )}
       </td>
       <td className="px-4 py-3 text-right">
@@ -163,7 +163,7 @@ function AccountRow({ n, account: a, onChanged }: { n: number; account: Account;
             </button>
           )
         ) : (
-          <Btn busy={busy} onClick={() => run(() => reactivateAccount(a.id))}>Reactivate</Btn>
+          <Btn tone="success" busy={busy} onClick={() => run(() => reactivateAccount(a.id))}>Reactivate</Btn>
         )}
         {error && <p className="mt-1 text-xs text-danger">{error}</p>}
       </td>

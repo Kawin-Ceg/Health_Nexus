@@ -134,9 +134,6 @@ async def _count(db: AsyncSession, query) -> int:
     return await db.scalar(select(func.count()).select_from(query.subquery())) or 0
 
 
-# --- Directory building blocks -------------------------------------------------
-
-
 def _directory(worker: User, now: datetime):
     """The catchment joined with each citizen's reading and open-flag aggregates, plus the engagement status."""
     members = catchment_ids(worker)
@@ -178,9 +175,6 @@ async def _engagement_counts(db: AsyncSession, worker: User, now: datetime) -> E
     source, members, status_expr, _, _ = _directory(worker, now)
     rows = await db.execute(select(status_expr, func.count()).select_from(source).where(members).group_by(status_expr))
     return EngagementCounts(**dict(rows.all()))
-
-
-# --- Dashboard and overview ----------------------------------------------------
 
 
 @router.get("/dashboard", response_model=DashboardOut)
@@ -280,9 +274,6 @@ async def overview(worker: User = Depends(require_catchment_worker), db: AsyncSe
     )
 
 
-# --- The queue: one row per open flag -----------------------------------------
-
-
 def _case_out(processed: ProcessedData, record: HealthRecord, citizen: User) -> CaseOut:
     return CaseOut(
         processed_id=processed.id,
@@ -365,9 +356,6 @@ async def mark_seen(
     await db.execute(_apply(update(ProcessedData).where(ProcessedData.id == processed.id), worker, data))
     await db.commit()
     return Cleared(cleared=1)
-
-
-# --- The worklist: open flags grouped by citizen --------------------------------
 
 
 @router.get("/worklist", response_model=WorklistOut)
@@ -476,9 +464,6 @@ async def resolve_citizen(
     return Cleared(cleared=result.rowcount or 0)
 
 
-# --- Directory and record ------------------------------------------------------
-
-
 @router.get("/citizens", response_model=DirectoryOut)
 async def citizens(
     q: str | None = Query(None, max_length=80),
@@ -509,7 +494,6 @@ async def citizens(
         query = query.where(status_expr == status_)
     total = await _count(db, query)
 
-    # What is worth opening first: open flags (worst first), never logged, then longest silent.
     rank = case((status_expr == "attention", 0), (status_expr == "never_logged", 1), (status_expr == "silent", 2), else_=3)
     rows = await db.execute(
         query.order_by(
@@ -664,7 +648,6 @@ async def citizen_record(
         )
     ).all()
 
-    # Unresolved from before the window: reported beside it, never mixed into it.
     before_open, oldest = (
         await db.execute(
             select(func.count(), func.min(HealthRecord.timestamp))
@@ -736,9 +719,6 @@ async def citizen_record(
         ),
         min_baseline_readings=MIN_BASELINE_READINGS,
     )
-
-
-# --- Feed, reports, map --------------------------------------------------------
 
 
 @router.get("/alerts", response_model=FeedOut)
@@ -819,7 +799,6 @@ async def reports(
     ).one()
 
     by_area: dict[str, dict[str, float]] = {}
-    # The locality breakdown is area-level, so only citizens who allowed community monitoring count in it.
     community = counts_in_community(User.id)
     for area, n in (
         await db.execute(select(User.area, func.count()).where(User.id.in_(members), community).group_by(User.area))
@@ -875,9 +854,6 @@ async def risk_map(worker: User = Depends(require_catchment_worker), db: AsyncSe
     )
 
 
-# --- Visits --------------------------------------------------------------------
-
-
 @router.post("/visits", response_model=VisitOut, status_code=status.HTTP_201_CREATED)
 async def book_visit(
     data: VisitCreate, worker: User = Depends(require_catchment_worker), db: AsyncSession = Depends(get_session)
@@ -920,7 +896,6 @@ async def book_visit(
         notes=data.notes or None,
     )
     db.add(visit)
-    # Booking a follow-up is a review: the case leaves the queue.
     if case_row is not None and case_row.resolution is None:
         case_row.resolution = FlagResolution.reviewed
         case_row.reviewed_at = utcnow()

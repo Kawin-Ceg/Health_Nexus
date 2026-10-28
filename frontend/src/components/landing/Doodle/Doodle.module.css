@@ -3,45 +3,25 @@
   z-index: -1;
   display: none;
   pointer-events: none;
-  perspective: 700px;
 }
 
 .art {
   opacity: var(--doodle-opacity, 1);
-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(var(--tx, 0px), var(--ty, 0px), 0)
-    scale(var(--s, 1));
-  transform-style: preserve-3d;
+  transform: scale(var(--s, 1));
   transition:
-    transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter 400ms ease-out,
-    opacity 400ms ease-out;
+    transform 300ms ease-out,
+    opacity 300ms ease-out;
 }
 
 .art[data-hover="true"] {
   --s: 1.08;
   opacity: 1;
-  filter: drop-shadow(0 22px 26px rgb(17 17 17 / 0.18));
 }
 
 .doodle svg {
   width: 100%;
   height: auto;
   overflow: visible;
-  animation: float 7s ease-in-out infinite alternate;
-}
-
-.doodle:nth-of-type(2n) svg {
-  animation-duration: 9s;
-  animation-delay: -3s;
-}
-
-.doodle:nth-of-type(3n) svg {
-  animation-duration: 11s;
-  animation-delay: -5s;
-}
-
-.paper {
-  box-shadow: 0 18px 40px -24px rgb(17 17 17 / 0.35);
 }
 
 @keyframes float {
@@ -51,38 +31,6 @@
   to {
     translate: 0 10px;
   }
-}
-
-/* Some keep moving on their own, hovered or not. */
-.art[data-piece="capsules"] svg {
-  animation:
-    float 6s ease-in-out infinite alternate,
-    tumble 16s ease-in-out infinite alternate;
-}
-
-.art[data-piece="coral"] svg {
-  animation:
-    float 8s ease-in-out infinite alternate,
-    tumble 10s ease-in-out infinite alternate;
-}
-
-.art[data-piece="microbe"] svg {
-  animation:
-    float 9s ease-in-out infinite alternate,
-    turn 60s linear infinite;
-}
-
-.art[data-piece="network"] svg {
-  animation: turn 120s linear infinite;
-}
-
-.art[data-piece="botanical"] svg {
-  transform-origin: left bottom;
-  animation: breeze 5s ease-in-out infinite alternate;
-}
-
-.art[data-piece="helix"] svg {
-  animation: drift 12s ease-in-out infinite;
 }
 
 @keyframes tumble {
@@ -125,7 +73,6 @@
   }
 }
 
-/* Heart-rate card: the trace redraws itself. */
 .art[data-piece="ecg"][data-hover="true"] path[stroke-linejoin] {
   stroke-dasharray: 420;
   animation: draw 1.4s ease-out;
@@ -137,7 +84,6 @@
   }
 }
 
-/* Beads bob, each a beat behind the last. */
 .art[data-piece="beads"][data-hover="true"] circle {
   animation: bob 700ms ease-in-out infinite alternate;
 }
@@ -156,7 +102,6 @@
   }
 }
 
-/* Capsules wiggle in place. */
 .art[data-piece="capsules"] g {
   transform-box: fill-box;
   transform-origin: center;
@@ -179,7 +124,6 @@
   }
 }
 
-/* Branch tips pulse like nodes lighting up. */
 .art[data-piece="tree"] circle {
   transform-box: fill-box;
   transform-origin: center;
@@ -201,7 +145,6 @@
   }
 }
 
-/* Radial cells spin slowly. */
 .art[data-piece="radial"] g {
   transform-box: fill-box;
   transform-origin: center;
@@ -221,7 +164,6 @@
   }
 }
 
-/* Helix rungs and outlines flow. */
 .art[data-piece="helix"][data-hover="true"] line,
 .art[data-piece="honeycomb"][data-hover="true"] path[stroke-dasharray] {
   animation: march 1.2s linear infinite;
@@ -237,7 +179,6 @@
   animation: shimmer 1.6s ease-in-out infinite alternate;
 }
 
-/* Tissue cells shimmer, the waves move. */
 .art[data-piece="tissue"][data-hover="true"] rect:last-of-type {
   animation: shimmer 900ms ease-in-out infinite alternate;
 }
@@ -253,7 +194,6 @@
   }
 }
 
-/* Network: links pulse, gold nodes flare. */
 .art[data-piece="network"][data-hover="true"] line {
   animation: shimmer 800ms ease-in-out infinite alternate;
 }
@@ -267,7 +207,6 @@
   animation: pulse 900ms ease-in-out infinite;
 }
 
-/* Botanical sprigs sway. */
 .art[data-piece="botanical"] g {
   transform-box: fill-box;
   transform-origin: left bottom;
@@ -290,7 +229,6 @@
   }
 }
 
-/* Flask bubbles rise. */
 .art[data-piece="flask"][data-hover="true"] circle {
   animation: rise 1.2s ease-in infinite;
 }
@@ -310,12 +248,10 @@
   }
 }
 
-/* Speckle cloud shimmers. */
 .art[data-piece="speckle"][data-hover="true"] circle:nth-of-type(3n) {
   animation: shimmer 600ms ease-in-out infinite alternate;
 }
 
-/* Microbe spikes turn; coral breathes. */
 .art[data-piece="microbe"] > svg > g {
   transform-box: fill-box;
   transform-origin: center;

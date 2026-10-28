@@ -28,7 +28,6 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 MEDIA_URL = "/api/v1/media"
 Kind = Literal["avatars", "covers"]
 MAX_BYTES: dict[str, int] = {"avatars": 2 * 1024 * 1024, "covers": 5 * 1024 * 1024}
-# Sniffed from the bytes, never trusted from the filename or Content-Type.
 SIGNATURES = ((b"\x89PNG\r\n\x1a\n", "png"), (b"\xff\xd8\xff", "jpg"))
 
 
@@ -131,9 +130,6 @@ async def update_profile(
     return await _profile_out(db, user)
 
 
-# --- Images ----------------------------------------------------------------------
-
-
 def media_root() -> Path:
     return Path(get_settings().MEDIA_DIR).resolve()
 
@@ -168,7 +164,6 @@ async def _store(file: UploadFile, kind: Kind, user: User) -> str:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Upload a PNG, JPEG or WebP image.")
     folder = media_root() / kind
     folder.mkdir(parents=True, exist_ok=True)
-    # Unguessable name, so a URL cannot be derived from a user id.
     name = f"{secrets.token_urlsafe(18)}.{ext}"
     (folder / name).write_bytes(content)
     _remove_old(user.avatar_url if kind == "avatars" else user.cover_url, kind)
@@ -208,8 +203,6 @@ async def remove_cover(user: User = Depends(require_any_verified), db: AsyncSess
     await db.commit()
     return await _profile_out(db, user)
 
-
-# --- Email change ------------------------------------------------------------------
 
 EMAIL_TAKEN = "An account with this email already exists."
 BAD_EMAIL_LINK = "This confirmation link is invalid or has expired."
@@ -268,7 +261,7 @@ async def confirm_email_change(
     user.email_token_expires_at = None
     try:
         await db.commit()
-    except IntegrityError:  # someone registered the address in the meantime
+    except IntegrityError:
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, EMAIL_TAKEN) from None
     background.add_task(send_email_changed_notice, old, user.name, new)

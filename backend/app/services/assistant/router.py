@@ -16,7 +16,6 @@ _UNIT_DAYS = {"day": 1, "week": 7, "month": 30, "year": 365}
 
 GREETING = re.compile(r"^\s*(hi|hello|hey|namaste|vanakkam|good (morning|afternoon|evening))\b[\s!.?]*$", re.I)
 HELP = re.compile(r"\b(help|what can you (do|answer)|what (should|can) i ask|how do(es)? (this|you) work)\b", re.I)
-# Questions a records assistant must not answer: it reads data, it does not practise medicine.
 MEDICAL_ADVICE = re.compile(
     r"\b(diagnos\w*|prescri\w*|what (medicine|medication|tablet|drug)s? should|should i (take|stop|start|increase|reduce)|"
     r"dos(e|age)|treat(ment)? for|cure|is it (cancer|covid|dengue|malaria|tb)|do i have)\b",
@@ -82,7 +81,6 @@ def extract_name(text: str) -> str | None:
     if not m:
         return None
     words = [w for w in m.group(1).split() if w.lower() not in _STOP]
-    # Prefer capitalised words: "how is Priya doing" -> "Priya".
     caps = [w for w in words if w[0].isupper()]
     chosen = caps or words
     return " ".join(chosen[:2]) if chosen else None
@@ -101,7 +99,7 @@ def plan(role: UserRole, question: str) -> Plan | None:
         return None
     best.args = fill_args(best.tool, question)
     if best.tool.name == "citizen_summary" and not best.args.get("name"):
-        return None  # a lookup with nobody named is not a lookup
+        return None
     return best
 
 

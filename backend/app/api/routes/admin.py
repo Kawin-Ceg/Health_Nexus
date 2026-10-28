@@ -73,9 +73,6 @@ def _ip(request: Request) -> str:
     return sessions.client_ip(request) or "unknown"
 
 
-# --- Overview -------------------------------------------------------------------
-
-
 class Overview(BaseModel):
     users_by_role: dict[str, int]
     inactive_accounts: int
@@ -379,9 +376,6 @@ async def centre_activity(
     )
 
 
-# --- Health centre registry -------------------------------------------------------
-
-
 class FacilityOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
@@ -416,9 +410,6 @@ async def facilities(
     if state:
         query = query.where(ValidPhcFacility.state.ilike(state.strip()))
     return list((await db.scalars(query.order_by(ValidPhcFacility.name).limit(limit))).all())
-
-
-# --- PHC worker applications --------------------------------------------------------
 
 
 class Applicant(BaseModel):
@@ -465,7 +456,6 @@ class HistoryItem(BaseModel):
 
 
 class ApplicationDetail(ApplicationItem):
-    # The registry's single exact match for what the applicant claimed, if any.
     suggested_facility: FacilityOut | None
     history: list[HistoryItem]
     documents: list[DocumentOut]
@@ -543,7 +533,6 @@ async def list_applications(
                 PhcApplication.employee_id.ilike(like))
         )
     total = await db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    # Oldest pending first: whoever has waited longest is reviewed first.
     rows = (await db.execute(query.order_by(PhcApplication.created_at).limit(limit).offset(offset))).all()
     counts = dict(
         (await db.execute(select(PhcApplication.status, func.count()).where(*filters).group_by(PhcApplication.status))).all()
@@ -656,7 +645,6 @@ async def approve(
     app_.last_checked_at = now
     app_.reviewed_by = admin.id
     app_.reviewed_at = now
-    # The catchment link: from here the worker sees citizens of this facility.
     user.role = UserRole.phc_worker
     user.phc_id = facility.id
     user.district = facility.district
@@ -720,7 +708,6 @@ async def revoke(
     if worker is not None:
         worker.role = UserRole.pending_phc
         worker.phc_id = None
-        # Citizens should not wait for a visit from someone who can no longer see them.
         visits = await db.execute(
             select(ScheduledVisit, User)
             .join(User, User.id == ScheduledVisit.citizen_id)
@@ -729,15 +716,11 @@ async def revoke(
         for visit, citizen in visits.all():
             visit.status = VisitStatus.cancelled
             notify_changed(db, visit, citizen, worker, "cancelled")
-        # Their assistant history quotes catchment records they may no longer see.
         await db.execute(delete(ChatSession).where(ChatSession.user_id == worker.id))
     _log(db, app_, admin, PhcVerificationAction.application_revoked, ApplicationStatus.approved.value, data.reason,
          request)
     await db.commit()
     return await _detail(db, app_.id)
-
-
-# --- Accounts ---------------------------------------------------------------------
 
 
 class AccountItem(BaseModel):
@@ -836,7 +819,6 @@ async def deactivate_user(
         raise HTTPException(status.HTTP_409_CONFLICT, "This account is already deactivated.")
     user.is_active = False
     user.deactivated_at = utcnow()
-    # Signed out everywhere at once; get_current_user also re-reads is_active on every request.
     await sessions.revoke_all_for_user(db, user.id, "deactivated_by_admin")
     db.add(AuditLog(user_id=admin.id, action=f"admin_deactivate: {data.reason}", entity="users",
                     entity_id=user.id, ip_address=_ip(request)))
@@ -869,9 +851,6 @@ async def _account(db: AsyncSession, u: User) -> AccountItem:
         profile_completed=u.profile_completed, facility=facility, district=u.district, state=u.state,
         created_at=u.created_at, deactivated_at=u.deactivated_at,
     )
-
-
-# --- Support concerns ---------------------------------------------------------------
 
 
 class ConcernItem(BaseModel):
@@ -1008,9 +987,6 @@ async def update_concern(
     return _concern(*row)
 
 
-# --- Audit trail --------------------------------------------------------------------
-
-
 class AuditItem(BaseModel):
     source: Literal["account", "verification"]
     action: str
@@ -1065,8 +1041,6 @@ async def audit(
     items.sort(key=lambda i: i.created_at, reverse=True)
     return items[:limit]
 
-
-# --- Research export ----------------------------------------------------------------
 
 RESEARCH_EXPORT_CAP = 50_000
 

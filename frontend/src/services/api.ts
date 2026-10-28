@@ -1,7 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import type { AuthPayload, User } from "./auth";
 
-/** Why the session ended without the user asking. Shown on the login page. */
 export type SessionEndReason = "inactivity" | "expired";
 
 export interface AuthHandlers {
@@ -9,8 +8,6 @@ export interface AuthHandlers {
   onSessionEnded: (reason: SessionEndReason | null) => void;
 }
 
-// The access token lives here, in memory only. Never localStorage or sessionStorage:
-// a page reload drops it and the httpOnly refresh cookie restores it.
 let accessToken: string | null = null;
 let handlers: AuthHandlers | null = null;
 
@@ -21,11 +18,9 @@ export const registerAuthHandlers = (h: AuthHandlers | null) => {
   handlers = h;
 };
 
-/** An error whose `detail` is always a string, however FastAPI shaped it. */
 export class ApiError extends Error {
   readonly status: number;
   readonly detail: string;
-  /** For 422s: message per field name, so a form can mark the right input. */
   readonly fieldErrors: Record<string, string>;
 
   constructor(status: number, detail: string, fieldErrors: Record<string, string> = {}) {
@@ -44,10 +39,6 @@ interface ValidationItem {
 
 const tidy = (msg: string) => msg.replace(/^Value error,\s*/i, "");
 
-/**
- * FastAPI's `detail` is a string for an HTTPException but a list of objects for a
- * 422. Rendering that list as a React child throws, so flatten it here, once.
- */
 export function normaliseDetail(detail: unknown): { message: string; fieldErrors: Record<string, string> } {
   if (typeof detail === "string") return { message: detail, fieldErrors: {} };
   if (Array.isArray(detail)) {
@@ -68,7 +59,7 @@ export function normaliseDetail(detail: unknown): { message: string; fieldErrors
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "/api/v1",
-  withCredentials: true, // sends the hn_refresh cookie
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
@@ -78,7 +69,6 @@ api.interceptors.request.use((config) => {
 
 type Retryable = InternalAxiosRequestConfig & { _retried?: boolean };
 
-// Retrying these on a 401 would loop forever: a failed login or refresh is final.
 const NEVER_RETRY = ["/auth/login", "/auth/refresh"];
 const ALREADY_USED = /already used/i;
 
@@ -86,11 +76,6 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let inflightRefresh: Promise<AuthPayload> | null = null;
 
-/**
- * One refresh at a time. React StrictMode and several tabs all ask at start-up;
- * the server rotates the token on each call, so a second concurrent call with
- * the same cookie would look like token theft.
- */
 export function refreshSession(): Promise<AuthPayload> {
   inflightRefresh ??= (async () => {
     try {
@@ -98,7 +83,6 @@ export function refreshSession(): Promise<AuthPayload> {
       try {
         response = await api.post<AuthPayload>("/auth/refresh");
       } catch (error) {
-        // Another tab won the rotation a moment ago and has already set a fresh cookie.
         if (error instanceof ApiError && ALREADY_USED.test(error.detail)) {
           await sleep(400);
           response = await api.post<AuthPayload>("/auth/refresh");
@@ -120,7 +104,6 @@ export function refreshSession(): Promise<AuthPayload> {
   return inflightRefresh;
 }
 
-/** No cookie at all is just "not signed in"; only a session that existed and died deserves a message. */
 function endReasonOf(detail: string): SessionEndReason | null {
   if (/inactivity/i.test(detail)) return "inactivity";
   if (/no refresh token/i.test(detail)) return null;
@@ -140,7 +123,7 @@ api.interceptors.response.use(
       } catch {
         return Promise.reject(toApiError(error));
       }
-      return api(config); // the request interceptor attaches the new token
+      return api(config);
     }
     return Promise.reject(toApiError(error));
   },
@@ -151,7 +134,6 @@ function toApiError(error: AxiosError<{ detail?: unknown }>): ApiError {
     return new ApiError(0, "Cannot reach the server. Check your connection and try again.");
   }
   const { message, fieldErrors } = normaliseDetail(error.response.data?.detail);
-  // Anything else that reads response.data.detail also gets a string.
   if (error.response.data && typeof error.response.data === "object") error.response.data.detail = message;
   return new ApiError(error.response.status, message, fieldErrors);
 }
@@ -159,7 +141,6 @@ function toApiError(error: AxiosError<{ detail?: unknown }>): ApiError {
 export const errorMessage = (error: unknown): string =>
   error instanceof ApiError ? error.detail : "Something went wrong. Please try again.";
 
-/** Seconds from a 429's Retry-After header, if the server sent one. */
 export const retryAfterSeconds = (error: unknown): number | null => {
   if (!(error instanceof ApiError) || error.status !== 429) return null;
   const match = error.detail.match(/(\d+)\s*seconds/);

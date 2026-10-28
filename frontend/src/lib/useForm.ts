@@ -4,10 +4,6 @@ import { ApiError, errorMessage } from "../services/api";
 type Values = Record<string, string | boolean | string[]>;
 type Errors<T> = Partial<Record<keyof T & string, string>>;
 
-/**
- * Small form state: inline validation on blur, one message per field, server 422s
- * mapped back onto their inputs, and a submitting flag for the button's loading state.
- */
 export function useForm<T extends Values>(initial: T, validate: (values: T) => Errors<T>) {
   const [values, setValues] = useState<T>(initial);
   const [touched, setTouched] = useState<Set<string>>(new Set());
@@ -42,12 +38,10 @@ export function useForm<T extends Values>(initial: T, validate: (values: T) => E
     onBlur: () => touch([name]),
   });
 
-  /** Marks the given fields (default all) as touched; true if any of them has a problem. */
   const check = (names: (keyof T & string)[] = Object.keys(values)): boolean => {
     touch(names);
     const bad = names.some((n) => problems[n]);
     if (bad) {
-      // Wait a frame so the error markup exists, then move focus to the first bad input.
       requestAnimationFrame(() => {
         const scope = formRef.current ?? document;
         scope.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();

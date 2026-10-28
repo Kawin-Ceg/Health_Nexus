@@ -26,7 +26,6 @@ log = logging.getLogger(__name__)
 
 READING_REMINDER_AFTER = timedelta(days=3)
 CHECK_EVERY = timedelta(hours=1)
-# Local hours a reminder may go out in: nobody wants one at 2 a.m.
 SEND_FROM_HOUR, SEND_UNTIL_HOUR = 9, 20
 MESSAGE = (
     "It has been a few days since your last reading. Logging regularly is what lets HealthNexus learn what is "
@@ -41,7 +40,6 @@ async def send_due(session: AsyncSession) -> int:
     last_reading = (
         select(func.max(HealthRecord.timestamp)).where(HealthRecord.user_id == User.id).correlate(User).scalar_subquery()
     )
-    # Quiet since: their last reading, or when they joined if they have none.
     quiet_since = func.coalesce(last_reading, User.created_at)
     due = await session.scalars(
         select(User).where(
@@ -50,10 +48,8 @@ async def send_due(session: AsyncSession) -> int:
             User.profile_completed.is_(True),
             User.consent.is_(True),
             quiet_since < cutoff,
-            # One per quiet stretch: none sent since they last logged (or joined).
             or_(User.reading_reminder_at.is_(None), User.reading_reminder_at < quiet_since),
         )
-        # Preferences may have changed since this session last loaded these people.
         .execution_options(populate_existing=True)
     )
     sent = 0

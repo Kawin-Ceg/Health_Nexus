@@ -1,4 +1,3 @@
-import { play } from "../lib/sound";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
   ArrowRight,
@@ -23,15 +22,13 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import { ErrorNote, Loading, cx, inputCls } from "../components/app/ui";
+import { ErrorNote, Loading, cx, inputCls, Status } from "../components/app/ui";
 import { useAuth } from "../context/AuthContext";
 import { fmtAgo } from "../lib/format";
-import { useResource } from "../lib/useResource";
 import { errorMessage } from "../services/api";
 import {
   askAssistant,
   deleteSession,
-  getAssistantInfo,
   getSession,
   getSessions,
   renameSession,
@@ -40,7 +37,6 @@ import {
   type Retrieval,
 } from "../services/assistant";
 
-/** Nira's mascot. Set this to the image path (e.g. "/brand/nira.png") once the artwork is in place. */
 const NIRA_ART: string | null = null;
 
 type Starter = { icon: typeof Users; title: string; body: string; ask: string | null };
@@ -74,7 +70,6 @@ const SCOPE: Record<string, string> = {
 
 const TAGLINE = "Your AI companion for a healthier, more connected community.";
 
-/** Shown while the answer is on its way, so the question does not appear to vanish. */
 const pending = (content: string): ChatMessage => ({
   id: "pending",
   role: "user",
@@ -102,7 +97,6 @@ function group(sessions: ChatSession[]): [string, ChatSession[]][] {
 export function Assistant() {
   const { user } = useAuth();
   const role = user?.role ?? "user";
-  const info = useResource((s) => getAssistantInfo(s), "info");
   const [sessions, setSessions] = useState<ChatSession[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -182,7 +176,6 @@ export function Assistant() {
     setMessages((m) => [...m, pending(content)]);
     try {
       const out = await askAssistant(content, activeId);
-      play("message");
       setMessages((m) => [...m.filter((x) => x.id !== "pending"), out.question, out.answer]);
       setActiveId(out.session.id);
       setSessions((list) => [out.session, ...(list ?? []).filter((s) => s.id !== out.session.id)]);
@@ -231,8 +224,6 @@ export function Assistant() {
     }
   };
 
-  const engine = info.data?.engine === "gemini" ? `Gemini (${info.data.model})` : "built-in rules";
-
   const composer = (
     <form
       onSubmit={onSubmit}
@@ -253,9 +244,9 @@ export function Assistant() {
         className="hn-bare-input block max-h-40 min-h-11 w-full resize-none bg-transparent px-2 py-2 text-base text-ink placeholder:text-ink-muted"
       />
       <div className="mt-1 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-paper px-3 py-1.5 text-xs font-medium text-ink-soft">
+        <Status tone="neutral">
           <Database size={13} aria-hidden="true" /> {SCOPE[role]}
-        </span>
+        </Status>
         <button
           type="submit"
           disabled={!draft.trim() || sending}
@@ -497,7 +488,7 @@ export function Assistant() {
             )}
             {composer}
             <p className="mt-2.5 text-center text-xs text-ink-muted">
-              Nira uses HealthNexus records only ({engine}). Not medical advice. In an emergency call 108.
+              Nira uses HealthNexus records only. Not medical advice. In an emergency call 108.
             </p>
           </div>
         </div>
@@ -506,7 +497,6 @@ export function Assistant() {
   );
 }
 
-/** Soft leaf shapes in the corners, behind everything. */
 function Decor() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
@@ -598,14 +588,13 @@ function Bubble({ message: m }: { message: ChatMessage }) {
         >
           {m.content}
         </div>
-        {!mine && m.retrieval && <Sources message={m} retrieval={m.retrieval} />}
+        {!mine && m.retrieval && <Sources retrieval={m.retrieval} />}
       </div>
     </li>
   );
 }
 
-/** "How I found this": every source, the period, whether the numbers were checked, and the rows. */
-function Sources({ message: m, retrieval: r }: { message: ChatMessage; retrieval: Retrieval }) {
+function Sources({ retrieval: r }: { retrieval: Retrieval }) {
   const args = Object.entries(r.args)
     .filter(([, v]) => v !== null && v !== "")
     .map(([k, v]) => `${k.replace(/_/g, " ")}: ${String(v)}`)
@@ -616,16 +605,12 @@ function Sources({ message: m, retrieval: r }: { message: ChatMessage; retrieval
         <Database size={12} aria-hidden="true" />
         Based on: {(r.sources ?? [r]).map((s) => `${s.title}${period(s.args)} (${s.row_count} row${s.row_count === 1 ? "" : "s"})`).join(" · ")}
         {r.grounded === true && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 font-semibold text-green-800">
-            <ShieldCheck size={12} aria-hidden="true" /> Numbers checked
-          </span>
+          <Status tone="success" icon={ShieldCheck}>Numbers checked</Status>
         )}
-        {r.grounded === false && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800">Plain summary used</span>}
-        {m.latency_ms != null && <span>· {(m.latency_ms / 1000).toFixed(1)} s</span>}
+        {r.grounded === false && <Status tone="warn">Plain summary used</Status>}
       </summary>
       <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3 text-left">
         {args && <p>Parameters: {args}</p>}
-        <p>Answered by: {r.engine === "rules" ? "built-in rules" : r.engine}</p>
         {r.rows.length > 0 && (
           <div className="max-h-56 overflow-auto">
             <table className="w-full text-left">

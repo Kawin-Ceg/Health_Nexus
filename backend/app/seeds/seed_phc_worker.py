@@ -20,8 +20,6 @@ from app.services.phc_registry import match_facility
 
 from ._common import password_or_generated, run, user_by_email, utcnow
 
-# Deliberately written differently from the registry's "Mylapore PHC" to
-# exercise name normalisation.
 CLAIMED_PHC = "Mylapore Primary Health Centre"
 DISTRICT = "Chennai"
 STATE = "Tamil Nadu"

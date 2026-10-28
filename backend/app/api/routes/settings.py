@@ -44,8 +44,6 @@ EXPORT_READINGS_CAP = 10_000
 CONCERN_NOT_FOUND = "Concern not found."
 
 
-# --- Preferences -----------------------------------------------------------------
-
 @router.get("/preferences", response_model=Preferences)
 async def get_preferences(user: User = Depends(require_any_verified)) -> Preferences:
     return current_preferences(user)
@@ -61,16 +59,12 @@ async def update_preferences(
         prefs = Preferences.model_validate(merged)
     except ValidationError as exc:
         raise RequestValidationError(exc.errors(include_context=False, include_input=False)) from None
-    user.preferences = prefs.model_dump()  # a new object, so the JSON column is marked dirty
+    user.preferences = prefs.model_dump()
     await db.commit()
     return prefs
 
 
-# --- Consents --------------------------------------------------------------------
-
-
 class ConsentsOut(BaseModel):
-    # None: never asked.
     consents: dict[ConsentType, bool | None]
 
 
@@ -119,9 +113,6 @@ async def consent_history(
         .limit(limit)
     )
     return list(rows.all())
-
-
-# --- About and export ------------------------------------------------------------
 
 
 class DataHeld(BaseModel):
@@ -279,9 +270,6 @@ async def export(
     )
 
 
-# --- Password and deactivation ---------------------------------------------------
-
-
 class PasswordChange(BaseModel):
     current_password: Annotated[str, Field(min_length=1, max_length=1024)]
     new_password: Password
@@ -325,7 +313,6 @@ async def deactivate(
     now = utcnow()
     user.is_active = False
     user.deactivated_at = now
-    # Nobody should travel to a visit for an account that no longer exists.
     await cancel_open_visits(db, user)
     await sessions.revoke_all_for_user(db, user.id, "deactivated")
     db.add(AuditLog(user_id=user.id, action="deactivate", entity="users", entity_id=user.id,
@@ -336,9 +323,6 @@ async def deactivate(
         REFRESH_COOKIE_NAME, httponly=True, samesite="lax", secure=get_settings().COOKIE_SECURE, path=REFRESH_COOKIE_PATH
     )
     return response
-
-
-# --- Support concerns -------------------------------------------------------------
 
 
 class ConcernCreate(BaseModel):
@@ -397,9 +381,6 @@ async def get_concern(
     return concern
 
 
-# --- The citizen's health centre ------------------------------------------------
-
-
 class CentreOut(BaseModel):
     id: uuid.UUID
     name: str
@@ -412,7 +393,6 @@ class HealthCentreOut(BaseModel):
     district: str | None
     state: str | None
     current: CentreOut | None
-    # Every active centre in the citizen's district, the current one included.
     options: list[CentreOut]
 
 
@@ -472,7 +452,6 @@ async def change_health_centre(
         )
     if data.phc_id == user.phc_id:
         return await _health_centre(db, user)
-    # Visits booked by the old centre's workers can no longer happen: they lose sight of this person.
     await cancel_open_visits(db, user, unless_phc=data.phc_id)
     user.phc_id = data.phc_id
     db.add(AuditLog(user_id=user.id, action="change_health_centre", entity="valid_phc_facilities",

@@ -34,7 +34,6 @@ NAMES = [
 ]
 AREAS = ["Mylapore", "Mandaveli", "Alwarpet", "Royapettah", "Santhome", "Luz"]
 
-# Citizens (by index) whose last few days go out of range, and how.
 FLAGGED = {
     2: "fever",
     5: "hypertension",
@@ -101,7 +100,7 @@ async def seed(session: AsyncSession) -> None:
         return
 
     password = password_or_generated(settings.DEMO_CITIZEN_PASSWORD, "Demo citizens (shared)")
-    hashed = hash_password(password)  # bcrypt is slow; hash once for all demo citizens
+    hashed = hash_password(password)
     rng = random.Random(20260920)
     now = utcnow().replace(minute=0, second=0, microsecond=0)
     created = flagged_readings = 0

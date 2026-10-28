@@ -5,7 +5,6 @@ interface State {
   failed: boolean;
 }
 
-/** Last line of defence: a render error shows a way out instead of a blank page. */
 export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { failed: false };
 
@@ -14,7 +13,6 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Message and component stack only: never the app state, which may hold health data.
     console.error("Render error:", error.message, info.componentStack);
   }
 

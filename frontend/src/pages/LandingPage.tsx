@@ -13,10 +13,6 @@ import {
 import { LazySection } from "../components/ui/LazySection/LazySection";
 import styles from "./LandingPage.module.css";
 
-/**
- * Fixed-height placeholder so the page does not shift when the chart chunk
- * loads. It carries the section's anchor id so "#insights" links still land.
- */
 function ChartSectionFallback() {
   return (
     <div id={insights.id} className={styles.chartFallback} role="status">

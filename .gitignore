@@ -4,7 +4,6 @@ __pycache__/
 .env
 model/data/*
 !model/data/.gitkeep
-# Trained models are rebuilt by `python -m healthnexus_ml.train`; only the one the app loads is kept.
 model/artifacts/*.joblib
 !model/artifacts/vitals_anomaly.joblib
 node_modules/

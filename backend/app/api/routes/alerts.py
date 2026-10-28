@@ -40,7 +40,6 @@ async def list_alerts(
     advisories = (
         await db.scalars(
             select(Advisory)
-            # Ended ones too, for the citizen's advisory history (last 365 days).
             .where(targeting(user), Advisory.created_at >= now_utc() - timedelta(days=365))
             .order_by(is_active(now_utc()).desc())
             .order_by(Advisory.created_at.desc())
@@ -63,7 +62,6 @@ async def unread_count(user: User = Depends(require_any_verified), db: AsyncSess
 async def mark_read(
     data: MarkRead, user: User = Depends(require_any_verified), db: AsyncSession = Depends(get_session)
 ) -> Updated:
-    # user_id in the WHERE: ids belonging to anyone else, or to no one (advisories), match nothing.
     query = update(Alert).where(Alert.user_id == user.id, Alert.is_read.is_(False)).values(is_read=True)
     if data.ids is not None:
         query = query.where(Alert.id.in_(data.ids))
@@ -73,7 +71,6 @@ async def mark_read(
 
 
 class PhcBadge(UnreadCount):
-    # Citizens in the catchment with at least one open flag: the work waiting.
     citizens_flagged: int
 
 

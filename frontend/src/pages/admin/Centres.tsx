@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
-import { Btn, Card, Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls } from "../../components/app/ui";
+import { Btn, Card, Empty, ErrorNote, Labelled, Loading, PageHeader, SearchInput, cx, inputCls, Status } from "../../components/app/ui";
 import { useToast } from "../../components/app/Toaster";
 import { useDebounced } from "../../lib/useDebounced";
 import { useResource } from "../../lib/useResource";
@@ -205,7 +205,7 @@ function CentreRow({ n, centre: c, onEdit, onChanged }: { n: number; centre: Cen
       <td className="px-4 py-3 text-ink">{c.district}</td>
       <td className="px-4 py-3">
         {c.workers === 0 && c.is_active ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">0 · none</span>
+          <Status tone="warn">0 · none</Status>
         ) : (
           <span className="tabular-nums text-ink">{c.workers}</span>
         )}
@@ -213,15 +213,15 @@ function CentreRow({ n, centre: c, onEdit, onChanged }: { n: number; centre: Cen
       <td className="px-4 py-3 tabular-nums text-ink">{c.citizens}</td>
       <td className="px-4 py-3">
         {c.latitude != null
-          ? <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-800">Located</span>
-          : <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">No location</span>}
+          ? <Status tone="info">Located</Status>
+          : <Status tone="warn">No location</Status>}
       </td>
       <td className="px-4 py-3">
         <span className="flex flex-col items-start gap-1">
           {c.is_active
-            ? <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-800">Active</span>
-            : <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-800">Inactive</span>}
-          {c.is_placeholder && <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-800">Not yet checked</span>}
+            ? <Status tone="success">Active</Status>
+            : <Status tone="danger">Inactive</Status>}
+          {c.is_placeholder && <Status tone="progress">Not yet checked</Status>}
         </span>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -234,7 +234,7 @@ function CentreRow({ n, centre: c, onEdit, onChanged }: { n: number; centre: Cen
               <Trash2 size={15} aria-hidden="true" /> Deactivate
             </button>
           ) : (
-            <Btn tone="ghost" busy={busy} onClick={() => void toggle()}>Reactivate</Btn>
+            <Btn tone="success" busy={busy} onClick={() => void toggle()}>Reactivate</Btn>
           )}
         </span>
         {error && <p className="mt-1 text-xs text-danger">{error}</p>}

@@ -5,7 +5,6 @@ export type ConsentType = "community_surveillance" | "health_tracking" | "phc_wo
 
 export type FlagSeverity = "critical" | "high" | "moderate" | "low";
 
-/** Everything is always shown in the app; these choose what is also emailed. */
 export interface Preferences {
   theme: ThemeChoice;
   language: "en" | "ta" | "hi";
@@ -96,7 +95,6 @@ export const getConsentHistory = () =>
 
 export const getAbout = () => data(api.get<About>("/settings/about"));
 
-/** The export arrives as JSON; turned into a file the browser saves. */
 export async function downloadExport(): Promise<void> {
   const response = await api.get<Blob>("/settings/export", { responseType: "blob" });
   const url = URL.createObjectURL(response.data);

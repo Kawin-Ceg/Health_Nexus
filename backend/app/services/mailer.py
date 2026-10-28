@@ -42,8 +42,6 @@ async def send_email(to: str, subject: str, body: str) -> None:
     message.set_content(body)
 
     if not settings.SMTP_HOST:
-        # The plain body, not message.as_string(): long lines are quoted-printable
-        # encoded on the wire, which would mangle the link a developer copies.
         print(
             f"\n----- email (console, SMTP_HOST not set) -----\n"
             f"From: {settings.SMTP_FROM}\nTo: {to}\nSubject: {subject}\n\n{body}"
@@ -54,7 +52,6 @@ async def send_email(to: str, subject: str, body: str) -> None:
     try:
         await asyncio.to_thread(_deliver_smtp, message)
     except Exception as exc:  # noqa: BLE001 - smtplib raises many unrelated types
-        # The type only, no traceback: smtplib errors can carry the full recipient address.
         log.error("Could not send email to %s (%s)", mask_email(to), type(exc).__name__)
 
 

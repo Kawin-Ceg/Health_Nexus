@@ -13,13 +13,8 @@ import styles from "../components/auth/Auth.module.css";
 
 type Redeem = "idle" | "working" | "done" | "failed";
 
-/**
- * Public on purpose: people open the link on a phone or another browser with no session.
- * With a token it redeems it; without one it is the "check your inbox" screen.
- */
 export function VerifyEmail() {
   const [params, setParams] = useSearchParams();
-  // Captured once, then removed from the address bar so it does not linger in history.
   const [token] = useState(() => params.get("token"));
   const { user, status, refreshUser } = useAuth();
   const navigate = useNavigate();
@@ -29,12 +24,12 @@ export function VerifyEmail() {
   const started = useRef(false);
 
   useEffect(() => {
-    if (!token || started.current) return; // the ref keeps StrictMode from spending a single-use token twice
+    if (!token || started.current) return;
     started.current = true;
     setParams({}, { replace: true });
     verifyEmail(token)
       .then(async () => {
-        await refreshUser(); // a no-op when there is no session on this device
+        await refreshUser();
         setRedeem("done");
       })
       .catch((error) => {

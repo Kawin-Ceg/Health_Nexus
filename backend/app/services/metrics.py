@@ -12,9 +12,9 @@ class VitalSpec:
     key: str
     label: str
     unit: str
-    group: str  # how the entry form groups fields
-    normal: tuple[float, float] | None  # None: no normal band (weight)
-    plausible: tuple[float, float]  # outside this a value is a typo, not an anomaly
+    group: str
+    normal: tuple[float, float] | None
+    plausible: tuple[float, float]
     decimals: int = 0
 
 
@@ -31,7 +31,6 @@ _SPECS = (
 
 VITALS: dict[str, VitalSpec] = {spec.key: spec for spec in _SPECS}
 
-# Offered as chips on the entry form. Free text is accepted too, within limits.
 COMMON_SYMPTOMS = (
     "fever",
     "cough",

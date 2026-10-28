@@ -17,7 +17,6 @@ interface BaseProps {
 
 interface ActionProps {
   type?: "button" | "submit";
-  /** Shows a spinner and blocks further clicks while a request is in flight. */
   loading?: boolean;
   disabled?: boolean;
 }
@@ -27,7 +26,6 @@ type ButtonProps =
   | (BaseProps & { href: string; to?: never; type?: never; loading?: never; disabled?: never })
   | (BaseProps & ActionProps & { to?: never; href?: never });
 
-/** Renders a router Link (`to`), an anchor (`href`), or a native button. */
 export function Button({
   children,
   variant = "primary",

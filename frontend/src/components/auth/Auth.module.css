@@ -123,8 +123,6 @@
   outline: none;
 }
 
-
-
 .stepActions {
   display: flex;
   gap: var(--hn-space-3);
